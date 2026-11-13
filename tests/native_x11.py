@@ -57,6 +57,17 @@ def main():
         portal = os.environ.get("PICKERHUB_TEST_PORTAL") == "1"
         if portal:
             env["XDG_SESSION_TYPE"] = "wayland"
+        single_color = portal and os.environ.get("PICKERHUB_TEST_LIVE") != "1"
+        if portal and not single_color:
+            # Existing libraries migrate to system picking by default. Only this
+            # explicit preference should route the button into ScreenCast.
+            folder = Path(env["XDG_DATA_HOME"]) / "PickerHub"
+            folder.mkdir(parents=True)
+            (folder / "workspace.json").write_text(json.dumps({
+                "version": 1, "color": "#87CEEB", "limit": 32, "theme": "light",
+                "palettes": [{"id":"test", "name":"Test", "colors":[]}], "gradients":[],
+                "history": [], "useWaylandScreenSharing": True
+            }))
         with subprocess.Popen([APP], env=env) as process:
             try:
                 window = until(lambda: re.search(r'(0x[0-9a-f]+) "PickerHub"', windows()))[1]
@@ -79,10 +90,22 @@ def main():
                     x11.XMapRaised(display, target)
                     x11.XSync(display, False)
                 click(left+78, top+36)  # The main «القطّارة» button.
+                if single_color:
+                    def is_visible():
+                        return "Map State: IsViewable" in subprocess.check_output(["xwininfo","-id",window], text=True)
+                    until(lambda: not is_visible())
+                    until(is_visible)
+                    files = list(Path(home).rglob("workspace.json"))
+                    if os.environ.get("PICKERHUB_PORTAL_RESULT", "0") == "0":
+                        assert len(files) == 1 and json.loads(files[0].read_text())["history"] == ["#3175B3"]
+                    else:
+                        assert not files
+                    print("PASS: system color request completed and the workbench returned")
+                    return
                 if portal and os.environ.get("PICKERHUB_PORTAL_RESULT","0")!="0":
                     until(lambda:"= 0" in subprocess.check_output(["xprop","-id",window,"_NET_WM_WINDOW_OPACITY"],text=True))
                     until(lambda:"= 0" not in subprocess.check_output(["xprop","-id",window,"_NET_WM_WINDOW_OPACITY"],text=True))
-                    assert not list(Path(home).rglob("workspace.json"))
+                    assert not json.loads((folder / "workspace.json").read_text())["history"]
                     print("PASS: main window restored after portal cancellation or failure")
                     return
                 until(lambda: re.search(r'"PickerHub Magnifier"',windows()))
@@ -117,10 +140,10 @@ def main():
                     finally: x11.XDestroyImage(image)
                 until(live_swatch)
                 click(1350,850)
+                until(mapped)
                 file=until(lambda:next(Path(home).rglob("workspace.json"),None))
                 original=json.loads(file.read_text())
                 assert original["history"] == ["#297351"]
-                until(mapped)
                 if portal:
                     result=subprocess.check_output(["gdbus","call","--session","--dest","org.freedesktop.portal.Desktop","--object-path","/org/freedesktop/portal/desktop","--method","org.pickerhub.Test.Color","2113632"],text=True)
                     assert "uint32 1" in result, "Only one sharing session should be started"

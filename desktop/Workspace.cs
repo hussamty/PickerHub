@@ -28,6 +28,7 @@ internal class Workspace
     public int Version { get; set; } = 1;
     public string Color { get; set; } = "#87CEEB";
     public int Limit { get; set; } = 32;
+    public bool UseWaylandScreenSharing { get; set; }
     public string Theme { get; set; } = "light";
     public List<string> History { get; set; } = [];
     public List<Palette> Palettes { get; set; } = [new()];

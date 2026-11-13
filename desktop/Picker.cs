@@ -32,10 +32,14 @@ internal static class Picker
     public static bool UsesPortal => OperatingSystem.IsLinux() &&
         (Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")=="wayland" ||
         !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")));
-    public static async Task<string?> Start(Window owner)
+    public static async Task<string?> Start(Window owner, bool useScreenSharing)
     {
         if (OperatingSystem.IsMacOS()) return await MacSampler.Start();
-        if (UsesPortal && !await WaylandCapture.Prepare(owner)) return null;
+        if (UsesPortal)
+        {
+            if (!useScreenSharing) return await WaylandColorPicker.Pick(owner);
+            if (!await WaylandCapture.Prepare(owner)) return null;
+        }
         owner.Hide();
         return await MagnifierSession.Start(owner);
     }

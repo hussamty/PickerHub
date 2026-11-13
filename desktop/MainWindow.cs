@@ -85,21 +85,22 @@ internal sealed partial class MainWindow : Window
         if (picking) return; picking = true; eyedropper.IsEnabled = false;
         status.Text = "انقر على البكسل المطلوب · Esc للإلغاء";
         var previousState = WindowState;
-        var previousOpacity=Opacity;
+        var previousOpacity = Opacity;
+        bool share = Picker.UsesPortal && state.UseWaylandScreenSharing;
         try
         {
             // GNOME authorizes only the focused application. Keep its parent window
             // mapped and focused, but transparent, until the portal has shown consent.
-            if(Picker.UsesPortal){WaylandCapture.ClearPending();Picker.SetPortalParentTransparent(this,true);}
+            if (share) { WaylandCapture.ClearPending(); Picker.SetPortalParentTransparent(this, true); }
             else Hide();
             await Task.Delay(180);
-            var h = await Picker.Start(this);
+            var h = await Picker.Start(this, share);
             if (h != null) { page = 0; Select(h); status.Text = "تم التقاط " + h; } else status.Text = "أُلغي الالتقاط";
         }
         finally
         {
             picking = false; eyedropper.IsEnabled = true;
-            try { if (Picker.UsesPortal) Picker.SetPortalParentTransparent(this, false); }
+            try { if (share) Picker.SetPortalParentTransparent(this, false); }
             finally { Opacity = previousOpacity; Show(); WindowState = previousState; Activate(); }
         }
     }

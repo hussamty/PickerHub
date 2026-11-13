@@ -119,7 +119,35 @@ internal sealed partial class MainWindow
         d.Content = Col(Text("الإعدادات", 21, true), Label("المظهر"), Btn(dark ? "الوضع الفاتح" : "الوضع الداكن", () => { Edit(() => state.Theme = dark ? "light" : "dark"); d.Close(); }),
             Label("المكتبة المحلية"), Btn("تنزيل نسخة احتياطية", async () => { d.Close(); await WriteFile("PickerHub-backup.json", Serialize(state)); }),
             Btn("استعادة نسخة احتياطية", async () => { d.Close(); await Restore(); }), Btn("إغلاق", () => d.Close()));
-        if(Picker.UsesPortal && d.Content is StackPanel panel)panel.Children.Insert(panel.Children.Count-1,Btn("تغيير الشاشات أو إيقاف المشاركة",async()=>{await Picker.RequestPermissionAgain();d.Close();status.Text="توقفت مشاركة الشاشة. اضغط القطّارة لاختيار الشاشات من جديد."; }));
+        if (Picker.UsesPortal && d.Content is StackPanel panel)
+        {
+            var mode = new CheckBox
+            {
+                Content = "استخدام عدسة PickerHub عبر مشاركة الشاشة",
+                IsChecked = state.UseWaylandScreenSharing,
+                IsEnabled = !damaged
+            };
+            var hint = Text("تستخدم القطّارة العادية منتقي ألوان النظام. فعّل المشاركة للعدسة الحيّة والتبديل بين النوافذ أثناء الالتقاط.", 12);
+            hint.Foreground = Muted;
+            Button? stop = null;
+            mode.IsCheckedChanged += async (_, _) => await Guard(() =>
+            {
+                Edit(() => state.UseWaylandScreenSharing = mode.IsChecked == true);
+                if (!state.UseWaylandScreenSharing)
+                {
+                    WaylandCapture.Stop();
+                    if (stop != null) stop.IsVisible = false;
+                }
+                return Task.CompletedTask;
+            });
+            panel.Children.Insert(1, Col(Label("القطّارة"), mode, hint));
+            if (WaylandCapture.IsSharing) panel.Children.Insert(panel.Children.Count-1, stop = Btn("إنهاء مشاركة الشاشة", async () =>
+            {
+                await Picker.RequestPermissionAgain();
+                d.Close();
+                status.Text = "توقفت مشاركة الشاشة.";
+            }));
+        }
         await d.ShowDialog(this);
     }
 }

@@ -29,4 +29,6 @@ jobs="$! $jobs"
 python3 tests/portal_fixture.py > "$runtime/fixture.log" 2>&1 &
 jobs="$! $jobs"
 gdbus wait --session --timeout 8 org.freedesktop.portal.Desktop
-PICKERHUB_TEST_PORTAL=1 python3 tests/native_x11.py || { cat "$runtime/fixture.log"; exit 1; }
+for live in 0 1; do
+    PICKERHUB_TEST_PORTAL=1 PICKERHUB_TEST_LIVE="$live" python3 tests/native_x11.py || { cat "$runtime/fixture.log"; exit 1; }
+done

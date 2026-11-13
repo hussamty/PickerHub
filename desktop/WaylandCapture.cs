@@ -33,6 +33,7 @@ internal sealed class WaylandCapture : IDisposable
     volatile bool ended;
     string peer="";
     public static void ClearPending(){if(current!=null&&!current.ended)foreach(var s in current.sources)s.capture.Drain();}
+    public static bool IsSharing => current is { ended: false };
     public static void Stop(){var old=current;current=null;old?.Dispose();}
     public static async Task<bool> Prepare(Window owner)
     {

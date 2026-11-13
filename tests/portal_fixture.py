@@ -51,6 +51,11 @@ class Portal(dbus.service.Object):
             return False
         GLib.timeout_add(250,respond)
         return dbus.ObjectPath(path)
+    @dbus.service.method("org.freedesktop.portal.Screenshot", in_signature="sa{sv}", out_signature="o", sender_keyword="sender")
+    def PickColor(self, parent, options, sender):
+        assert parent.startswith("x11:") and self.starts == 0
+        rgb = dbus.Struct(tuple(dbus.Double(v / 255) for v in (49, 117, 179)), signature="ddd", variant_level=1)
+        return self.reply(options, sender, {"color": rgb})
     @dbus.service.method("org.freedesktop.portal.ScreenCast",in_signature="a{sv}",out_signature="o",sender_keyword="sender")
     def CreateSession(self,options,sender):
         assert self.registered.get(sender)=="pickerhub"

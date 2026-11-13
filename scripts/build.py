@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist" / "native"
-VERSION = "0.3.4"
+VERSION = "0.3.5"
 HOST = {"Linux": "linux", "Windows": "win", "Darwin": "osx"}[platform.system()]
 ARCH = "arm64" if platform.machine().lower() in ("aarch64", "arm64") else "x64"
 
@@ -97,7 +97,7 @@ def main():
         if osname == "osx":
             (bundle / "Contents/Info.plist").write_bytes(plistlib.dumps({
                 "CFBundleExecutable": "PickerHub", "CFBundleName": "PickerHub", "CFBundleIdentifier": "org.pickerhub.app",
-                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "7",
+                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "8",
                 "NSHighResolutionCapable": True, "LSMinimumSystemVersion": "14.0"}))
             (runtime / "PickerHub").chmod(0o755)
             if HOST == "osx":
