@@ -13,13 +13,12 @@ namespace PickerHub;
 internal sealed partial class MainWindow : Window
 {
     Workspace state = new();
-    readonly StackPanel content = new() { Spacing = 15 };
+    readonly StackPanel content = new() { Spacing = 18, Margin = new Thickness(0, 0, 16, 0) };
     readonly TextBlock status = new() { TextWrapping = TextWrapping.Wrap };
     readonly Button eyedropper;
-    readonly WrapPanel nav = new();
     readonly string[] pages = ["ملتقط الألوان", "لوحات الألوان", "فحص التباين", "تحليل الصور", "محرّر التدرجات", "السجل"];
     readonly string[] modes = ["متجاورة", "متكاملة", "ثلاثية", "متكاملة منقسمة", "أحادية اللون", "عالية التباين"];
-    int page, harmony;
+    int page, harmony, shownPage = -1, paletteCard, historyCard;
     string? paletteId;
     bool picking, damaged;
     string foreground = "#172D46", background = "#FFFFFF";
@@ -31,10 +30,7 @@ internal sealed partial class MainWindow : Window
     string lastSaved = "";
     FileStream? instanceLock;
     bool dark => state.Theme == "dark";
-    IBrush Ink => Paint(dark ? "#F2F6FC" : "#172C40");
-    IBrush Paper => Paint(dark ? "#1D2938" : "#FFFFFF");
-    IBrush Line => Paint(dark ? "#3A4B5C" : "#DCE4ED");
-    static IBrush Paint(string hex) => new SolidColorBrush(Avalonia.Media.Color.Parse(hex));
+    bool Motion => !state.ReduceMotion;
     static string Serialize<T>(T v) => JsonSerializer.Serialize(v, Workspace.Json);
     Palette Current => state.Palettes.FirstOrDefault(p => p.Id == paletteId) ?? state.Palettes[0];
 
@@ -52,22 +48,12 @@ internal sealed partial class MainWindow : Window
         }
         catch (Exception e) { damaged = true; status.Text = "تعذّر فتح المكتبة للتحرير. " + e.Message; }
         lastSaved = Serialize(state);
-        eyedropper = Btn("القطّارة", PickDesktop, true);
+        eyedropper = Btn("color-picker", "القطّارة", PickDesktop, true);
         BuildShell();
         Closed += (_, _) => { if(Picker.UsesPortal)WaylandCapture.Stop();preview?.Dispose(); instanceLock?.Dispose(); };
         KeyDown += (_, ev) => { if (ev.Key == Avalonia.Input.Key.F8 && !picking) { ev.Handled = true; _ = Guard(PickDesktop); } };
         Render();
     }
-    static StackPanel Col(params Control[] controls) { var p = new StackPanel { Spacing = 8 }; foreach (var c in controls) p.Children.Add(c); return p; }
-    static WrapPanel Row(params Control[] controls) { var p = new WrapPanel(); foreach (var c in controls) { c.Margin = new Thickness(3); p.Children.Add(c); } return p; }
-    TextBlock Text(string text, double size = 15, bool bold = false) => new() { Text = text, LineHeight = size * 1.55, FontSize = size, FontWeight = bold ? FontWeight.Bold : FontWeight.Normal, Foreground = Ink, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
-    Button Btn(string label, Func<Task> act, bool primary = false)
-    {
-        var b = new Button { Background = Paper, Foreground = Ink, BorderBrush = Line, BorderThickness = new Thickness(1), MinHeight = 36, FontSize = 12, Content = label, CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 7), Margin = new Thickness(2), HorizontalContentAlignment = HorizontalAlignment.Center };
-        if (primary) { b.BorderThickness = new Thickness(0); b.Background = Paint("#214D8D"); b.Foreground = Brushes.White; }
-        b.Click += async (_, _) => await Guard(act); return b;
-    }
-    Button Btn(string label, Action act, bool primary = false) => Btn(label, () => { act(); return Task.CompletedTask; }, primary);
     async Task Guard(Func<Task> action) { try { await action(); } catch (Exception ex) { Console.Error.WriteLine(ex);status.Text = ex.Message; } }
     void Edit(Action mutation)
     {
@@ -107,52 +93,11 @@ internal sealed partial class MainWindow : Window
     void Render()
     {
         RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+        Classes.Set("calm", !Motion);
         StyleShell();
         content.Children.Clear();
+        if (page != shownPage) { shownPage = page; Arrive(); }
         switch (page) { case 0: ColorPage(); break; case 1: Palettes(); break; case 2: ContrastPage(); break; case 3: Images(); break; case 4: Gradients(); break; case 5: History(); break; }
-    }
-    Border Card(Control c) => new() { Background = Paper, BorderBrush = Line, BorderThickness = new Thickness(1), Padding = new Thickness(15), CornerRadius = new CornerRadius(12), Child = c };
-    Button Chip(string hex, Action act, string? label = null)
-    {
-        var b = Btn(label ?? hex, act); b.Background = Paint(hex); b.Foreground = Paint(Core.Describe(hex).Text("ink")); b.MinHeight = 41; b.HorizontalAlignment = HorizontalAlignment.Stretch; b.VerticalAlignment = VerticalAlignment.Stretch;
-        b.FlowDirection = FlowDirection.LeftToRight; return b;
-    }
-    ComboBox Choose(IEnumerable<string> options, int index, Action<int> changed)
-    {
-        var box = new ComboBox { ItemsSource = options.ToArray(), SelectedIndex = index, MinWidth = 125, Margin = new Thickness(3) };
-        box.SelectionChanged += (_, _) => { if (box.SelectedIndex >= 0) changed(box.SelectedIndex); }; return box;
-    }
-    async Task Copy(string value) { if (Clipboard == null) throw new InvalidOperationException("الحافظة غير متاحة."); await Clipboard.SetTextAsync(value); status.Text = "نُسخت القيمة إلى الحافظة"; }
-    async Task<string?> Prompt(string title, string initial, bool hex = false)
-    {
-        var input = new TextBox { Text = initial, MaxLength = hex ? 7 : 100, FlowDirection = hex ? FlowDirection.LeftToRight : FlowDirection.RightToLeft };
-        var feedback = Text("", 12); feedback.Foreground = Paint(dark ? "#FFB5B5" : "#A42635"); feedback.IsVisible = false;
-        var d = Dialog(title); void OK() { var val = (input.Text ?? "").Trim(); if (hex) val = "#" + val.TrimStart('#').ToUpperInvariant(); if (val.Length > 0 && (!hex || Workspace.Hex(val))) d.Close(val); else { feedback.IsVisible = true; feedback.Text = hex ? "أدخل ست خانات HEX." : "أدخل اسماً."; } }
-        d.Content = Col(Text(title, 18, true), input, feedback, Row(Btn("حفظ", OK, true), Btn("إلغاء", () => d.Close())));
-        input.KeyDown += (_, ev) => { if (ev.Key == Avalonia.Input.Key.Enter) { ev.Handled = true; OK(); } };
-        d.Opened += (_, _) => { input.Focus(); input.SelectAll(); }; return await d.ShowDialog<string?>(this);
-    }
-    Window Dialog(string title)
-    {
-        var d = new Window
-        {
-            Title = title,
-            Width = 380,
-            SizeToContent = SizeToContent.Height,
-            CanResize = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Padding = new Thickness(18),
-            FontFamily = FontFamily,
-            FlowDirection = FlowDirection.RightToLeft,
-            RequestedThemeVariant = RequestedThemeVariant
-        };
-        d.KeyDown += (_, ev) => { if (ev.Key == Avalonia.Input.Key.Escape) d.Close(); }; return d;
-    }
-    async Task<bool> Confirm(string title) { var d = Dialog(title); d.Content = Col(Text(title, 17), Row(Btn("تأكيد", () => d.Close(true), true), Btn("إلغاء", () => d.Close(false)))); return await d.ShowDialog<bool>(this); }
-    async Task<int?> SelectOption(string title, string[] choices, int start = 0)
-    {
-        var d = Dialog(title); var choice = new ComboBox { ItemsSource = choices, SelectedIndex = start, HorizontalAlignment = HorizontalAlignment.Stretch };
-        d.Content = Col(Text(title, 17), choice, Row(Btn("اختيار", () => d.Close((int?)choice.SelectedIndex), true), Btn("إلغاء", () => d.Close()))); return await d.ShowDialog<int?>(this);
     }
     async Task WriteFile(string name, string text)
     {

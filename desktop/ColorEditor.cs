@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Layout;
@@ -40,44 +41,66 @@ internal sealed partial class MainWindow
     {
         var c = Core.Describe(state.Color);
         var formats = c.GetProperty("formats");
-        var hex = new TextBox { Text = state.Color, MaxLength = 7, FlowDirection = FlowDirection.LeftToRight, FontSize = 22, FontWeight = FontWeight.SemiBold, BorderThickness = new Thickness(0), Background = Brushes.Transparent, Padding = new Thickness(0) };
-        AutomationProperties.SetAutomationId(hex, "hex-input");
-        var error = Text("", 11); error.IsVisible = false; error.Foreground = Paint(dark ? "#FFB5B5" : "#A42635");
+        string ink = c.Text("ink");
+
+        // The specimen: the selected color at full size, labelled in its own readable ink.
+        var title = Col(Text(c.Text("name"), 26, true), Text(c.Text("base") + "، " + c.Text("shade"), 12)); title.Spacing = 0; title.VerticalAlignment = VerticalAlignment.Bottom; title.HorizontalAlignment = HorizontalAlignment.Right; title.FlowDirection = FlowDirection.RightToLeft;
+        var code = Mono(state.Color, 20, true); code.VerticalAlignment = VerticalAlignment.Bottom; code.HorizontalAlignment = HorizontalAlignment.Left;
+        var english = Mono(c.Text("english").ToLowerInvariant(), 12); english.VerticalAlignment = VerticalAlignment.Top; english.HorizontalAlignment = HorizontalAlignment.Right; english.Opacity = .8;
+        var quick = Cluster(LiquidOn(ink, "copy", "نسخ HEX", () => Copy(state.Color)), LiquidOn(ink, "download", "تصدير اللون", () => Export(new Palette { Name = c.Text("name"), Colors = [Swatch.From(state.Color)] })));
+        quick.HorizontalAlignment = HorizontalAlignment.Left; quick.VerticalAlignment = VerticalAlignment.Top; quick.FlowDirection = FlowDirection.LeftToRight;
+        var face = new Panel { FlowDirection = FlowDirection.LeftToRight }; face.Children.AddRange([english, quick, title, code]);
+        var specimen = new Border { Background = Paint(state.Color), CornerRadius = new CornerRadius(24), Padding = new Thickness(22), Height = 216, Child = face };
+        specimen[!Border.BorderBrushProperty] = new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("Line"); specimen.BorderThickness = new Thickness(1);
+        Avalonia.Controls.Documents.TextElement.SetForeground(specimen, Paint(ink));
+
+        var hex = new TextBox { Text = state.Color, MaxLength = 7, FlowDirection = FlowDirection.LeftToRight, FontFamily = Code, FontSize = 17, MinHeight = 44, VerticalContentAlignment = VerticalAlignment.Center };
+        AutomationProperties.SetAutomationId(hex, "hex-input"); AutomationProperties.SetName(hex, "قيمة HEX");
+        var error = Of(Text("", 12), "danger"); error.IsVisible = false;
         void Apply() { var next = "#" + (hex.Text ?? "").Trim().TrimStart('#'); if (!Workspace.Hex(next)) { error.IsVisible = true; error.Text = "أدخل ست خانات HEX."; return; } Select(next); }
         hex.KeyDown += (_, ev) => { if (ev.Key == Key.Enter) { ev.Handled = true; _ = Guard(() => { Apply(); return Task.CompletedTask; }); } };
-        var small = new Border { Width = 48, Height = 48, CornerRadius = new CornerRadius(10), Background = Paint(state.Color), BorderBrush = Line, BorderThickness = new Thickness(1) };
-        var input = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,12,*,Auto"), FlowDirection = FlowDirection.LeftToRight };
-        input.Children.Add(small); Grid.SetColumn(hex, 2); input.Children.Add(hex);
-        var apply = IconButton("check", "اعتماد HEX", Apply); Grid.SetColumn(apply, 3); input.Children.Add(apply);
-        var spectrum = new Spectrum(state.Color); spectrum.Selected += h => _ = Guard(() => { Select(h); return Task.CompletedTask; });
+        var input = new Grid { ColumnDefinitions = new ColumnDefinitions("*,8,Auto"), FlowDirection = FlowDirection.LeftToRight };
+        input.Children.Add(hex);
+        var apply = Of(Liquid("check", "اعتماد HEX", Apply), "still"); Grid.SetColumn(apply, 2); input.Children.Add(apply);
+
+        var spectrum = new Spectrum(state.Color) { Height = 168 }; spectrum.Selected += h => _ = Guard(() => { Select(h); return Task.CompletedTask; });
         var hue = new Slider { Height = 40, MinHeight = 40, Minimum = 0, Maximum = 359.99, Value = spectrum.Value.H, FlowDirection = FlowDirection.LeftToRight };
+        AutomationProperties.SetName(hue, "درجة اللون");
         var hueBrush = new LinearGradientBrush { StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(1, 0, RelativeUnit.Relative) };
         for (int i = 0; i <= 6; i++) hueBrush.GradientStops.Add(new GradientStop(HsvColor.FromHsv(i * 60 % 360, 1, 1).ToRgb(), i / 6d));
         hue.Background = hueBrush;
+        void Commit() { var rgb = spectrum.Value.ToRgb(); var h = $"#{rgb.R:X2}{rgb.G:X2}{rgb.B:X2}"; if (h != state.Color) _ = Guard(() => { Select(h); return Task.CompletedTask; }); }
         hue.ValueChanged += (_, _) => { spectrum.Value = HsvColor.FromHsv(hue.Value, spectrum.Value.S, spectrum.Value.V); spectrum.InvalidateVisual(); };
-        hue.PointerCaptureLost += (_, _) => { var rgb = spectrum.Value.ToRgb(); var h = $"#{rgb.R:X2}{rgb.G:X2}{rgb.B:X2}"; if (h != state.Color) _ = Guard(() => { Select(h); return Task.CompletedTask; }); };
-        hue.KeyUp += (_, _) => { var rgb = spectrum.Value.ToRgb(); var h = $"#{rgb.R:X2}{rgb.G:X2}{rgb.B:X2}"; if (h != state.Color) _ = Guard(() => { Select(h); return Task.CompletedTask; }); };
-        var names = new DockPanel { LastChildFill = false }; var en = Text(c.Text("english"), 12); en.Foreground = Muted; en.FlowDirection = FlowDirection.LeftToRight; DockPanel.SetDock(en, Dock.Left); en.Margin = new Thickness(12, 0); names.Children.Add(en); names.Children.Add(Text(c.Text("name"), 18, true));
-        var editor = Col(new Border { CornerRadius = new CornerRadius(8), ClipToBounds = true, Child = spectrum }, hue, names, Label(c.Text("base") + "، " + c.Text("shade")), input, error,
-            Row(Btn("إضافة إلى لوحة", () => AddToPalette([state.Color]), true), IconButton("download", "تصدير اللون", () => Export(new Palette { Name = c.Text("name"), Colors = [Swatch.From(state.Color)] }))));
-        editor.Spacing = 6;
-        var rows = new StackPanel { Spacing = 0 };
+        hue.PointerCaptureLost += (_, _) => Commit();
+        hue.KeyUp += (_, _) => Commit();
+        var save = Btn("plus", "إضافة إلى لوحة", () => AddToPalette([state.Color]), true); save.HorizontalAlignment = HorizontalAlignment.Stretch;
+        var editor = Col(new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = spectrum }, hue, Field("HEX", input), error, save);
+
+        // Every format is one click away from the clipboard.
+        var rows = new StackPanel { Spacing = 2 };
         foreach (var key in new[] { "HEX", "RGB", "RGBA", "HSL", "HSV", "HSB", "CMYK" })
         {
-            string value = formats.Text(key); var b = Btn("", () => Copy(value));
-            b.HorizontalAlignment = HorizontalAlignment.Stretch; b.HorizontalContentAlignment = HorizontalAlignment.Stretch; b.Background = Brushes.Transparent; b.BorderThickness = new Thickness(0); b.Padding = new Thickness(0, 6);
-            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("46,*,24"), FlowDirection = FlowDirection.LeftToRight };
-            var label = Text(key, 11, true); label.Foreground = Muted; grid.Children.Add(label);
-            var val = Text(value, 13); val.FlowDirection = FlowDirection.LeftToRight; Grid.SetColumn(val, 1); grid.Children.Add(val);
-            var copy = Icon("copy", Muted, 16); Grid.SetColumn(copy, 2); grid.Children.Add(copy); b.Content = grid;
-            ToolTip.SetTip(b, "نسخ " + key); rows.Children.Add(b);
+            string value = formats.Text(key); var b = Of(Btn("", () => Copy(value)), "row");
+            var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("52,*,20"), FlowDirection = FlowDirection.LeftToRight };
+            grid.Children.Add(Tone(Mono(key, 11, true), "Muted"));
+            var val = Mono(value, 13); val.TextWrapping = TextWrapping.NoWrap; val.TextTrimming = TextTrimming.CharacterEllipsis; Grid.SetColumn(val, 1); grid.Children.Add(val);
+            var copy = Tone(new Icon("copy", 15), "Muted"); Grid.SetColumn(copy, 2); grid.Children.Add(copy); b.Content = grid;
+            AutomationProperties.SetName(b, "نسخ " + key + " " + value); ToolTip.SetTip(b, "نسخ " + key); ToolTip.SetPlacement(b, PlacementMode.Top); rows.Children.Add(b);
         }
-        content.Children.Add(Pair(Section("محرّر اللون", editor), Section("صيغ اللون", rows, IconButton("copy", "نسخ جميع الصيغ", () => Copy(string.Join("\n", formats.EnumerateObject().Select(k => k.Name + ": " + k.Value.GetString()))))), 1.1, 1));
+        var formatList = Section("صيغ اللون", rows, Of(Liquid("copy", "نسخ جميع الصيغ", () => Copy(string.Join("\n", formats.EnumerateObject().Select(k => k.Name + ": " + k.Value.GetString())))), "still"));
+
         var colors = Core.Harmony(state.Color, harmony);
-        var strip = new Grid { ColumnDefinitions = new ColumnDefinitions(string.Join(",", colors.Select(_ => "*"))), FlowDirection = FlowDirection.LeftToRight };
-        for (int i = 0; i < colors.Length; i++) { var h = colors[i]; var b = Chip(h, () => Select(h)); b.Height = 54; b.CornerRadius = new CornerRadius(0); b.Margin = new Thickness(0); b.BorderThickness = new Thickness(0); Grid.SetColumn(b, i); strip.Children.Add(b); }
-        content.Children.Add(Section("تناغم الألوان", new Border { CornerRadius = new CornerRadius(8), ClipToBounds = true, Child = strip },
-            Row(Choose(modes, harmony, i => { harmony = i; Render(); }), IconButton("plus", "إضافة المجموعة إلى لوحة", () => AddToPalette(colors)))));
-        if (state.History.Count > 0) { var recent = Row(); foreach (var h in state.History.Take(12)) { var b = Chip(h, () => Select(h), " "); b.Width = 34; b.MinHeight = 30; ToolTip.SetTip(b, h); recent.Children.Add(b); } content.Children.Add(Col(Label("الألوان الأخيرة"), recent)); }
+        var strip = new Grid { ColumnDefinitions = new ColumnDefinitions(string.Join(",", colors.Select(_ => "*"))), Height = 64, FlowDirection = FlowDirection.LeftToRight };
+        for (int i = 0; i < colors.Length; i++) { var h = colors[i]; var b = Of(Chip(h, () => Select(h), colors.Length > 5 ? "" : null), "flat"); b.CornerRadius = new CornerRadius(0); ToolTip.SetTip(b, h); Grid.SetColumn(b, i); strip.Children.Add(b); }
+        var harmonyTools = Line(8, Choose(modes, harmony, i => { harmony = i; Render(); }), Of(Liquid("plus", "إضافة المجموعة إلى لوحة", () => AddToPalette(colors)), "still"));
+        var harmonies = Section("تناغم الألوان", new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = strip }, harmonyTools);
+
+        content.Children.Add(Pair(Col(specimen, Surface(editor)), Col(formatList, harmonies), 1.1, 1));
+        if (state.History.Count > 0)
+        {
+            var recent = new WrapPanel();
+            foreach (var h in state.History.Take(14)) { var dot = Dot(h, () => Select(h)); dot.Margin = new Thickness(0, 0, 8, 8); recent.Children.Add(dot); }
+            content.Children.Add(Col(Label("الألوان الأخيرة"), recent));
+        }
     }
 }

@@ -13,7 +13,12 @@ internal class App : Application
         if (args.Contains("--check-core")) { Console.WriteLine(Core.Describe("#87CEEB").Text("hex")); return 0; }
         return AppBuilder.Configure<App>().With(new X11PlatformOptions{WmClass="pickerhub"}).UsePlatformDetect().StartWithClassicDesktopLifetime(args);
     }
-    public override void Initialize() { Resources["SystemAccentColor"] = Avalonia.Media.Color.Parse("#2856B4"); Styles.Add(new FluentTheme()); }
+    public override void Initialize()
+    {
+        Resources["SystemAccentColor"] = Avalonia.Media.Color.Parse("#D03A1F");
+        Styles.Add(new FluentTheme());
+        Styles.Add(new Avalonia.Markup.Xaml.Styling.StyleInclude(new Uri("avares://PickerHub/")) { Source = new Uri("avares://PickerHub/Theme.axaml") });
+    }
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
