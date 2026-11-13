@@ -40,7 +40,7 @@ internal sealed partial class MainWindow : Window
 
     public MainWindow()
     {
-        Title = "PickerHub"; Width = 970; Height = 760; MinWidth = 450; MinHeight = 480;
+        Title = "PickerHub"; Width = 1120; Height = 820; MinWidth = 640; MinHeight = 560;
         FlowDirection = FlowDirection.RightToLeft;
         FontFamily = new FontFamily("avares://PickerHub/Fonts#Noto Sans Arabic, Segoe UI, sans-serif");
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -52,26 +52,19 @@ internal sealed partial class MainWindow : Window
         }
         catch (Exception e) { damaged = true; status.Text = "تعذّر فتح المكتبة للتحرير. " + e.Message; }
         lastSaved = Serialize(state);
-        var frame = new DockPanel { Margin = new Thickness(22, 14) };
-        var header = new DockPanel { LastChildFill = false, Margin = new Thickness(0, 0, 0, 12) };
-        var brand = Text("PickerHub", 27, true); brand.FlowDirection = FlowDirection.LeftToRight; DockPanel.SetDock(brand, Dock.Right); header.Children.Add(brand);
-        eyedropper = Btn("القطّارة", PickDesktop, true); DockPanel.SetDock(eyedropper, Dock.Left); header.Children.Add(eyedropper);
-        DockPanel.SetDock(header, Dock.Top); frame.Children.Add(header);
-        DockPanel.SetDock(nav, Dock.Top); frame.Children.Add(nav);
-        var foot = Row(Btn("المظهر", () => Edit(() => state.Theme = dark ? "light" : "dark")), Btn("نسخة احتياطية", () => WriteFile("PickerHub-backup.json", Serialize(state))), Btn("استعادة", Restore));
-        var footer = Col(foot, status); DockPanel.SetDock(footer, Dock.Bottom); frame.Children.Add(footer);
-        frame.Children.Add(new ScrollViewer { Content = content, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
-        Content = frame; Closed += (_, _) => { preview?.Dispose(); instanceLock?.Dispose(); };
+        eyedropper = Btn("القطّارة", PickDesktop, true);
+        BuildShell();
+        Closed += (_, _) => { preview?.Dispose(); instanceLock?.Dispose(); };
         KeyDown += (_, ev) => { if (ev.Key == Avalonia.Input.Key.F8 && !picking) { ev.Handled = true; _ = Guard(PickDesktop); } };
         Render();
     }
     static StackPanel Col(params Control[] controls) { var p = new StackPanel { Spacing = 8 }; foreach (var c in controls) p.Children.Add(c); return p; }
     static WrapPanel Row(params Control[] controls) { var p = new WrapPanel(); foreach (var c in controls) { c.Margin = new Thickness(3); p.Children.Add(c); } return p; }
-    TextBlock Text(string text, double size = 15, bool bold = false) => new() { Text = text, FontSize = size, FontWeight = bold ? FontWeight.Bold : FontWeight.Normal, Foreground = Ink, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
+    TextBlock Text(string text, double size = 15, bool bold = false) => new() { Text = text, LineHeight = size * 1.55, FontSize = size, FontWeight = bold ? FontWeight.Bold : FontWeight.Normal, Foreground = Ink, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
     Button Btn(string label, Func<Task> act, bool primary = false)
     {
-        var b = new Button { Content = label, CornerRadius = new CornerRadius(8), Padding = new Thickness(13, 6), Margin = new Thickness(2), HorizontalContentAlignment = HorizontalAlignment.Center };
-        if (primary) { b.Background = Paint("#214D8D"); b.Foreground = Brushes.White; }
+        var b = new Button { Background = Paper, Foreground = Ink, BorderBrush = Line, BorderThickness = new Thickness(1), MinHeight = 36, FontSize = 12, Content = label, CornerRadius = new CornerRadius(8), Padding = new Thickness(12, 7), Margin = new Thickness(2), HorizontalContentAlignment = HorizontalAlignment.Center };
+        if (primary) { b.BorderThickness = new Thickness(0); b.Background = Paint("#214D8D"); b.Foreground = Brushes.White; }
         b.Click += async (_, _) => await Guard(act); return b;
     }
     Button Btn(string label, Action act, bool primary = false) => Btn(label, () => { act(); return Task.CompletedTask; }, primary);
@@ -97,15 +90,14 @@ internal sealed partial class MainWindow : Window
     void Render()
     {
         RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
-        Background = Paint(dark ? "#101923" : "#F3F6FA"); Foreground = Ink; status.Foreground = Ink;
-        nav.Children.Clear(); for (int i = 0; i < pages.Length; i++) { int idx = i; var b = Btn(pages[i], () => { page = idx; Render(); }, page == i); nav.Children.Add(b); }
-        content.Children.Clear(); content.Children.Add(Text(pages[page], 27, true));
+        StyleShell();
+        content.Children.Clear();
         switch (page) { case 0: ColorPage(); break; case 1: Palettes(); break; case 2: ContrastPage(); break; case 3: Images(); break; case 4: Gradients(); break; case 5: History(); break; }
     }
     Border Card(Control c) => new() { Background = Paper, BorderBrush = Line, BorderThickness = new Thickness(1), Padding = new Thickness(15), CornerRadius = new CornerRadius(12), Child = c };
     Button Chip(string hex, Action act, string? label = null)
     {
-        var b = Btn(label ?? hex, act); b.Background = Paint(hex); b.Foreground = Paint(Core.Describe(hex).Text("ink")); b.MinHeight = 41;
+        var b = Btn(label ?? hex, act); b.Background = Paint(hex); b.Foreground = Paint(Core.Describe(hex).Text("ink")); b.MinHeight = 41; b.HorizontalAlignment = HorizontalAlignment.Stretch; b.VerticalAlignment = VerticalAlignment.Stretch;
         b.FlowDirection = FlowDirection.LeftToRight; return b;
     }
     ComboBox Choose(IEnumerable<string> options, int index, Action<int> changed)
@@ -117,8 +109,9 @@ internal sealed partial class MainWindow : Window
     async Task<string?> Prompt(string title, string initial, bool hex = false)
     {
         var input = new TextBox { Text = initial, MaxLength = hex ? 7 : 100, FlowDirection = hex ? FlowDirection.LeftToRight : FlowDirection.RightToLeft };
-        var d = Dialog(title); void OK() { var val = (input.Text ?? "").Trim(); if (hex) val = "#" + val.TrimStart('#').ToUpperInvariant(); if (val.Length > 0 && (!hex || Workspace.Hex(val))) d.Close(val); }
-        d.Content = Col(Text(title, 18, true), input, Row(Btn("حفظ", OK, true), Btn("إلغاء", () => d.Close())));
+        var feedback = Text("", 12); feedback.Foreground = Paint(dark ? "#FFB5B5" : "#A42635"); feedback.IsVisible = false;
+        var d = Dialog(title); void OK() { var val = (input.Text ?? "").Trim(); if (hex) val = "#" + val.TrimStart('#').ToUpperInvariant(); if (val.Length > 0 && (!hex || Workspace.Hex(val))) d.Close(val); else { feedback.IsVisible = true; feedback.Text = hex ? "أدخل ست خانات HEX." : "أدخل اسماً."; } }
+        d.Content = Col(Text(title, 18, true), input, feedback, Row(Btn("حفظ", OK, true), Btn("إلغاء", () => d.Close())));
         input.KeyDown += (_, ev) => { if (ev.Key == Avalonia.Input.Key.Enter) { ev.Handled = true; OK(); } };
         d.Opened += (_, _) => { input.Focus(); input.SelectAll(); }; return await d.ShowDialog<string?>(this);
     }
@@ -162,20 +155,6 @@ internal sealed partial class MainWindow : Window
         var bytes = await ReadFile("نسخة PickerHub", ["*.json"], 16 << 20); if (bytes == null) return; var restored = Workspace.Parse(Encoding.UTF8.GetString(bytes).TrimStart('\uFEFF'));
         if (!await Confirm("استبدال المكتبة الحالية بالنسخة المختارة؟")) return;
         restored.Save(); state = restored; lastSaved = Serialize(state); damaged = false; paletteId = null; Render(); status.Text = "استُعيدت المكتبة";
-    }
-    void ColorPage()
-    {
-        var c = Core.Describe(state.Color); var fg = Paint(c.Text("ink")); var hex = Text(state.Color, 47, true); hex.FlowDirection = FlowDirection.LeftToRight; hex.Foreground = fg;
-        var name = Text(c.Text("name") + "   ·   " + c.Text("english"), 20, true); name.Foreground = fg;
-        var details = Text(c.Text("base") + "  ·  " + c.Text("shade") + "  ·  " + "\u2066" + c.Text("reference") + "\u2069", 13); details.Foreground = fg;
-        content.Children.Add(new Border { Background = Paint(state.Color), CornerRadius = new CornerRadius(14), Padding = new Thickness(25, 16), Child = Col(name, hex, details) });
-        var formats = c.GetProperty("formats");
-        content.Children.Add(Row(Btn("إضافة إلى لوحة", () => AddToPalette([state.Color]), true), Btn("تعديل HEX", async () => { var h = await Prompt("قيمة HEX", state.Color, true); if (h != null) Select(h); }),
-            Btn("نسخ جميع الصيغ", () => Copy(string.Join("\n", formats.EnumerateObject().Select(k => k.Name + ": " + k.Value.GetString())))), Btn("تصدير اللون", () => Export(new Palette { Name = c.Text("name"), Colors = [Swatch.From(state.Color)] }))));
-        var fmt = Row(); foreach (var key in new[] { "HEX", "RGB", "RGBA", "HSL", "HSV", "HSB", "CMYK" }) { var val = formats.Text(key); var b = Btn(key + "   " + val, () => Copy(val)); b.FlowDirection = FlowDirection.LeftToRight; fmt.Children.Add(b); }
-        content.Children.Add(Card(Col(Text("صيغ اللون", 18, true), fmt)));
-        var colors = Core.Harmony(state.Color, harmony); var group = Row(); foreach (var h in colors) group.Children.Add(Chip(h, () => Select(h)));
-        content.Children.Add(Card(Col(Row(Text("تناغم الألوان", 18, true), Choose(modes, harmony, i => { harmony = i; Render(); })), group, Btn("إضافة المجموعة إلى لوحة", () => AddToPalette(colors)))));
     }
     async Task AddToPalette(string[] colors)
     {

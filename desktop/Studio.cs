@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
@@ -11,7 +12,16 @@ namespace PickerHub;
 
 internal sealed partial class MainWindow
 {
+    bool analyzing;
     async Task Analyze()
+    {
+        if (analyzing) return;
+        analyzing = true;
+        status.Text = "جارٍ تحليل الصورة…";
+        try { await AnalyzeImage(); }
+        finally { analyzing = false; if (status.Text == "جارٍ تحليل الصورة…") status.Text = "جاهز لالتقاط الألوان"; }
+    }
+    async Task AnalyzeImage()
     {
         var files = await StorageProvider.OpenFilePickerAsync(new() { Title = "اختيار صورة", FileTypeFilter = [new FilePickerFileType("PNG · JPG · WEBP") { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.webp"] }] }); if (files.Count == 0) return;
         using var stream = await files[0].OpenReadAsync();
@@ -33,11 +43,19 @@ internal sealed partial class MainWindow
     }
     void Images()
     {
-        content.Children.Add(Btn("اختيار صورة   PNG · JPG · WEBP", Analyze, true)); if (preview == null) return;
-        content.Children.Add(new Image { Source = preview, MaxHeight = 190, Stretch = Stretch.Uniform });
+        if (preview == null) { content.Children.Add(Empty("لوحة جديدة من صورة", "PNG أو JPG أو WEBP بحجم يصل إلى 32 ميغابايت.", "photo", Btn("اختيار صورة", Analyze, true))); return; }
         Palette Make() => new() { Name = imageName, Colors = recentImage.Select(Swatch.From).ToList() };
-        content.Children.Add(Row(Text(imageName, 18, true), Btn("حفظ كلوحة", async () => { var p = Make(); var name = await Prompt("اسم اللوحة", p.Name); if (name != null) { p.Name = name; Edit(() => { state.Palettes.Add(p); paletteId = p.Id; }); } }), Btn("تصدير", () => Export(Make()))));
-        for (int i = 0; i < recentImage.Length; i++) { var h = recentImage[i]; content.Children.Add(Row(Chip(h, () => { page = 0; Select(h); }), Text(Core.Describe(h).Text("name")), Text($"{percentages[i]:0.0}%"))); }
+        var photo = Section(imageName, new Image { Source = preview, MaxHeight = 330, Stretch = Stretch.Uniform }, IconButton("upload", "تغيير الصورة", Analyze));
+        var list = new StackPanel { Spacing = 7 };
+        for (int i = 0; i < recentImage.Length; i++)
+        {
+            var h = recentImage[i];
+            var line = new DockPanel(); var percent = Text($"{percentages[i]:0.0}%", 13, true); percent.FlowDirection = FlowDirection.LeftToRight; DockPanel.SetDock(percent, Dock.Left); line.Children.Add(percent);
+            line.Children.Add(Row(Chip(h, () => { page = 0; Select(h); }), Text(Core.Describe(h).Text("name"), 12)));
+            list.Children.Add(line);
+        }
+        list.Children.Add(Row(Btn("حفظ كلوحة", async () => { var p = Make(); var name = await Prompt("اسم اللوحة", p.Name); if (name != null) { p.Name = name; Edit(() => { state.Palettes.Add(p); paletteId = p.Id; }); } }, true), IconButton("download", "تصدير", () => Export(Make()))));
+        content.Children.Add(Pair(photo, Section("ألوان الصورة", list)));
     }
     static string Css(Gradient g) => (g.Type == "linear" ? $"linear-gradient({g.Angle}deg, " : "radial-gradient(circle, ") + string.Join(", ", g.Stops.OrderBy(s => s.Pos).Select(s => $"{s.Hex} {s.Pos}%")) + ")";
     static IBrush GradientBrush(Gradient g)
@@ -48,29 +66,29 @@ internal sealed partial class MainWindow
     }
     void Gradients()
     {
-        var preview = new Border { Height = 115, CornerRadius = new CornerRadius(10), Background = GradientBrush(gradient) };
-        var code = Text(Css(gradient), 13); code.FlowDirection = FlowDirection.LeftToRight;
+        var preview = new Border { Height = 145, CornerRadius = new CornerRadius(10), Background = GradientBrush(gradient) };
+        var code = Text(Css(gradient), 12); code.FlowDirection = FlowDirection.LeftToRight;
         void Refresh() { preview.Background = GradientBrush(gradient); code.Text = Css(gradient); }
-        var angle = new NumericUpDown { Minimum = 0, Maximum = 360, Value = gradient.Angle, Increment = 5, IsEnabled = gradient.Type == "linear" };
+        var angle = new NumericUpDown { MinWidth = 130, FlowDirection = FlowDirection.LeftToRight, Minimum = 0, Maximum = 360, Value = gradient.Angle, Increment = 5, IsEnabled = gradient.Type == "linear" };
         angle.ValueChanged += (_, _) => { gradient.Angle = (int)(angle.Value ?? 0); Refresh(); };
         content.Children.Add(Row(Choose(["خطي", "دائري"], gradient.Type == "linear" ? 0 : 1, i => { gradient.Type = i == 0 ? "linear" : "radial"; Render(); }), Text("الزاوية"), angle, Btn("تدرج جديد", () => { gradient = new(); Render(); })));
         content.Children.Add(preview);
         foreach (var stop in gradient.Stops)
         {
-            var pos = new NumericUpDown { Minimum = 0, Maximum = 100, Value = stop.Pos, Increment = 1 };
-            var slider = new Slider { Minimum = 0, Maximum = 100, Value = stop.Pos, Width = 125, TickFrequency = 1, IsSnapToTickEnabled = true };
+            var pos = new NumericUpDown { MinWidth = 130, FlowDirection = FlowDirection.LeftToRight, Minimum = 0, Maximum = 100, Value = stop.Pos, Increment = 1 };
+            var slider = new Slider { FlowDirection = FlowDirection.LeftToRight, Minimum = 0, Maximum = 100, Value = stop.Pos, Width = 125, TickFrequency = 1, IsSnapToTickEnabled = true };
             slider.ValueChanged += (_, _) => { stop.Pos = (int)Math.Round(slider.Value); pos.Value = stop.Pos; Refresh(); };
             pos.ValueChanged += (_, _) => { stop.Pos = (int)(pos.Value ?? 0); slider.Value = stop.Pos; Refresh(); };
-            content.Children.Add(Row(EditHex("لون النقطة", stop.Hex, h => stop.Hex = h), slider, pos, Text("%"), Btn("إزالة", () => { if (gradient.Stops.Count > 2) { gradient.Stops.Remove(stop); Render(); } })));
+            content.Children.Add(Card(Row(new Border { Width = 30, Height = 30, CornerRadius = new CornerRadius(6), Background = Paint(stop.Hex) }, EditHex("لون النقطة", stop.Hex, h => stop.Hex = h), slider, pos, Text("%"), IconButton("trash", "إزالة النقطة", () => { if (gradient.Stops.Count > 2) { gradient.Stops.Remove(stop); Render(); } }))));
         }
-        content.Children.Add(code);
+        content.Children.Add(Card(code));
         content.Children.Add(Row(Btn("إضافة نقطة", () => { if (gradient.Stops.Count < 32) { gradient.Stops.Add(new Stop { Hex = state.Color, Pos = 50 }); Render(); } }), Btn("نسخ CSS", () => Copy("background: " + Css(gradient) + ";")),
             Btn("تصدير CSS", () => WriteFile("gradient.css", ".gradient { background: " + Css(gradient) + "; }")), Btn("حفظ التدرج", async () =>
             {
                 var name = await Prompt("اسم التدرج", gradient.Name); if (name == null) return; gradient.Name = name; var saved = JsonSerializer.Deserialize<Gradient>(Serialize(gradient), Workspace.Json)!;
                 Edit(() => { var i = state.Gradients.FindIndex(g => g.Id == saved.Id); if (i < 0) state.Gradients.Add(saved); else state.Gradients[i] = saved; });
             }, true)));
-        content.Children.Add(Text("مكتبة التدرجات", 18, true)); foreach (var g in state.Gradients) content.Children.Add(Row(new Border { Width = 81, Height = 30, Background = GradientBrush(g) }, Text(g.Name),
+        content.Children.Add(Text("مكتبة التدرجات", 18, true)); if (state.Gradients.Count == 0) content.Children.Add(Label("احفظ تدرجك للعودة إليه في أي وقت.")); foreach (var g in state.Gradients) content.Children.Add(Row(new Border { Width = 81, Height = 30, Background = GradientBrush(g) }, Text(g.Name),
             Btn("فتح", () => { gradient = JsonSerializer.Deserialize<Gradient>(Serialize(g), Workspace.Json)!; Render(); }), Btn("حذف", async () => { if (await Confirm("حذف التدرج؟")) Edit(() => state.Gradients.Remove(g)); })));
     }
 }

@@ -74,7 +74,7 @@ def main():
                     x11.XStoreName(display, target, b"External color reference")
                     x11.XMapRaised(display, target)
                     x11.XSync(display, False)
-                click(left+width-58, top+42)  # The main «القطّارة» button.
+                click(left+78, top+36)  # The main «القطّارة» button.
                 if not portal:
                     until(lambda: re.search(r"146x153[+-]", windows()))
                     click(1350, 850)
@@ -84,7 +84,7 @@ def main():
                 if not portal:
                     key("F8")
                     until(lambda: re.search(r"146x153[+-]", windows()))
-                    click(1230, 850)  # Desktop background, outside both windows.
+                    click(1280, 850)  # Desktop background, outside both windows.
                     until(lambda: json.loads(file.read_text())["color"] == "#37A6D4")
                     original = json.loads(file.read_text())
                     key("F8")
