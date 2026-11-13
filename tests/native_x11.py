@@ -24,6 +24,10 @@ def click(x, y):
     x11.XFlush(display)
 
 
+def move(x,y):
+    input_api.XTestFakeMotionEvent(display,0,x,y,0)
+    x11.XFlush(display)
+
 def key(name):
     symbol = x11.XStringToKeysym(name.encode())
     code = x11.XKeysymToKeycode(display, symbol)
@@ -75,23 +79,42 @@ def main():
                     x11.XMapRaised(display, target)
                     x11.XSync(display, False)
                 click(left+78, top+36)  # The main «القطّارة» button.
-                if not portal:
-                    until(lambda: re.search(r"146x153[+-]", windows()))
-                    click(1350, 850)
-                file = until(lambda: next(Path(home).rglob("workspace.json"), None))
-                original = json.loads(file.read_text())
-                assert original["history"] == (["#336699"] if portal else ["#745AC3"])
-                if not portal:
-                    key("F8")
-                    until(lambda: re.search(r"146x153[+-]", windows()))
-                    click(1280, 850)  # Desktop background, outside both windows.
-                    until(lambda: json.loads(file.read_text())["color"] == "#37A6D4")
-                    original = json.loads(file.read_text())
-                    key("F8")
-                    until(lambda: re.search(r"146x153[+-]", windows()))
-                    key("Escape")
-                    until(lambda: not re.search(r"146x153[+-]", windows()))
-                    assert json.loads(file.read_text()) == original
+                if portal and os.environ.get("PICKERHUB_PORTAL_RESULT","0")!="0":
+                    until(lambda:"Map State: IsUnMapped" in subprocess.check_output(["xwininfo","-id",window],text=True))
+                    until(lambda:"Map State: IsViewable" in subprocess.check_output(["xwininfo","-id",window],text=True))
+                    assert not list(Path(home).rglob("workspace.json"))
+                    print("PASS: main window restored after portal cancellation or failure")
+                    return
+                until(lambda: re.search(r'"PickerHub Magnifier"',windows()))
+                def mapped():
+                    return "Map State: IsViewable" in subprocess.check_output(["xwininfo","-id",window],text=True)
+                assert not mapped(), "PickerHub must hide while the magnifier is active"
+                move(1350,850)
+                time.sleep(.15)
+                # The lens itself shows the sampled color while moving, before selection.
+                x11.XGetImage.restype=ctypes.c_void_p
+                x11.XGetPixel.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_int]
+                x11.XGetPixel.restype=ctypes.c_ulong
+                x11.XDestroyImage.argtypes=[ctypes.c_void_p]
+                image=x11.XGetImage(display,x11.XDefaultRootWindow(display),1118,750,1,1,ctypes.c_ulong(-1),2)
+                assert image
+                try:
+                    assert x11.XGetPixel(image,0,0)&0xffffff == (0x336699 if portal else 0x745AC3), "Magnifier swatch must update before clicking"
+                finally:x11.XDestroyImage(image)
+                click(1350,850)
+                file=until(lambda:next(Path(home).rglob("workspace.json"),None))
+                original=json.loads(file.read_text())
+                assert original["history"]==(["#336699"] if portal else ["#745AC3"])
+                until(mapped)
+                x11.XSetInputFocus(display,int(window,16),1,0)
+                x11.XFlush(display)
+                key("F8")
+                until(lambda:re.search(r'"PickerHub Magnifier"',windows()))
+                assert not mapped()
+                key("Escape")
+                until(lambda:not re.search(r'"PickerHub Magnifier"',windows()))
+                until(mapped)
+                assert json.loads(file.read_text())==original
                 assert process.poll() is None
                 print("PASS: desktop eyedropper and persisted selected color", original["color"])
             finally:

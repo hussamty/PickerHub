@@ -9,7 +9,7 @@ internal class App : Application
     [STAThread]
     public static int Main(string[] args)
     {
-        if (args.Contains("--version")) { Console.WriteLine("PickerHub 0.3.0"); return 0; }
+        if (args.Contains("--version")) { Console.WriteLine("PickerHub 0.3.1"); return 0; }
         if (args.Contains("--check-core")) { Console.WriteLine(Core.Describe("#87CEEB").Text("hex")); return 0; }
         return AppBuilder.Configure<App>().UsePlatformDetect().StartWithClassicDesktopLifetime(args);
     }
@@ -17,7 +17,7 @@ internal class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.MainWindow = new MainWindow();
+        { desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnMainWindowClose; desktop.MainWindow = new MainWindow(); }
         base.OnFrameworkInitializationCompleted();
     }
 }

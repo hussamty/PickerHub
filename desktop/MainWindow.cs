@@ -84,8 +84,20 @@ internal sealed partial class MainWindow : Window
     {
         if (picking) return; picking = true; eyedropper.IsEnabled = false;
         status.Text = "انقر على البكسل المطلوب · Esc للإلغاء";
-        try { var h = await Picker.Start(this); if (h != null) { page = 0; Select(h); status.Text = "تم التقاط " + h; } else status.Text = "أُلغي الالتقاط"; }
-        finally { picking = false; eyedropper.IsEnabled = true; }
+        var previousState = WindowState;
+        try
+        {
+            Hide();
+            // Let the compositor remove this window before the desktop is sampled.
+            await Task.Delay(180);
+            var h = await Picker.Start(this);
+            if (h != null) { page = 0; Select(h); status.Text = "تم التقاط " + h; } else status.Text = "أُلغي الالتقاط";
+        }
+        finally
+        {
+            picking = false; eyedropper.IsEnabled = true;
+            Show(); WindowState = previousState; Activate();
+        }
     }
     void Render()
     {
