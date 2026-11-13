@@ -80,8 +80,8 @@ def main():
                     x11.XSync(display, False)
                 click(left+78, top+36)  # The main «القطّارة» button.
                 if portal and os.environ.get("PICKERHUB_PORTAL_RESULT","0")!="0":
-                    until(lambda:"Map State: IsUnMapped" in subprocess.check_output(["xwininfo","-id",window],text=True))
-                    until(lambda:"Map State: IsViewable" in subprocess.check_output(["xwininfo","-id",window],text=True))
+                    until(lambda:"= 0" in subprocess.check_output(["xprop","-id",window,"_NET_WM_WINDOW_OPACITY"],text=True))
+                    until(lambda:"= 0" not in subprocess.check_output(["xprop","-id",window,"_NET_WM_WINDOW_OPACITY"],text=True))
                     assert not list(Path(home).rglob("workspace.json"))
                     print("PASS: main window restored after portal cancellation or failure")
                     return
@@ -90,7 +90,7 @@ def main():
                     return "Map State: IsViewable" in subprocess.check_output(["xwininfo","-id",window],text=True)
                 assert not mapped(), "PickerHub must hide while the magnifier is active"
                 move(1350,850)
-                time.sleep(.15)
+                time.sleep(.48)
                 # The lens itself shows the sampled color while moving, before selection.
                 x11.XGetImage.restype=ctypes.c_void_p
                 x11.XGetPixel.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_int]
@@ -99,18 +99,45 @@ def main():
                 image=x11.XGetImage(display,x11.XDefaultRootWindow(display),1118,750,1,1,ctypes.c_ulong(-1),2)
                 assert image
                 try:
-                    assert x11.XGetPixel(image,0,0)&0xffffff == (0x336699 if portal else 0x745AC3), "Magnifier swatch must update before clicking"
+                    assert x11.XGetPixel(image,0,0)&0xffffff == (0x336699 if portal else 0x745AC3), f"Magnifier swatch must update before clicking: {x11.XGetPixel(image,0,0):06X}"
                 finally:x11.XDestroyImage(image)
+                # Change the source under a stationary pointer, with the lens still open.
+                if portal:
+                    change = ["gdbus","call","--session","--dest","org.freedesktop.portal.Desktop","--object-path",
+                              "/org/freedesktop/portal/desktop","--method","org.pickerhub.Test.Color"]
+                    assert "uint32 1" in subprocess.check_output([*change, str(0x297351)], text=True)
+                else:
+                    other = x11.XCreateSimpleWindow(display, root, 1300, 800, 95, 90, 0, 0, 0x297351)
+                    x11.XMapRaised(display, other)
+                    x11.XSetInputFocus(display, other, 1, 0)
+                    x11.XSync(display, False)
+                def live_swatch():
+                    image = x11.XGetImage(display,x11.XDefaultRootWindow(display),1118,750,1,1,ctypes.c_ulong(-1),2)
+                    try: return x11.XGetPixel(image,0,0)&0xffffff == 0x297351
+                    finally: x11.XDestroyImage(image)
+                until(live_swatch)
                 click(1350,850)
                 file=until(lambda:next(Path(home).rglob("workspace.json"),None))
                 original=json.loads(file.read_text())
-                assert original["history"]==(["#336699"] if portal else ["#745AC3"])
+                assert original["history"] == ["#297351"]
                 until(mapped)
+                if portal:
+                    result=subprocess.check_output(["gdbus","call","--session","--dest","org.freedesktop.portal.Desktop","--object-path","/org/freedesktop/portal/desktop","--method","org.pickerhub.Test.Color","2113632"],text=True)
+                    assert "uint32 1" in result, "Only one sharing session should be started"
                 x11.XSetInputFocus(display,int(window,16),1,0)
                 x11.XFlush(display)
                 key("F8")
                 until(lambda:re.search(r'"PickerHub Magnifier"',windows()))
                 assert not mapped()
+                if portal:
+                    move(1350,850)
+                    time.sleep(.48)
+                    image=x11.XGetImage(display,x11.XDefaultRootWindow(display),1118,750,1,1,ctypes.c_ulong(-1),2)
+                    try:assert x11.XGetPixel(image,0,0)&0xffffff==0x204060,"Second capture must show the updated stream, not an old screenshot"
+                    finally:x11.XDestroyImage(image)
+                if not portal:
+                    x11.XSetInputFocus(display, other, 1, 0)
+                    x11.XSync(display, False)
                 key("Escape")
                 until(lambda:not re.search(r'"PickerHub Magnifier"',windows()))
                 until(mapped)

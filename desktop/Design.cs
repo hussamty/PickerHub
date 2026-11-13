@@ -119,6 +119,7 @@ internal sealed partial class MainWindow
         d.Content = Col(Text("الإعدادات", 21, true), Label("المظهر"), Btn(dark ? "الوضع الفاتح" : "الوضع الداكن", () => { Edit(() => state.Theme = dark ? "light" : "dark"); d.Close(); }),
             Label("المكتبة المحلية"), Btn("تنزيل نسخة احتياطية", async () => { d.Close(); await WriteFile("PickerHub-backup.json", Serialize(state)); }),
             Btn("استعادة نسخة احتياطية", async () => { d.Close(); await Restore(); }), Btn("إغلاق", () => d.Close()));
+        if(Picker.UsesPortal && d.Content is StackPanel panel)panel.Children.Insert(panel.Children.Count-1,Btn("تغيير الشاشات أو إيقاف المشاركة",async()=>{await Picker.RequestPermissionAgain();d.Close();status.Text="توقفت مشاركة الشاشة. اضغط القطّارة لاختيار الشاشات من جديد."; }));
         await d.ShowDialog(this);
     }
 }

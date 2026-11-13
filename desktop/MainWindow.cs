@@ -54,7 +54,7 @@ internal sealed partial class MainWindow : Window
         lastSaved = Serialize(state);
         eyedropper = Btn("القطّارة", PickDesktop, true);
         BuildShell();
-        Closed += (_, _) => { preview?.Dispose(); instanceLock?.Dispose(); };
+        Closed += (_, _) => { if(Picker.UsesPortal)WaylandCapture.Stop();preview?.Dispose(); instanceLock?.Dispose(); };
         KeyDown += (_, ev) => { if (ev.Key == Avalonia.Input.Key.F8 && !picking) { ev.Handled = true; _ = Guard(PickDesktop); } };
         Render();
     }
@@ -68,7 +68,7 @@ internal sealed partial class MainWindow : Window
         b.Click += async (_, _) => await Guard(act); return b;
     }
     Button Btn(string label, Action act, bool primary = false) => Btn(label, () => { act(); return Task.CompletedTask; }, primary);
-    async Task Guard(Func<Task> action) { try { await action(); } catch (Exception ex) { status.Text = ex.Message; } }
+    async Task Guard(Func<Task> action) { try { await action(); } catch (Exception ex) { Console.Error.WriteLine(ex);status.Text = ex.Message; } }
     void Edit(Action mutation)
     {
         if (damaged) throw new InvalidOperationException("المكتبة للقراءة فقط. أغلق النسخة الأخرى أو استعد نسخة احتياطية صالحة.");
@@ -85,10 +85,13 @@ internal sealed partial class MainWindow : Window
         if (picking) return; picking = true; eyedropper.IsEnabled = false;
         status.Text = "انقر على البكسل المطلوب · Esc للإلغاء";
         var previousState = WindowState;
+        var previousOpacity=Opacity;
         try
         {
-            Hide();
-            // Let the compositor remove this window before the desktop is sampled.
+            // GNOME authorizes only the focused application. Keep its parent window
+            // mapped and focused, but transparent, until the portal has shown consent.
+            if(Picker.UsesPortal){WaylandCapture.ClearPending();Picker.SetPortalParentTransparent(this,true);}
+            else Hide();
             await Task.Delay(180);
             var h = await Picker.Start(this);
             if (h != null) { page = 0; Select(h); status.Text = "تم التقاط " + h; } else status.Text = "أُلغي الالتقاط";
@@ -96,7 +99,8 @@ internal sealed partial class MainWindow : Window
         finally
         {
             picking = false; eyedropper.IsEnabled = true;
-            Show(); WindowState = previousState; Activate();
+            try { if (Picker.UsesPortal) Picker.SetPortalParentTransparent(this, false); }
+            finally { Opacity = previousOpacity; Show(); WindowState = previousState; Activate(); }
         }
     }
     void Render()

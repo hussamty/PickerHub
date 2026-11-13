@@ -14,7 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist" / "native"
-VERSION = "0.3.1"
+VERSION = "0.3.4"
 HOST = {"Linux": "linux", "Windows": "win", "Darwin": "osx"}[platform.system()]
 ARCH = "arm64" if platform.machine().lower() in ("aarch64", "arm64") else "x64"
 
@@ -97,7 +97,7 @@ def main():
         if osname == "osx":
             (bundle / "Contents/Info.plist").write_bytes(plistlib.dumps({
                 "CFBundleExecutable": "PickerHub", "CFBundleName": "PickerHub", "CFBundleIdentifier": "org.pickerhub.app",
-                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "4",
+                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "7",
                 "NSHighResolutionCapable": True, "LSMinimumSystemVersion": "14.0"}))
             (runtime / "PickerHub").chmod(0o755)
             if HOST == "osx":
@@ -127,11 +127,11 @@ def main():
                 (deb / "usr/bin/pickerhub").symlink_to("/opt/pickerhub/PickerHub")
                 (deb / "usr/share/applications/pickerhub.desktop").write_text(
                     "[Desktop Entry]\nType=Application\nName=PickerHub\nExec=/opt/pickerhub/PickerHub\n"
-                    "Icon=applications-graphics\nTerminal=false\nCategories=Graphics;Utility;\nStartupWMClass=PickerHub\n")
+                    "Icon=applications-graphics\nTerminal=false\nCategories=Graphics;Utility;\nStartupWMClass=pickerhub\n")
                 (deb / "DEBIAN/control").write_text(
                     f"Package: pickerhub\nVersion: {VERSION}\nArchitecture: amd64\nMaintainer: PickerHub contributors\nSection: graphics\n"
-                    "Priority: optional\nDepends: libc6, libgcc-s1, libstdc++6, libx11-6, libice6, libsm6, libfontconfig1, libicu78 | libicu76 | libicu74 | libicu72 | libicu70, libssl3t64 | libssl3\n"
-                    "Recommends: xdg-desktop-portal\nDescription: Native Arabic color workbench and desktop eyedropper\n")
+                    "Priority: optional\nDepends: libc6, libgcc-s1, libstdc++6, libx11-6, libgstreamer1.0-0, libgstreamer-plugins-base1.0-0, libice6, libsm6, libfontconfig1, libicu78 | libicu76 | libicu74 | libicu72 | libicu70, libssl3t64 | libssl3\n"
+                    "Recommends: xdg-desktop-portal, gstreamer1.0-pipewire, gstreamer1.0-plugins-base\nDescription: Native Arabic color workbench and desktop eyedropper\n")
                 run("dpkg-deb", "--root-owner-group", "-Zgzip", "-z5", "--build", deb, DIST / f"pickerhub_{VERSION}_amd64.deb")
         else:
             archive = DIST / (stem + ".zip")

@@ -4,10 +4,10 @@ using Tmds.DBus;
 
 namespace PickerHub;
 
-[DBusInterface("org.freedesktop.portal.Screenshot")]
-public interface IScreenshot : IDBusObject
+[DBusInterface("org.freedesktop.host.portal.Registry")]
+public interface IPortalRegistry : IDBusObject
 {
-    Task<ObjectPath> ScreenshotAsync(string parent, IDictionary<string, object> options);
+    Task RegisterAsync(string appId,IDictionary<string,object> options);
 }
 [DBusInterface("org.freedesktop.portal.Request")]
 public interface IRequest : IDBusObject
@@ -17,48 +17,27 @@ public interface IRequest : IDBusObject
 }
 internal static class Picker
 {
-    [DllImport("picker_capture")] static extern nint pickerhub_snapshot(out int width, out int height, out int left, out int top);
-    [DllImport("picker_capture")] static extern void pickerhub_snapshot_free(nint pixels);
+    [DllImport("picker_capture")] static extern int pickerhub_window_transparent(nuint window,int transparent);
+    public static void SetPortalParentTransparent(Window owner,bool transparent)
+    {
+        var handle=owner.TryGetPlatformHandle();
+        if(handle?.HandleDescriptor=="XID")
+        {
+            if(pickerhub_window_transparent((nuint)handle.Handle,transparent?1:0)==0 && transparent)
+                throw new InvalidOperationException("تعذّر تجهيز نافذة التطبيق لطلب إذن الشاشة.");
+        }
+        else owner.Opacity=transparent?0:1;
+    }
+    public static Task RequestPermissionAgain(){WaylandCapture.Stop();return Task.CompletedTask;}
+    public static bool UsesPortal => OperatingSystem.IsLinux() &&
+        (Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")=="wayland" ||
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")));
     public static async Task<string?> Start(Window owner)
     {
         if (OperatingSystem.IsMacOS()) return await MacSampler.Start();
-        DesktopFrame? frame;
-        if (OperatingSystem.IsLinux() && (Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") == "wayland" ||
-            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"))))
-            frame = await PortalFrame();
-        else frame = await Task.Run(() =>
-        {
-            var ptr = pickerhub_snapshot(out var w, out var h, out var left, out var top);
-            if (ptr == 0) throw new InvalidOperationException("تعذّر التقاط سطح المكتب.");
-            try
-            {
-                var bytes = new byte[checked(w * h * 4)]; Marshal.Copy(ptr, bytes, 0, bytes.Length);
-                return new DesktopFrame(bytes, w, h, left, top);
-            }
-            finally { pickerhub_snapshot_free(ptr); }
-        });
-        if (frame == null) return null;
-        using (frame) return await MagnifierSession.Start(owner, frame);
-    }
-    static async Task<DesktopFrame?> PortalFrame()
-    {
-        const string service = "org.freedesktop.portal.Desktop";
-        using var connection = new Connection(Address.Session);
-        var info = await connection.ConnectAsync();
-        var token = "pickerhub_" + Guid.NewGuid().ToString("N");
-        var path = "/org/freedesktop/portal/desktop/request/" + info.LocalName.TrimStart(':').Replace('.', '_') + "/" + token;
-        var request = connection.CreateProxy<IRequest>(service, path);
-        var completion = new TaskCompletionSource<(uint code, IDictionary<string, object> values)>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var watch = await request.WatchResponseAsync(r => completion.TrySetResult(r), ex => completion.TrySetException(ex));
-        var portal = connection.CreateProxy<IScreenshot>(service, "/org/freedesktop/portal/desktop");
-        var actual = await portal.ScreenshotAsync("", new Dictionary<string, object> { { "handle_token", token }, { "interactive", false }, { "modal", false } });
-        if (actual.ToString() != path) throw new InvalidOperationException("مسار طلب التقاط الشاشة غير متوقع.");
-        var result = await completion.Task;
-        if (result.code == 1) return null;
-        if (result.code != 0 || !result.values.TryGetValue("uri", out var value) || value is not string uri ||
-            !Uri.TryCreate(uri, UriKind.Absolute, out var location) || !location.IsFile)
-            throw new InvalidOperationException("تعذّر التقاط الشاشة. تحقق من أذونات بوابة سطح المكتب.");
-        return DesktopFrame.FromFile(location.LocalPath);
+        if (UsesPortal && !await WaylandCapture.Prepare(owner)) return null;
+        owner.Hide();
+        return await MagnifierSession.Start(owner);
     }
 
 }

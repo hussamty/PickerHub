@@ -17,8 +17,8 @@ python3 scripts/build.py --packages
 xvfb-run -a -s '-screen 0 1400x900x24 -noreset' python3 tests/native_x11.py
 ```
 
-يمكن التحقق من تبادل رسائل Wayland داخل ناقل D-Bus تجريبي بعزل tests/portal_fixture.py عن جلسة المستخدم. يتطلب هذا الاختبار python3-dbus وpython3-gi.
+يتحقق الاختبار التالي من طلب الإذن وتغيّر بكسلات مصدر مولّد أثناء فتح العدسة عبر PipeWire. يحتاج إلى python3-dbus وpython3-gi وGStreamer وملحقاته وPipeWire وWirePlumber 0.5 أو أحدث. يمكن تجربة الإلغاء والرفض بضبط PICKERHUB_PORTAL_RESULT إلى 1 أو 2.
 
 ```sh
-dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24 -noreset' sh -c 'python3 tests/portal_fixture.py & service=$!; PICKERHUB_TEST_PORTAL=1 python3 tests/native_x11.py; result=$?; kill "$service"; exit "$result"'
+dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24 -noreset' sh tests/run_portal_test.sh
 ```
