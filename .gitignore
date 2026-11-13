@@ -4,3 +4,6 @@
 /package-lock.json
 __pycache__/
 .DS_Store
+/desktop/bin/
+/desktop/obj/
+/desktop/.avalonia-build-tasks/

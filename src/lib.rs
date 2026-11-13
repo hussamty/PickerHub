@@ -1,4 +1,4 @@
-//! PickerHub core and a narrow WebAssembly ABI. See docs/architecture.md.
+//! PickerHub core and a native C ABI. See docs/architecture.md.
 pub mod color;
 mod names;
 use color::Color;
@@ -10,26 +10,26 @@ thread_local! {
     static OUT: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
     static PIXELS: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
 }
-fn output(value: Value) -> u32 {
+fn output(value: Value) -> usize {
     OUT.with_borrow_mut(|out| {
         *out = value.to_string().into_bytes();
-        out.as_ptr() as u32
+        out.as_ptr() as usize
     })
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn output_len() -> u32 {
-    OUT.with_borrow(|out| out.len() as u32)
+pub extern "C" fn output_len() -> usize {
+    OUT.with_borrow(|out| out.len())
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn describe(rgb: u32) -> u32 {
+pub extern "C" fn describe(rgb: u32) -> usize {
     output(Color::unpack(rgb).describe())
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn harmony(rgb: u32, kind: u32) -> u32 {
+pub extern "C" fn harmony(rgb: u32, kind: u32) -> usize {
     output(json!(Color::unpack(rgb).harmonies(kind)))
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn contrast(fg: u32, bg: u32) -> u32 {
+pub extern "C" fn contrast(fg: u32, bg: u32) -> usize {
     let f = Color::unpack(fg);
     let b = Color::unpack(bg);
     let ratio = f.ratio(b);
@@ -38,13 +38,13 @@ pub extern "C" fn contrast(fg: u32, bg: u32) -> u32 {
     )
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn pixel_buffer(bytes: u32) -> u32 {
+pub extern "C" fn pixel_buffer(bytes: u32) -> usize {
     if bytes == 0 || bytes > 4 * 1024 * 1024 {
         return 0;
     }
     PIXELS.with_borrow_mut(|buf| {
         buf.resize(bytes as usize, 0);
-        buf.as_mut_ptr() as u32
+        buf.as_mut_ptr() as usize
     })
 }
 /// Quantize into 4-bit RGB bins. Weight by opacity; percentages use the entire visible sample.
@@ -72,7 +72,7 @@ pub fn dominant(rgba: &[u8], count: usize) -> Vec<Value> {
     }).collect()
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn extract(count: u32) -> u32 {
+pub extern "C" fn extract(count: u32) -> usize {
     PIXELS.with_borrow_mut(|buf| {
         let result = dominant(buf, count as usize);
         *buf = Vec::new();

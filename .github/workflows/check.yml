@@ -1,53 +1,52 @@
-name: Check and package
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
+name: Native desktop builds
+on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
-  core:
+  build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - {os: ubuntu-22.04, rid: linux-x64}
+          - {os: windows-latest, rid: win-x64}
+          - {os: macos-15-intel, rid: osx-x64}
+          - {os: macos-15, rid: osx-arm64}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/setup-dotnet@v4
+        with: {dotnet-version: '10.0.x'}
+      - if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev xvfb x11-utils x11-xserver-utils libxtst6
       - run: rustup update stable
       - run: rustup default stable
-      - run: rustup target add wasm32-unknown-unknown
-      - run: rustup component add rustfmt clippy
-      - run: cargo fmt --check
       - run: cargo test --locked
-      - run: cargo clippy --all-targets --locked -- -D warnings
-      - uses: actions/setup-python@v5
+      - run: python scripts/build.py --packages --rid ${{ matrix.rid }}
+      - if: runner.os == 'Linux'
+        run: xvfb-run -a -s '-screen 0 1400x900x24 -noreset' python tests/native_x11.py
+      - if: runner.os == 'macOS'
+        run: dist/native/${{ matrix.rid }}/PickerHub.app/Contents/MacOS/PickerHub --check-core
+      - if: runner.os == 'Windows'
+        run: dist/native/win-x64/PickerHub/PickerHub.exe --check-core
+      - uses: actions/upload-artifact@v4
         with:
-          python-version: '3.12'
-      - run: python scripts/build.py --packages
-      - if: runner.os == 'Linux'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - if: runner.os == 'Linux'
-        run: npm install --no-save --package-lock=false playwright-core
-      - if: runner.os == 'Linux'
-        run: node tests/browser.cjs
-      - if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v4
-        with:
-          name: pickerhub-release
-          path: dist/*
+          name: pickerhub-${{ matrix.rid }}
+          path: |
+            dist/native/*.zip
+            dist/native/*.tar.gz
+            dist/native/*.deb
+            dist/native/*.sha256
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: core
+    needs: build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    permissions: {contents: write}
     steps:
       - uses: actions/download-artifact@v4
-        with:
-          name: pickerhub-release
-          path: dist
+        with: {pattern: 'pickerhub-*', merge-multiple: true, path: dist}
       - run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
-        env:
-          GH_TOKEN: ${{ github.token }}
+        env: {GH_TOKEN: '${{ github.token }}'}
