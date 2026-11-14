@@ -92,7 +92,7 @@ internal sealed partial class MainWindow : Window
     }
     void Render()
     {
-        RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light;
+        RequestedThemeVariant = dark ? ThemeVariant.Dark : ThemeVariant.Light; App.Accent(dark);
         Classes.Set("calm", !Motion);
         StyleShell();
         content.Children.Clear();

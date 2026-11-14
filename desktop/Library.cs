@@ -13,15 +13,22 @@ internal sealed partial class MainWindow
 {
     internal sealed record Specimen(string Hex, string Name);
 
-    // Card front: the color itself. Card back: its measurements.
+    // Card front: a pane of glass holding the color as one flat, unmodified disc. Card back: its measurements.
     Control CardFront(Specimen item, int number)
     {
-        string ink = Core.Describe(item.Hex).Text("ink");
-        var serial = Mono("no. " + (number + 1).ToString("00"), 11); serial.HorizontalAlignment = HorizontalAlignment.Left; serial.VerticalAlignment = VerticalAlignment.Top; serial.Opacity = .75;
-        var caption = Col(Text(item.Name, 20, true), Mono(item.Hex, 12)); caption.Spacing = 0; caption.VerticalAlignment = VerticalAlignment.Bottom; caption.FlowDirection = FlowDirection.RightToLeft;
-        var face = new Panel { Margin = new Thickness(20) }; face.Children.AddRange([serial, caption]);
-        var card = new Border { Background = Paint(item.Hex), Child = face };
-        Avalonia.Controls.Documents.TextElement.SetForeground(card, Paint(ink)); return card;
+        var color = Color.Parse(item.Hex);
+        var serial = Tone(Mono("no. " + (number + 1).ToString("00"), 11), "Muted"); serial.HorizontalAlignment = HorizontalAlignment.Left; serial.VerticalAlignment = VerticalAlignment.Top;
+        var code = Mono(item.Hex, 11); code.HorizontalAlignment = HorizontalAlignment.Right; code.VerticalAlignment = VerticalAlignment.Top;
+        var disc = new Border
+        {
+            Width = 156, Height = 156, CornerRadius = new CornerRadius(78), Background = Paint(item.Hex), BorderThickness = new Thickness(1), BorderBrush = Paint("#FFFFFF", .28),
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 26),
+            BoxShadow = new BoxShadows(new BoxShadow { OffsetY = 18, Blur = 38, Color = Color.FromArgb(120, color.R, color.G, color.B) })
+        };
+        var name = Text(item.Name, 20, true); name.TextWrapping = TextWrapping.NoWrap; name.TextTrimming = TextTrimming.CharacterEllipsis;
+        var caption = Col(name, Label(Core.Describe(item.Hex).Text("base"))); caption.Spacing = 0; caption.VerticalAlignment = VerticalAlignment.Bottom; caption.FlowDirection = FlowDirection.RightToLeft;
+        var face = new Panel(); face.Children.AddRange([disc, serial, code, caption]);
+        return Tone(new Glass("CardTint") { Radius = 26, Blur = 18, Padding = new Thickness(20), Wash = Color.FromArgb(30, color.R, color.G, color.B), Child = face }, "Ink");
     }
     Control CardBack(Specimen item, int number)
     {
@@ -50,9 +57,8 @@ internal sealed partial class MainWindow
         var body = Col(head, Text(item.Name, 21, true), Col(lightness, scale), Of(new Border(), "hairline"), rows,
             new Border { CornerRadius = new CornerRadius(10), ClipToBounds = true, Child = strip }, Label(c.Text("base") + "، " + c.Text("shade")));
         body.Spacing = 11; body.FlowDirection = FlowDirection.RightToLeft;
-        var card = new Border { Padding = new Thickness(20, 18), Child = body };
-        card[!Border.BackgroundProperty] = new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("Raised");
-        Tone(card, "Ink"); return card;
+        // The reverse is denser glass, so the measurements stay readable over the cards beneath.
+        return Tone(new Glass("DenseTint") { Radius = 26, Blur = 18, Padding = new Thickness(20, 18), Child = body }, "Ink");
     }
     // The deck with its pager and the actions for whichever card is on top.
     (Control View, Deck Deck) DeckView(IReadOnlyList<Specimen> items, int start, Action<int> moved, params Control[] actions)
@@ -65,7 +71,7 @@ internal sealed partial class MainWindow
         var caption = Col(name, position); caption.Spacing = 0; caption.Width = 150; caption.VerticalAlignment = VerticalAlignment.Center;
         var pager = Line(8, Of(Liquid("chevron-right", "اللون السابق", deck.Previous), "still"), caption, Of(Liquid("chevron-left", "اللون التالي", deck.Next), "still"));
         var tools = Cluster([Liquid("refresh", "قلب البطاقة", deck.Flip), .. actions]);
-        var view = Col(deck, pager, tools); view.Spacing = 14; view.HorizontalAlignment = HorizontalAlignment.Center;
+        var view = Col(deck, pager, tools); view.Spacing = 10; view.HorizontalAlignment = HorizontalAlignment.Center;
         foreach (var child in view.Children) child.HorizontalAlignment = HorizontalAlignment.Center;
         return (view, deck);
     }

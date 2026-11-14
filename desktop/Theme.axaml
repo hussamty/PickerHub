@@ -1,93 +1,159 @@
 <Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <!--
     PickerHub design tokens and control styles.
-    Shape rule: interactive controls are pills (999), surfaces 24, cards 22, inputs and swatches 12.
-    One accent (vermilion). Neutral chrome so sampled colors read true.
+    Palette: TrineHub black #111111, yellow #FFF000, white #FFFFFF. Dark is the home theme.
+    Light swaps black and white and keeps yellow fixed; yellow only ever carries black ink,
+    and where the dark theme writes in yellow the light theme writes in black.
+    Surfaces are glass: a translucent tint, a lit rim, and a blurred backdrop where they overlap content.
+    Shape rule: interactive controls are pills (999), glass panes 24 to 26, inputs and swatches 12.
   -->
   <Styles.Resources>
     <ResourceDictionary>
       <ResourceDictionary.ThemeDictionaries>
-        <ResourceDictionary x:Key="Light">
-          <SolidColorBrush x:Key="Canvas">#EEF0F2</SolidColorBrush>
-          <SolidColorBrush x:Key="Surface">#F8F9FA</SolidColorBrush>
-          <SolidColorBrush x:Key="Raised">#FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="Ink">#15181C</SolidColorBrush>
-          <SolidColorBrush x:Key="Muted">#59616C</SolidColorBrush>
-          <SolidColorBrush x:Key="Line">#DADEE3</SolidColorBrush>
-          <SolidColorBrush x:Key="Tint">#E3E6EA</SolidColorBrush>
-          <SolidColorBrush x:Key="TintStrong">#D3D7DD</SolidColorBrush>
-          <SolidColorBrush x:Key="Accent">#D03A1F</SolidColorBrush>
-          <SolidColorBrush x:Key="AccentHover">#B93219</SolidColorBrush>
-          <SolidColorBrush x:Key="AccentInk">#FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="AccentText">#B02E17</SolidColorBrush>
-          <SolidColorBrush x:Key="Danger">#A42635</SolidColorBrush>
-          <BoxShadows x:Key="Float">0 14 40 0 #24101418</BoxShadows>
-          <SolidColorBrush x:Key="TextControlBackground">#FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="TextControlBackgroundFocused">#FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="TextControlBorderBrush">#DADEE3</SolidColorBrush>
-          <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#B9BFC7</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBackground">#FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver">#F8F9FA</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBorderBrush">#DADEE3</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver">#B9BFC7</SolidColorBrush>
-        </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
-          <SolidColorBrush x:Key="Canvas">#0D0E10</SolidColorBrush>
-          <SolidColorBrush x:Key="Surface">#16181B</SolidColorBrush>
-          <SolidColorBrush x:Key="Raised">#1E2125</SolidColorBrush>
-          <SolidColorBrush x:Key="Ink">#F1F3F5</SolidColorBrush>
-          <SolidColorBrush x:Key="Muted">#9CA4AF</SolidColorBrush>
-          <SolidColorBrush x:Key="Line">#2A2E34</SolidColorBrush>
-          <SolidColorBrush x:Key="Tint">#25282D</SolidColorBrush>
-          <SolidColorBrush x:Key="TintStrong">#33373E</SolidColorBrush>
-          <SolidColorBrush x:Key="Accent">#D03A1F</SolidColorBrush>
-          <SolidColorBrush x:Key="AccentHover">#E04A2E</SolidColorBrush>
-          <SolidColorBrush x:Key="AccentInk">#FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="AccentText">#FF8A6B</SolidColorBrush>
-          <SolidColorBrush x:Key="Danger">#FFB5B5</SolidColorBrush>
-          <BoxShadows x:Key="Float">0 16 44 0 #70000000</BoxShadows>
-          <SolidColorBrush x:Key="TextControlBackground">#1E2125</SolidColorBrush>
-          <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#1E2125</SolidColorBrush>
-          <SolidColorBrush x:Key="TextControlBackgroundFocused">#1E2125</SolidColorBrush>
-          <SolidColorBrush x:Key="TextControlBorderBrush">#2A2E34</SolidColorBrush>
-          <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#444A52</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBackground">#1E2125</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver">#25282D</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBorderBrush">#2A2E34</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver">#444A52</SolidColorBrush>
+          <SolidColorBrush x:Key="Canvas">#111111</SolidColorBrush>
+          <SolidColorBrush x:Key="Raised">#1C1C1A</SolidColorBrush>
+          <SolidColorBrush x:Key="Ink">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="Muted">#ADADA5</SolidColorBrush>
+          <SolidColorBrush x:Key="Line">#24FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="Tint">#14FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="TintStrong">#26FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="Accent">#FFF000</SolidColorBrush>
+          <SolidColorBrush x:Key="AccentHover">#FFF566</SolidColorBrush>
+          <SolidColorBrush x:Key="AccentInk">#111111</SolidColorBrush>
+          <SolidColorBrush x:Key="AccentText">#FFF000</SolidColorBrush>
+          <SolidColorBrush x:Key="Danger">#FF9E94</SolidColorBrush>
+          <SolidColorBrush x:Key="Keycap">#24111111</SolidColorBrush>
+          <LinearGradientBrush x:Key="Rim" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#52FFFFFF"/><GradientStop Offset="1" Color="#12FFFFFF"/>
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="AccentRim" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#CCFFFFFF"/><GradientStop Offset="1" Color="#00FFFFFF"/>
+          </LinearGradientBrush>
+          <BoxShadows x:Key="Soft">0 6 18 0 #40000000</BoxShadows>
+          <BoxShadows x:Key="Glow">0 8 26 0 #47FFF000</BoxShadows>
+          <BoxShadows x:Key="Float">0 16 44 0 #80000000</BoxShadows>
+          <Color x:Key="GlassTint">#12FFFFFF</Color>
+          <Color x:Key="GlassRim">#57FFFFFF</Color>
+          <Color x:Key="GlassShade">#73000000</Color>
+          <Color x:Key="CardTint">#1CFFFFFF</Color>
+          <Color x:Key="DenseTint">#D11A1A18</Color>
+          <Color x:Key="GooBody">#24FFFFFF</Color>
+          <SolidColorBrush x:Key="TextControlBackground">#12FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#1CFFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="TextControlBackgroundFocused">#0AFFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="TextControlForegroundFocused">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="TextControlBorderBrush">#2EFFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#57FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="TextControlBorderBrushFocused">#FFF000</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxBackground">#12FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver">#1CFFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxBackgroundPressed">#26FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxBorderBrush">#2EFFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver">#57FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxBorderBrushPressed">#57FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxDropDownBackground">#1C1C1A</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush">#33FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver">#14FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxItemBackgroundPressed">#26FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected">#1FFFF000</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver">#33FFF000</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed">#33FFF000</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedUnfocused">#1FFFF000</SolidColorBrush>
+          <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked">#111111</SolidColorBrush>
+          <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver">#111111</SolidColorBrush>
+          <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPressed">#111111</SolidColorBrush>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="Canvas">#F4F3EE</SolidColorBrush>
+          <SolidColorBrush x:Key="Raised">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="Ink">#111111</SolidColorBrush>
+          <SolidColorBrush x:Key="Muted">#5A5A54</SolidColorBrush>
+          <SolidColorBrush x:Key="Line">#21111111</SolidColorBrush>
+          <SolidColorBrush x:Key="Tint">#0F111111</SolidColorBrush>
+          <SolidColorBrush x:Key="TintStrong">#1F111111</SolidColorBrush>
+          <SolidColorBrush x:Key="Accent">#FFF000</SolidColorBrush>
+          <SolidColorBrush x:Key="AccentHover">#F5E600</SolidColorBrush>
+          <SolidColorBrush x:Key="AccentInk">#111111</SolidColorBrush>
+          <SolidColorBrush x:Key="AccentText">#111111</SolidColorBrush>
+          <SolidColorBrush x:Key="Danger">#A42635</SolidColorBrush>
+          <SolidColorBrush x:Key="Keycap">#24111111</SolidColorBrush>
+          <LinearGradientBrush x:Key="Rim" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#FFFFFFFF"/><GradientStop Offset="1" Color="#2E111111"/>
+          </LinearGradientBrush>
+          <LinearGradientBrush x:Key="AccentRim" StartPoint="0%,0%" EndPoint="0%,100%">
+            <GradientStop Offset="0" Color="#E6FFFFFF"/><GradientStop Offset="1" Color="#4D111111"/>
+          </LinearGradientBrush>
+          <BoxShadows x:Key="Soft">0 6 16 0 #14111111</BoxShadows>
+          <BoxShadows x:Key="Glow">0 8 22 0 #70E6D800</BoxShadows>
+          <BoxShadows x:Key="Float">0 14 40 0 #29111111</BoxShadows>
+          <Color x:Key="GlassTint">#94FFFFFF</Color>
+          <Color x:Key="GlassRim">#FFFFFFFF</Color>
+          <Color x:Key="GlassShade">#24111111</Color>
+          <Color x:Key="CardTint">#8CFFFFFF</Color>
+          <Color x:Key="DenseTint">#E6FFFFFF</Color>
+          <Color x:Key="GooBody">#1C111111</Color>
+          <SolidColorBrush x:Key="TextControlBackground">#B3FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#D9FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="TextControlBackgroundFocused">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="TextControlForegroundFocused">#111111</SolidColorBrush>
+          <SolidColorBrush x:Key="TextControlBorderBrush">#2E111111</SolidColorBrush>
+          <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#66111111</SolidColorBrush>
+          <SolidColorBrush x:Key="TextControlBorderBrushFocused">#111111</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxBackground">#B3FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver">#D9FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxBackgroundPressed">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxBorderBrush">#2E111111</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver">#66111111</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxBorderBrushPressed">#66111111</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxDropDownBackground">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush">#2E111111</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver">#0F111111</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxItemBackgroundPressed">#1F111111</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected">#FFF000</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver">#F5E600</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed">#F5E600</SolidColorBrush>
+          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedUnfocused">#FFF000</SolidColorBrush>
+          <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPressed">#FFFFFF</SolidColorBrush>
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
       <CornerRadius x:Key="ControlCornerRadius">12</CornerRadius>
-      <CornerRadius x:Key="OverlayCornerRadius">14</CornerRadius>
+      <CornerRadius x:Key="OverlayCornerRadius">16</CornerRadius>
       <Thickness x:Key="TextControlBorderThemeThickness">1</Thickness>
+      <Thickness x:Key="TextControlBorderThemeThicknessFocused">1.5</Thickness>
       <Thickness x:Key="ComboBoxBorderThemeThickness">1</Thickness>
     </ResourceDictionary>
   </Styles.Resources>
 
-  <!-- Buttons own their template so hover and press states come from these tokens. -->
+  <!--
+    Liquid glass button. The fill is a translucent tint with a lit rim.
+    It swells a little under the pointer, squashes when pressed, and springs back with an overshoot.
+  -->
   <Style Selector="Button.ph">
-    <Setter Property="Background" Value="{DynamicResource Raised}"/>
+    <Setter Property="Background" Value="{DynamicResource Tint}"/>
     <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Rim}"/>
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="CornerRadius" Value="999"/>
     <Setter Property="Padding" Value="16,0"/>
     <Setter Property="MinHeight" Value="40"/>
     <Setter Property="FontSize" Value="13"/>
     <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="ClipToBounds" Value="False"/>
     <Setter Property="HorizontalContentAlignment" Value="Center"/>
     <Setter Property="VerticalContentAlignment" Value="Center"/>
-    <Setter Property="RenderTransform" Value="scale(1)"/>
+    <Setter Property="RenderTransform" Value="scale(1,1)"/>
     <Setter Property="Transitions">
       <Transitions>
-        <BrushTransition Property="Background" Duration="0:0:0.16"/>
-        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.22" Easing="CubicEaseOut"/>
+        <BrushTransition Property="Background" Duration="0:0:0.18"/>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.36" Easing="BackEaseOut"/>
       </Transitions>
     </Setter>
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+        <Border Name="body" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                 BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}">
           <ContentPresenter Content="{TemplateBinding Content}" Padding="{TemplateBinding Padding}"
                             HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -96,47 +162,63 @@
       </ControlTemplate>
     </Setter>
   </Style>
-  <Style Selector="Button.ph:pointerover"><Setter Property="Background" Value="{DynamicResource Tint}"/></Style>
-  <Style Selector="Button.ph:pressed"><Setter Property="RenderTransform" Value="scale(0.96)"/></Style>
-  <Style Selector="Button.ph:disabled"><Setter Property="Opacity" Value="0.5"/></Style>
+  <Style Selector="Button.ph:pointerover">
+    <Setter Property="Background" Value="{DynamicResource TintStrong}"/>
+    <Setter Property="RenderTransform" Value="scale(1.03,1.03)"/>
+  </Style>
+  <Style Selector="Button.ph:pressed"><Setter Property="RenderTransform" Value="scale(1.05,0.9)"/></Style>
+  <Style Selector="Button.ph:disabled"><Setter Property="Opacity" Value="0.45"/></Style>
 
+  <!-- The one filled action: brand yellow carrying black, with its own light. -->
   <Style Selector="Button.ph.primary">
     <Setter Property="Background" Value="{DynamicResource Accent}"/>
     <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
-    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentRim}"/>
+    <Setter Property="CornerRadius" Value="20"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
   </Style>
+  <Style Selector="Button.ph.primary /template/ Border#body"><Setter Property="BoxShadow" Value="{DynamicResource Glow}"/></Style>
   <Style Selector="Button.ph.primary:pointerover"><Setter Property="Background" Value="{DynamicResource AccentHover}"/></Style>
 
-  <!-- Liquid icon button: a circle that swells toward the pointer and nudges its neighbours. -->
+  <!-- Liquid icon button: a drop that widens toward the pointer and presses against its neighbours. -->
   <Style Selector="Button.ph.liquid">
     <Setter Property="Width" Value="40"/>
     <Setter Property="Height" Value="40"/>
     <Setter Property="MinHeight" Value="40"/>
     <Setter Property="Padding" Value="0"/>
-    <Setter Property="BorderThickness" Value="0"/>
-    <Setter Property="Background" Value="{DynamicResource Tint}"/>
+    <Setter Property="Margin" Value="0"/>
     <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
     <Setter Property="Transitions">
       <Transitions>
-        <BrushTransition Property="Background" Duration="0:0:0.16"/>
-        <DoubleTransition Property="Width" Duration="0:0:0.34" Easing="BackEaseOut"/>
-        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.3" Easing="BackEaseOut"/>
+        <BrushTransition Property="Background" Duration="0:0:0.18"/>
+        <DoubleTransition Property="Width" Duration="0:0:0.4" Easing="BackEaseOut"/>
+        <ThicknessTransition Property="Margin" Duration="0:0:0.4" Easing="BackEaseOut"/>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.36" Easing="BackEaseOut"/>
       </Transitions>
     </Setter>
   </Style>
   <Style Selector="Button.ph.liquid:pointerover">
     <Setter Property="Width" Value="56"/>
-    <Setter Property="Background" Value="{DynamicResource TintStrong}"/>
     <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+    <Setter Property="RenderTransform" Value="scale(1,1)"/>
   </Style>
   <Style Selector="Button.ph.liquid.still:pointerover">
     <Setter Property="Width" Value="40"/>
-    <Setter Property="RenderTransform" Value="scale(1.12)"/>
+    <Setter Property="RenderTransform" Value="scale(1.14,1.14)"/>
   </Style>
-  <Style Selector="Button.ph.liquid:pressed"><Setter Property="RenderTransform" Value="scale(0.92)"/></Style>
+  <Style Selector="Button.ph.liquid:pressed"><Setter Property="RenderTransform" Value="scale(1.12,0.84)"/></Style>
+  <!-- Inside a Goo the buttons share one fluid body, drawn by the Goo itself. -->
+  <Style Selector="Button.ph.liquid.goo">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+  </Style>
+  <Style Selector="Button.ph.liquid.goo:pointerover">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Width" Value="60"/>
+    <Setter Property="Margin" Value="-4,0"/>
+  </Style>
 
-  <!-- Spine navigation rows. -->
+  <!-- Spine rows. The moving pills behind them are drawn by the spine. -->
   <Style Selector="Button.ph.nav">
     <Setter Property="Height" Value="44"/>
     <Setter Property="Padding" Value="0"/>
@@ -147,12 +229,29 @@
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
   </Style>
   <Style Selector="Button.ph.nav:pointerover">
-    <Setter Property="Background" Value="{DynamicResource Tint}"/>
+    <Setter Property="Background" Value="Transparent"/>
     <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+    <Setter Property="RenderTransform" Value="scale(1,1)"/>
   </Style>
-  <Style Selector="Button.ph.nav.active">
+  <Style Selector="Button.ph.nav:pressed"><Setter Property="RenderTransform" Value="scale(0.97,0.94)"/></Style>
+  <Style Selector="Button.ph.nav.active"><Setter Property="Foreground" Value="{DynamicResource AccentInk}"/></Style>
+  <Style Selector="Border.pill">
+    <Setter Property="Height" Value="44"/>
+    <Setter Property="CornerRadius" Value="22"/>
+    <Setter Property="VerticalAlignment" Value="Top"/>
+    <Setter Property="IsHitTestVisible" Value="False"/>
+    <Setter Property="RenderTransform" Value="scale(1,1)"/>
+  </Style>
+  <Style Selector="Border.pill.hover">
+    <Setter Property="Background" Value="{DynamicResource Tint}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Rim}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+  </Style>
+  <Style Selector="Border.pill.active">
     <Setter Property="Background" Value="{DynamicResource Accent}"/>
-    <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentRim}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource Glow}"/>
   </Style>
 
   <!-- Borderless list row, used for copyable values. -->
@@ -164,41 +263,36 @@
     <Setter Property="HorizontalAlignment" Value="Stretch"/>
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
   </Style>
-  <Style Selector="Button.ph.row:pointerover"><Setter Property="Background" Value="{DynamicResource Tint}"/></Style>
+  <Style Selector="Button.ph.row:pointerover">
+    <Setter Property="Background" Value="{DynamicResource Tint}"/>
+    <Setter Property="RenderTransform" Value="scale(1,1)"/>
+  </Style>
+  <Style Selector="Button.ph.row:pressed"><Setter Property="RenderTransform" Value="scale(0.985,0.94)"/></Style>
 
-  <!-- A sample of a real color. Its fill is set per instance. -->
+  <!-- A sample of a real color. Its fill is set per instance and is never tinted. -->
   <Style Selector="Button.ph.swatch">
     <Setter Property="BorderThickness" Value="0"/>
     <Setter Property="CornerRadius" Value="12"/>
     <Setter Property="Padding" Value="8,0"/>
     <Setter Property="FontSize" Value="12"/>
   </Style>
-  <Style Selector="Button.ph.swatch:pointerover"><Setter Property="RenderTransform" Value="scale(1.06)"/></Style>
-  <Style Selector="Button.ph.swatch.flat:pointerover"><Setter Property="RenderTransform" Value="scale(1)"/></Style>
+  <Style Selector="Button.ph.swatch:pointerover"><Setter Property="RenderTransform" Value="scale(1.1,1.1)"/></Style>
+  <Style Selector="Button.ph.swatch:pressed"><Setter Property="RenderTransform" Value="scale(1.14,0.86)"/></Style>
+  <Style Selector="Button.ph.swatch.flat:pointerover"><Setter Property="RenderTransform" Value="scale(1,1)"/></Style>
+  <Style Selector="Button.ph.swatch.flat:pressed"><Setter Property="RenderTransform" Value="scale(1,1)"/></Style>
   <Style Selector="Button.ph.swatch.flat:pointerover /template/ ContentPresenter"><Setter Property="Opacity" Value="0.8"/></Style>
 
-  <Style Selector="Border.surface">
-    <Setter Property="Background" Value="{DynamicResource Surface}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-    <Setter Property="CornerRadius" Value="24"/>
-    <Setter Property="Padding" Value="20"/>
-  </Style>
   <Style Selector="Border.tile">
     <Setter Property="Background" Value="{DynamicResource Tint}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Rim}"/>
+    <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="CornerRadius" Value="16"/>
     <Setter Property="Padding" Value="14"/>
   </Style>
-  <Style Selector="Border.spine">
-    <Setter Property="Background" Value="{DynamicResource Raised}"/>
-    <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-    <Setter Property="CornerRadius" Value="30"/>
-    <Setter Property="Padding" Value="7"/>
-    <Setter Property="BoxShadow" Value="{DynamicResource Float}"/>
-  </Style>
   <Style Selector="Border.status">
     <Setter Property="Background" Value="{DynamicResource Tint}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Rim}"/>
+    <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="CornerRadius" Value="999"/>
     <Setter Property="Padding" Value="14,7"/>
   </Style>
@@ -206,19 +300,70 @@
     <Setter Property="Background" Value="{DynamicResource Line}"/>
     <Setter Property="Height" Value="1"/>
   </Style>
+  <Style Selector="Border.keycap">
+    <Setter Property="Background" Value="{DynamicResource Keycap}"/>
+    <Setter Property="CornerRadius" Value="6"/>
+    <Setter Property="Padding" Value="6,1"/>
+  </Style>
 
   <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{DynamicResource Muted}"/></Style>
   <Style Selector="TextBlock.danger"><Setter Property="Foreground" Value="{DynamicResource Danger}"/></Style>
+  <Style Selector="TextBlock.signal"><Setter Property="Foreground" Value="{DynamicResource AccentText}"/></Style>
+
+  <!-- Inputs take the pill and glass language; the open list grows out of its field. -->
+  <Style Selector="ComboBox">
+    <Setter Property="CornerRadius" Value="20"/>
+    <Setter Property="Padding" Value="16,5,6,6"/>
+  </Style>
+  <Style Selector="ComboBox /template/ Border#PopupBorder">
+    <Setter Property="CornerRadius" Value="18"/>
+    <Setter Property="Padding" Value="4"/>
+  </Style>
+  <Style Selector="ComboBox:dropdownopen /template/ Border#PopupBorder">
+    <Style.Animations>
+      <Animation Duration="0:0:0.26" Easing="CubicEaseOut">
+        <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0"/><Setter Property="ScaleTransform.ScaleY" Value="0.7"/><Setter Property="ScaleTransform.ScaleX" Value="0.94"/></KeyFrame>
+        <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/><Setter Property="ScaleTransform.ScaleY" Value="1"/><Setter Property="ScaleTransform.ScaleX" Value="1"/></KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+  <Style Selector="ComboBoxItem">
+    <Setter Property="CornerRadius" Value="12"/>
+    <Setter Property="Margin" Value="0,1"/>
+  </Style>
+  <Style Selector="ComboBoxItem:selected /template/ ContentPresenter"><Setter Property="Foreground" Value="{DynamicResource Ink}"/></Style>
+  <Style Selector="TextBox"><Setter Property="CornerRadius" Value="14"/></Style>
+  <Style Selector="NumericUpDown"><Setter Property="CornerRadius" Value="14"/></Style>
+  <Style Selector="CheckBox"><Setter Property="Foreground" Value="{DynamicResource Ink}"/></Style>
+  <Style Selector="Slider Thumb">
+    <Setter Property="RenderTransform" Value="scale(1,1)"/>
+    <Setter Property="Transitions">
+      <Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.34" Easing="BackEaseOut"/></Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Slider Thumb:pointerover"><Setter Property="RenderTransform" Value="scale(1.2,1.2)"/></Style>
+  <Style Selector="Slider Thumb:pressed"><Setter Property="RenderTransform" Value="scale(1.32,0.86)"/></Style>
 
   <Style Selector="ToolTip">
-    <Setter Property="Background" Value="{DynamicResource Ink}"/>
-    <Setter Property="Foreground" Value="{DynamicResource Canvas}"/>
-    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Background" Value="{DynamicResource Raised}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Rim}"/>
+    <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="CornerRadius" Value="999"/>
     <Setter Property="Padding" Value="12,6"/>
     <Setter Property="FontSize" Value="12"/>
+    <Setter Property="FontFamily" Value="avares://PickerHub/Fonts#Noto Sans Arabic, Segoe UI, sans-serif"/>
+  </Style>
+  <Style Selector="ToolTip:open">
+    <Style.Animations>
+      <Animation Duration="0:0:0.22" Easing="CubicEaseOut">
+        <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0"/><Setter Property="ScaleTransform.ScaleX" Value="0.7"/><Setter Property="ScaleTransform.ScaleY" Value="0.7"/></KeyFrame>
+        <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/><Setter Property="ScaleTransform.ScaleX" Value="1"/><Setter Property="ScaleTransform.ScaleY" Value="1"/></KeyFrame>
+      </Animation>
+    </Style.Animations>
   </Style>
 
   <!-- Reduced motion: state changes still happen, without travel. -->
   <Style Selector="Window.calm Button.ph"><Setter Property="Transitions" Value="{x:Null}"/></Style>
+  <Style Selector="Window.calm Slider Thumb"><Setter Property="Transitions" Value="{x:Null}"/></Style>
 </Styles>

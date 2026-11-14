@@ -30,7 +30,7 @@ internal class Workspace
     public int Limit { get; set; } = 32;
     public bool UseWaylandScreenSharing { get; set; }
     public bool ReduceMotion { get; set; }
-    public string Theme { get; set; } = "light";
+    public string Theme { get; set; } = "dark";
     public List<string> History { get; set; } = [];
     public List<Palette> Palettes { get; set; } = [new()];
     public List<Gradient> Gradients { get; set; } = [];

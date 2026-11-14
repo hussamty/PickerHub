@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.VisualTree;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
@@ -14,19 +16,26 @@ internal sealed partial class MainWindow
     readonly TextBlock pageTitle = Text("", 28, true);
     readonly TextBlock pageDescription = Label("");
     readonly Border currentDot = new() { Width = 14, Height = 14, CornerRadius = new CornerRadius(7), VerticalAlignment = VerticalAlignment.Center };
-    Button? themeButton;
+    readonly ThemeSwitch themeSwitch = new() { VerticalAlignment = VerticalAlignment.Center };
+    readonly Backdrop backdrop = new();
     readonly string[] symbols = ["color-picker", "palette", "contrast-2", "photo", "color-swatch", "history"];
     readonly string[] descriptions = ["اختر لوناً واضبطه وانسخ قيمه.", "ألوان مشاريعك في مكان واحد.", "تأكد من وضوح النص على الخلفية.", "استخرج لوحة ألوان من صورتك.", "امزج الألوان واصنع تدرجك.", "كل الألوان التي التقطتها مؤخراً."];
 
     void BuildShell()
     {
         this[!BackgroundProperty] = new DynamicResourceExtension("Canvas");
+        // The switch plays the change: the room behind the glass follows the knob, and the theme itself turns at the midpoint.
+        themeSwitch.Scrubbed += mix => backdrop.Mix = mix;
+        themeSwitch.Toggled += light => _ = Guard(() => { if (dark == light) Edit(() => state.Theme = light ? "light" : "dark"); return Task.CompletedTask; });
+        ToolTip.SetTip(themeSwitch, "المظهر"); ToolTip.SetPlacement(themeSwitch, PlacementMode.Bottom);
+        // A click anywhere else lets a pinned spine close.
+        AddHandler(PointerPressedEvent, (_, e) => { if (e.Source is Visual hit && hit != spine && !spine.IsVisualAncestorOf(hit)) spine.Release(); }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         this[!ForegroundProperty] = new DynamicResourceExtension("Ink");
 
         // The eyedropper keeps its top-left position: it is the one global action.
-        eyedropper.Height = 44; eyedropper.HorizontalAlignment = HorizontalAlignment.Left; eyedropper.VerticalAlignment = VerticalAlignment.Center;
+        eyedropper.Height = 44; eyedropper.CornerRadius = new CornerRadius(22); eyedropper.HorizontalAlignment = HorizontalAlignment.Left; eyedropper.VerticalAlignment = VerticalAlignment.Center;
         eyedropper.Content = Line(9, new Icon("color-picker", 19), new TextBlock { Text = "القطّارة", VerticalAlignment = VerticalAlignment.Center },
-            new Border { Background = Paint("#FFFFFF", .2), CornerRadius = new CornerRadius(6), Padding = new Thickness(6, 1), VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = "F8", FontSize = 11, FontFamily = Code } });
+            Of(new Border { VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = "F8", FontSize = 11, FontFamily = Code } }, "keycap"));
         eyedropper.FlowDirection = FlowDirection.RightToLeft;
         AutomationProperties.SetName(eyedropper, "القطّارة");
 
@@ -35,7 +44,11 @@ internal sealed partial class MainWindow
         AutomationProperties.SetLiveSetting(status, AutomationLiveSetting.Polite);
         var notice = Of(new Border { Child = status, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(14, 0) }, "status");
 
-        var brand = Line(9, currentDot, new TextBlock { Text = "PickerHub", FontSize = 19, FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center });
+        // The wordmark follows the TrineHub rule: only the capital H takes the signal color.
+        var wordmark = new TextBlock { FontSize = 19, FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center };
+        var signal = new Avalonia.Controls.Documents.Run("H"); signal[!Avalonia.Controls.Documents.TextElement.ForegroundProperty] = new DynamicResourceExtension("AccentText");
+        wordmark.Inlines = [new Avalonia.Controls.Documents.Run("Picker"), signal, new Avalonia.Controls.Documents.Run("ub")];
+        var brand = Line(14, themeSwitch, currentDot, wordmark);
         brand.VerticalAlignment = VerticalAlignment.Center;
 
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Height = 72, Margin = new Thickness(24, 0), FlowDirection = FlowDirection.LeftToRight };
@@ -47,26 +60,26 @@ internal sealed partial class MainWindow
             AutomationProperties.SetAutomationId(spine.Add(symbols[i], pages[i], () => { page = index; Render(); }), "nav-" + i);
         }
         spine.Divide();
-        themeButton = spine.Add("moon", "", () => _ = Guard(() => { Edit(() => state.Theme = dark ? "light" : "dark"); return Task.CompletedTask; }), false);
         spine.Add("settings", "الإعدادات", () => _ = Guard(Settings), false);
-        spine.Margin = new Thickness(0, 0, 16, 16);
+        spine.Margin = new Thickness(0, 0, 0, 16);
 
         var heading = Col(pageTitle, pageDescription); heading.Spacing = 2; heading.Margin = new Thickness(0, 4, 0, 18);
-        var work = new DockPanel { FlowDirection = FlowDirection.RightToLeft, Margin = new Thickness(28, 0, Spine.Closed + 36, 0) };
+        var work = new DockPanel { FlowDirection = FlowDirection.RightToLeft, Margin = new Thickness(28, 0, Spine.Closed + 22, 0) };
         DockPanel.SetDock(heading, Dock.Top); work.Children.Add(heading);
         work.Children.Add(new ScrollViewer { Content = content, Padding = new Thickness(0, 0, 0, 24), HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
 
         var body = new Panel(); body.Children.Add(work); body.Children.Add(spine);
         var shell = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), FlowDirection = FlowDirection.LeftToRight };
         shell.Children.Add(header); Grid.SetRow(body, 1); shell.Children.Add(body);
-        Content = shell;
+        var room = new Panel(); room.Children.Add(backdrop); room.Children.Add(shell);
+        Content = room;
     }
     void StyleShell()
     {
         pageTitle.Text = pages[page]; pageDescription.Text = descriptions[page];
         currentDot.Background = Paint(state.Color); ToolTip.SetTip(currentDot, state.Color);
         spine.Motion = Motion; spine.Activate(page);
-        if (themeButton != null) spine.Label(themeButton, dark ? "sun" : "moon", dark ? "الوضع الفاتح" : "الوضع الداكن");
+        themeSwitch.Motion = Motion; themeSwitch.Sync(!dark);
     }
     async Task Settings()
     {

@@ -26,7 +26,8 @@ internal sealed partial class MainWindow
     static WrapPanel Row(params Control[] controls) { var p = new WrapPanel(); foreach (var c in controls) { c.Margin = new Thickness(4); p.Children.Add(c); } return p; }
     // Non-wrapping run, for button contents and liquid clusters.
     static StackPanel Line(double spacing, params Control[] controls) { var p = new StackPanel { Orientation = Orientation.Horizontal, Spacing = spacing }; p.Children.AddRange(controls); return p; }
-    static StackPanel Cluster(params Control[] controls) => Line(6, controls);
+    // Liquid buttons that share one fluid body: a swelling button flows into its neighbours.
+    static Goo Cluster(params Control[] controls) { var goo = new Goo(); foreach (var c in controls) { c.Classes.Add("goo"); goo.Add(c); } return goo; }
 
     static TextBlock Text(string text, double size = 14, bool bold = false) => new()
     {
@@ -69,7 +70,7 @@ internal sealed partial class MainWindow
     // The same control placed on a sampled color: tinted with that color's readable ink.
     Button LiquidOn(string ink, string symbol, string label, Func<Task> act)
     {
-        var b = Liquid(symbol, label, act); b.Background = Paint(ink, .16); b.Foreground = Paint(ink); return b;
+        var b = Liquid(symbol, label, act); b.Background = Paint(ink, .16); b.BorderBrush = Paint(ink, .28); b.Foreground = Paint(ink); return b;
     }
     Button Chip(string hex, Action act, string? label = null)
     {
@@ -89,7 +90,7 @@ internal sealed partial class MainWindow
         box.SelectionChanged += (_, _) => { if (box.SelectedIndex >= 0) changed(box.SelectedIndex); }; return box;
     }
 
-    static Border Surface(Control child) => Of(new Border { Child = child }, "surface");
+    static Glass Surface(Control child) => new() { Child = child, Padding = new Thickness(20) };
     static Control Section(string title, Control body, Control? actions = null)
     {
         var top = new DockPanel { Margin = new Thickness(0, 0, 0, 14), MinHeight = 40 };
