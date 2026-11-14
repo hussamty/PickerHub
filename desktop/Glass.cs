@@ -43,7 +43,8 @@ internal class Glass : Decorator, ICustomHitTest
     public bool HitTest(Point point) => new Rect(Bounds.Size).Contains(point);
     public override void Render(DrawingContext context) =>
         context.Custom(new Pane(new Rect(Bounds.Size), Tint, Rim, Shade, Wash, Radius, Blur, Shoulder, behind));
-    readonly Backing behind = new();
+    Backing behind = Backing.Take();
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { base.OnDetachedFromVisualTree(e); behind.Return(); behind = Backing.Take(); }
 
     sealed record Pane(Rect Area, Color Tint, Color Rim, Color Shade, Color Wash, double Radius, double Blur, double Shoulder, Backing Behind) : ICustomDrawOperation
     {
@@ -81,17 +82,22 @@ internal class Glass : Decorator, ICustomHitTest
 
             if (Shade.A > 0)
             {
-                canvas.Save();
-                canvas.ClipPath(path, SKClipOperation.Difference, true);
-                canvas.Translate(0, Drop);
                 using var shadow = new SKPaint { Color = Sk(Shade), IsAntialias = true, MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Spread) };
-                canvas.DrawPath(path, shadow);
+                canvas.Save();
+                if (Shoulder > 0) { canvas.ClipPath(path, SKClipOperation.Difference, true); canvas.Translate(0, Drop); canvas.DrawPath(path, shadow); }
+                else
+                {
+                    // A plain rounded rectangle takes Skia's fast blurred-shadow path; an arbitrary path is rasterized on every repaint.
+                    float r = (float)Math.Min(Radius, Math.Min(Area.Width, Area.Height) / 2);
+                    using var round = new SKRoundRect(new SKRect(0, 0, (float)Area.Width, (float)Area.Height), r, r);
+                    canvas.ClipRoundRect(round, SKClipOperation.Difference, true); canvas.Translate(0, Drop); canvas.DrawRoundRect(round, shadow);
+                }
                 canvas.Restore();
             }
 
             canvas.Save();
             canvas.ClipPath(path, SKClipOperation.Intersect, true);
-            if (Blur > 0 && lease.SkSurface is { } surface) Frost(canvas, surface);
+            if (Blur > 0 && lease.SkSurface is { } surface) Frost(canvas, surface, lease.GrContext);
             using (var fill = new SKPaint { Color = Sk(Tint) }) canvas.DrawPaint(fill);
             if (Wash.A > 0) { using var wash = new SKPaint { Color = Sk(Wash) }; canvas.DrawPaint(wash); }
             // Light falls from the top-left corner and fades across the pane.
@@ -114,7 +120,9 @@ internal class Glass : Decorator, ICustomHitTest
         // Draw the pixels painted under the pane back, blurred. A repaint may cover only part of the
         // pane, and outside that part the window already shows the finished glass, so the pane keeps
         // its own copy of the backdrop and refreshes only what was just repainted beneath it.
-        void Frost(SKCanvas canvas, SKSurface surface)
+        // The copy is a quarter of the size: a blur hides the difference and costs a sixteenth of the work.
+        const int Down = 4;
+        void Frost(SKCanvas canvas, SKSurface surface, GRContext? gpu)
         {
             var matrix = canvas.TotalMatrix;
             float scale = MathF.Sqrt(MathF.Abs(matrix.ScaleX * matrix.ScaleY - matrix.SkewX * matrix.SkewY));
@@ -126,36 +134,60 @@ internal class Glass : Decorator, ICustomHitTest
             if (region.Width <= 0 || region.Height <= 0) return;
             using var seen = surface.Snapshot(region);
             if (seen == null) return;
-            bool moved = Behind.Copy == null || Behind.Region != region;
-            if (moved)
-            {
-                Behind.Copy?.Dispose();
-                Behind.Copy = SKSurface.Create(new SKImageInfo(region.Width, region.Height, SKColorType.Rgba8888, SKAlphaType.Premul));
-                Behind.Region = region;
-                if (Behind.Copy == null) return;
-            }
-            var copy = Behind.Copy!.Canvas;
-            using var replace = new SKPaint { BlendMode = SKBlendMode.Src };
-            if (moved) copy.DrawImage(seen, 0, 0, replace);
+            int w = (region.Width + Down - 1) / Down, h = (region.Height + Down - 1) / Down;
+            bool whole = Behind.Fit(gpu, w, h) || Behind.Region != region;
+            if (Behind.Copy == null || Behind.Soft == null) return;
+            Behind.Region = region;
+
+            var copy = Behind.Copy.Canvas;
+            using var replace = new SKPaint { BlendMode = SKBlendMode.Src, FilterQuality = SKFilterQuality.Low };
+            copy.Save();
+            copy.ClipRect(new SKRect(0, 0, w, h));
+            copy.Scale(1f / Down); copy.Translate(-region.Left, -region.Top);
+            if (whole) copy.DrawImage(seen, region.Left, region.Top, replace);
             else
             {
                 // Around the pane nothing of it was ever painted; inside it, only the repainted part is the true backdrop.
-                copy.Save(); copy.Translate(-region.Left, -region.Top);
                 copy.Save(); copy.ClipRect(own, SKClipOperation.Difference); copy.DrawImage(seen, region.Left, region.Top, replace); copy.Restore();
                 copy.ClipRect(fresh); copy.DrawImage(seen, region.Left, region.Top, replace);
-                copy.Restore();
             }
-            using var backdrop = Behind.Copy.Snapshot();
-            using var blur = SKImageFilter.CreateBlur(sigma, sigma, SKShaderTileMode.Clamp);
-            using var paint = new SKPaint { ImageFilter = blur };
+            copy.Restore();
+
+            var part = new SKRectI(0, 0, w, h);
+            using (var small = Behind.Copy.Snapshot(part))
+            using (var blur = SKImageFilter.CreateBlur(sigma / Down, sigma / Down, SKShaderTileMode.Clamp))
+            using (var soften = new SKPaint { ImageFilter = blur, BlendMode = SKBlendMode.Src })
+                if (small != null) Behind.Soft.Canvas.DrawImage(small, 0, 0, soften);
+            using var blurred = Behind.Soft.Snapshot(part);
+            if (blurred == null) return;
+            using var enlarge = new SKPaint { FilterQuality = SKFilterQuality.Low };
             canvas.Save();
-            canvas.ResetMatrix();
-            canvas.DrawImage(backdrop, region.Left, region.Top, paint);
+            canvas.ResetMatrix(); canvas.Translate(region.Left, region.Top); canvas.Scale(Down);
+            canvas.DrawImage(blurred, 0, 0, enlarge);
             canvas.Restore();
         }
     }
-    // The pane's private copy of what lies behind it. Only the render thread touches it.
-    sealed class Backing { public SKSurface? Copy; public SKRectI Region; }
+    // A pane's private copy of what lies behind it, and its blurred form. Only the render thread draws
+    // into them. They are pooled rather than left to the finalizer, which must not free GPU surfaces.
+    sealed class Backing
+    {
+        static readonly System.Collections.Concurrent.ConcurrentBag<Backing> spare = [];
+        public SKSurface? Copy, Soft; public SKRectI Region;
+        GRContext? owner; int wide, high;
+        public static Backing Take() => spare.TryTake(out var found) ? found : new Backing();
+        public void Return() { Region = default; spare.Add(this); }
+        // True when the surfaces were (re)made and hold nothing yet.
+        public bool Fit(GRContext? gpu, int w, int h)
+        {
+            if (Copy != null && Soft != null && owner == gpu && w <= wide && h <= high) return false;
+            Copy?.Dispose(); Soft?.Dispose();
+            wide = Math.Max(wide, (w + 31) / 32 * 32); high = Math.Max(high, (h + 31) / 32 * 32); owner = gpu;
+            var info = new SKImageInfo(wide, high, SKColorType.Rgba8888, SKAlphaType.Premul);
+            Copy = (gpu != null ? SKSurface.Create(gpu, false, info) : null) ?? SKSurface.Create(info);
+            Soft = (gpu != null ? SKSurface.Create(gpu, false, info) : null) ?? SKSurface.Create(info);
+            return true;
+        }
+    }
 }
 
 // A run of liquid buttons that share one body. Each button's outline is drawn into a blurred

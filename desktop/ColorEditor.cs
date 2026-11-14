@@ -50,7 +50,7 @@ internal sealed partial class MainWindow
         var quick = Cluster(LiquidOn(ink, "copy", "نسخ HEX", () => Copy(state.Color)), LiquidOn(ink, "download", "تصدير اللون", () => Export(new Palette { Name = c.Text("name"), Colors = [Swatch.From(state.Color)] })));
         quick.HorizontalAlignment = HorizontalAlignment.Left; quick.VerticalAlignment = VerticalAlignment.Top; quick.FlowDirection = FlowDirection.LeftToRight;
         var face = new Panel { FlowDirection = FlowDirection.LeftToRight }; face.Children.AddRange([english, quick, title, code]);
-        var specimen = new Border { Background = Paint(state.Color), CornerRadius = new CornerRadius(24), Padding = new Thickness(22), Height = 216, Child = face };
+        var specimen = new Border { Background = Paint(state.Color), CornerRadius = new CornerRadius(24), Padding = new Thickness(22), Height = 172, Child = face };
         specimen[!Border.BorderBrushProperty] = new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("Line"); specimen.BorderThickness = new Thickness(1);
         Avalonia.Controls.Documents.TextElement.SetForeground(specimen, Paint(ink));
 
@@ -63,7 +63,7 @@ internal sealed partial class MainWindow
         input.Children.Add(hex);
         var apply = Of(Liquid("check", "اعتماد HEX", Apply), "still"); Grid.SetColumn(apply, 2); input.Children.Add(apply);
 
-        var spectrum = new Spectrum(state.Color) { Height = 168 }; spectrum.Selected += h => _ = Guard(() => { Select(h); return Task.CompletedTask; });
+        var spectrum = new Spectrum(state.Color) { Height = 150 }; spectrum.Selected += h => _ = Guard(() => { Select(h); return Task.CompletedTask; });
         var hue = new Slider { Height = 40, MinHeight = 40, Minimum = 0, Maximum = 359.99, Value = spectrum.Value.H, FlowDirection = FlowDirection.LeftToRight };
         AutomationProperties.SetName(hue, "درجة اللون");
         var hueBrush = new LinearGradientBrush { StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(1, 0, RelativeUnit.Relative) };
@@ -95,12 +95,15 @@ internal sealed partial class MainWindow
         var harmonyTools = Line(8, Choose(modes, harmony, i => { harmony = i; Render(); }), Of(Liquid("plus", "إضافة المجموعة إلى لوحة", () => AddToPalette(colors)), "still"));
         var harmonies = Section("تناغم الألوان", new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = strip }, harmonyTools);
 
-        content.Children.Add(Pair(Col(specimen, Surface(editor)), Col(formatList, harmonies), 1.1, 1));
+        // Recent colors sit under the harmonies, where the shorter column has room, so the whole page shows without scrolling.
+        var side = Col(formatList, harmonies); side.Spacing = 18;
         if (state.History.Count > 0)
         {
-            var recent = new WrapPanel();
-            foreach (var h in state.History.Take(14)) { var dot = Dot(h, () => Select(h)); dot.Margin = new Thickness(0, 0, 8, 8); recent.Children.Add(dot); }
-            content.Children.Add(Col(Label("الألوان الأخيرة"), recent));
+            var recent = new WrapPanel { MaxHeight = 84, ClipToBounds = true };
+            foreach (var h in state.History.Take(18)) { var dot = Dot(h, () => Select(h)); dot.Margin = new Thickness(0, 0, 8, 8); recent.Children.Add(dot); }
+            var block = Col(Label("الألوان الأخيرة"), recent); block.Margin = new Thickness(6, 0); side.Children.Add(block);
         }
+        var main = Col(specimen, Surface(editor)); main.Spacing = 18;
+        content.Children.Add(Pair(main, side, 1.1, 1));
     }
 }

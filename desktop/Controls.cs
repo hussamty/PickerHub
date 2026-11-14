@@ -83,17 +83,17 @@ internal sealed class Spine : Glass
             foreach (var pill in new[] { hover, current }) pill.Transitions = value ? Travel() : null;
         }
     }
-    Transitions? Fade(int row) => motion ? [new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(200), Delay = TimeSpan.FromMilliseconds(row * 22) }] : null;
+    Transitions? Fade(int row) => motion ? [new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(130), Delay = TimeSpan.FromMilliseconds(row * 8) }] : null;
     static Transitions Travel() =>
     [
-        new ThicknessTransition { Property = MarginProperty, Duration = TimeSpan.FromMilliseconds(420), Easing = new BackEaseOut() },
-        new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(160) },
-        new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(320), Easing = new BackEaseOut() }
+        new ThicknessTransition { Property = MarginProperty, Duration = TimeSpan.FromMilliseconds(230), Easing = new BackEaseOut() },
+        new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(110) },
+        new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(220), Easing = new BackEaseOut() }
     ];
     // Opening overshoots like a drop let go; closing settles without a bounce so the icons are never clipped.
     void Expand(bool open)
     {
-        Transitions = motion ? [new DoubleTransition { Property = WidthProperty, Duration = TimeSpan.FromMilliseconds(open ? 460 : 300), Easing = open ? new BackEaseOut() : new CubicEaseOut() }] : null;
+        Transitions = motion ? [new DoubleTransition { Property = WidthProperty, Duration = TimeSpan.FromMilliseconds(open ? 280 : 190), Easing = open ? new BackEaseOut() : new CubicEaseOut() }] : null;
         Width = open ? Open : Closed; foreach (var label in labels) label.Opacity = open ? 1 : 0;
     }
     // Unpin after a click outside the spine.
@@ -167,8 +167,8 @@ internal sealed class Deck : Panel
         Width = CardWidth, Height = CardHeight, Child = face(item, back),
         HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Opacity = opacity,
         RenderTransformOrigin = new RelativePoint(.5, 1, RelativeUnit.Relative), RenderTransform = start,
-        Transitions = motion ? [new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(460), Easing = new CubicEaseOut() },
-            new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(300) }] : null
+        Transitions = motion ? [new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(300), Easing = new CubicEaseOut() },
+            new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(180) }] : null
     };
     void Fan(double amount) { spread = amount; if (busy) return; foreach (var (card, depth) in pile) card.RenderTransform = Pose(depth); }
     // step: +1 after moving forward, -1 after moving back, 0 for a plain layout.
@@ -189,7 +189,7 @@ internal sealed class Deck : Panel
         {
             var leaving = Card(previous, false, Pose(0)); leaving.IsHitTestVisible = false; Children.Add(leaving);
             settle.Add(() => { leaving.RenderTransform = Away; leaving.Opacity = 0; });
-            DispatcherTimer.RunOnce(() => Children.Remove(leaving), TimeSpan.FromMilliseconds(480));
+            DispatcherTimer.RunOnce(() => Children.Remove(leaving), TimeSpan.FromMilliseconds(320));
         }
         if (motion && step != 0) Dispatcher.UIThread.Post(() => { foreach (var move in settle) move(); }, DispatcherPriority.Background);
     }
@@ -210,10 +210,10 @@ internal sealed class Deck : Panel
         busy = true;
         try
         {
-            Transitions Turn(Easing easing) => [new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(170), Easing = easing }];
-            card.Transitions = Turn(new CubicEaseIn()); card.RenderTransform = Pose(0, 0.02); await Task.Delay(180);
+            Transitions Turn(Easing easing) => [new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(120), Easing = easing }];
+            card.Transitions = Turn(new CubicEaseIn()); card.RenderTransform = Pose(0, 0.02); await Task.Delay(125);
             card.Child = face(index, flipped);
-            card.Transitions = Turn(new CubicEaseOut()); card.RenderTransform = Pose(0); await Task.Delay(180);
+            card.Transitions = Turn(new CubicEaseOut()); card.RenderTransform = Pose(0); await Task.Delay(125);
         }
         finally { busy = false; }
     }

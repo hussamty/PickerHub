@@ -84,12 +84,6 @@ internal sealed partial class MainWindow
         b[!BorderBrushProperty] = new DynamicResourceExtension("Line"); b.BorderThickness = new Thickness(1);
         ToolTip.SetTip(b, hex); ToolTip.SetPlacement(b, PlacementMode.Top); return b;
     }
-    static ComboBox Choose(IEnumerable<string> options, int index, Action<int> changed)
-    {
-        var box = new ComboBox { ItemsSource = options.ToArray(), SelectedIndex = index, MinWidth = 150, MinHeight = 40, VerticalAlignment = VerticalAlignment.Center };
-        box.SelectionChanged += (_, _) => { if (box.SelectedIndex >= 0) changed(box.SelectedIndex); }; return box;
-    }
-
     static Glass Surface(Control child) => new() { Child = child, Padding = new Thickness(20) };
     static Control Section(string title, Control body, Control? actions = null)
     {
@@ -124,28 +118,16 @@ internal sealed partial class MainWindow
     void Arrive()
     {
         if (!Motion) { content.Transitions = null; content.Opacity = 1; content.RenderTransform = null; return; }
-        content.Transitions = null; content.Opacity = 0; content.RenderTransform = TransformOperations.Parse("translateY(14px)");
+        content.Transitions = null; content.Opacity = 0; content.RenderTransform = TransformOperations.Parse("translateY(8px)");
         Dispatcher.UIThread.Post(() =>
         {
-            content.Transitions = [new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(260) },
-                new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(380), Easing = new CubicEaseOut() }];
+            content.Transitions = [new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(140) },
+                new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(220), Easing = new CubicEaseOut() }];
             content.Opacity = 1; content.RenderTransform = TransformOperations.Parse("translateY(0px)");
         }, DispatcherPriority.Background);
     }
 
     async Task Copy(string value) { if (Clipboard == null) throw new InvalidOperationException("الحافظة غير متاحة."); await Clipboard.SetTextAsync(value); status.Text = "نُسخت القيمة إلى الحافظة"; }
-    Window Dialog(string title)
-    {
-        var d = new Window
-        {
-            Title = title, Width = 400, SizeToContent = SizeToContent.Height, CanResize = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner, Padding = new Thickness(24),
-            FontFamily = FontFamily, FlowDirection = FlowDirection.RightToLeft, RequestedThemeVariant = RequestedThemeVariant
-        };
-        d[!BackgroundProperty] = new DynamicResourceExtension("Canvas"); d[!ForegroundProperty] = new DynamicResourceExtension("Ink");
-        d.Classes.Set("calm", !Motion);
-        d.KeyDown += (_, ev) => { if (ev.Key == Avalonia.Input.Key.Escape) d.Close(); }; return d;
-    }
     static Control Choices(params Control[] buttons) { var row = Line(8, buttons); row.Margin = new Thickness(0, 8, 0, 0); return row; }
     async Task<string?> Prompt(string title, string initial, bool hex = false)
     {
@@ -162,18 +144,18 @@ internal sealed partial class MainWindow
         }
         d.Content = Col(Text(title, 18, true), input, feedback, Choices(Btn("حفظ", OK, true), Btn("إلغاء", () => d.Close())));
         input.KeyDown += (_, ev) => { if (ev.Key == Avalonia.Input.Key.Enter) { ev.Handled = true; OK(); } };
-        d.Opened += (_, _) => { input.Focus(); input.SelectAll(); }; return await d.ShowDialog<string?>(this);
+        d.Opened += () => { input.Focus(); input.SelectAll(); }; return await d.Show<string?>();
     }
     async Task<bool> Confirm(string title)
     {
         var d = Dialog(title); d.Content = Col(Text(title, 16), Choices(Btn("تأكيد", () => d.Close(true), true), Btn("إلغاء", () => d.Close(false))));
-        return await d.ShowDialog<bool>(this);
+        return await d.Show<bool>();
     }
     async Task<int?> SelectOption(string title, string[] choices, int start = 0)
     {
-        var d = Dialog(title); var choice = new ComboBox { ItemsSource = choices, SelectedIndex = start, MinHeight = 42, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var d = Dialog(title); int picked = start; var choice = Choose(choices, start, i => picked = i); choice.HorizontalAlignment = HorizontalAlignment.Stretch;
         AutomationProperties.SetName(choice, title);
-        d.Content = Col(Text(title, 16), choice, Choices(Btn("اختيار", () => d.Close((int?)choice.SelectedIndex), true), Btn("إلغاء", () => d.Close())));
-        return await d.ShowDialog<int?>(this);
+        d.Content = Col(Text(title, 16), choice, Choices(Btn("اختيار", () => d.Close((int?)picked), true), Btn("إلغاء", () => d.Close())));
+        return await d.Show<int?>();
     }
 }

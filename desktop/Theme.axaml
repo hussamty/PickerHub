@@ -38,6 +38,8 @@
           <Color x:Key="GlassShade">#73000000</Color>
           <Color x:Key="CardTint">#1CFFFFFF</Color>
           <Color x:Key="DenseTint">#D11A1A18</Color>
+          <Color x:Key="SheetTint">#C7191917</Color>
+          <SolidColorBrush x:Key="Scrim">#8C000000</SolidColorBrush>
           <Color x:Key="GooBody">#24FFFFFF</Color>
           <SolidColorBrush x:Key="TextControlBackground">#12FFFFFF</SolidColorBrush>
           <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#1CFFFFFF</SolidColorBrush>
@@ -92,6 +94,8 @@
           <Color x:Key="GlassShade">#24111111</Color>
           <Color x:Key="CardTint">#8CFFFFFF</Color>
           <Color x:Key="DenseTint">#E6FFFFFF</Color>
+          <Color x:Key="SheetTint">#E0FFFFFF</Color>
+          <SolidColorBrush x:Key="Scrim">#47111111</SolidColorBrush>
           <Color x:Key="GooBody">#1C111111</Color>
           <SolidColorBrush x:Key="TextControlBackground">#B3FFFFFF</SolidColorBrush>
           <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#D9FFFFFF</SolidColorBrush>
@@ -142,13 +146,14 @@
     <Setter Property="FontSize" Value="13"/>
     <Setter Property="Cursor" Value="Hand"/>
     <Setter Property="ClipToBounds" Value="False"/>
+    <Setter Property="FocusAdorner" Value="{x:Null}"/>
     <Setter Property="HorizontalContentAlignment" Value="Center"/>
     <Setter Property="VerticalContentAlignment" Value="Center"/>
     <Setter Property="RenderTransform" Value="scale(1,1)"/>
     <Setter Property="Transitions">
       <Transitions>
-        <BrushTransition Property="Background" Duration="0:0:0.18"/>
-        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.36" Easing="BackEaseOut"/>
+        <BrushTransition Property="Background" Duration="0:0:0.12"/>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.24" Easing="BackEaseOut"/>
       </Transitions>
     </Setter>
     <Setter Property="Template">
@@ -168,6 +173,11 @@
   </Style>
   <Style Selector="Button.ph:pressed"><Setter Property="RenderTransform" Value="scale(1.05,0.9)"/></Style>
   <Style Selector="Button.ph:disabled"><Setter Property="Opacity" Value="0.45"/></Style>
+  <!-- Keyboard focus is drawn in the control's own shape: a ring in the signal color. -->
+  <Style Selector="Button.ph:focus-visible /template/ Border#body">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentText}"/>
+    <Setter Property="BorderThickness" Value="2"/>
+  </Style>
 
   <!-- The one filled action: brand yellow carrying black, with its own light. -->
   <Style Selector="Button.ph.primary">
@@ -190,10 +200,10 @@
     <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
     <Setter Property="Transitions">
       <Transitions>
-        <BrushTransition Property="Background" Duration="0:0:0.18"/>
-        <DoubleTransition Property="Width" Duration="0:0:0.4" Easing="BackEaseOut"/>
-        <ThicknessTransition Property="Margin" Duration="0:0:0.4" Easing="BackEaseOut"/>
-        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.36" Easing="BackEaseOut"/>
+        <BrushTransition Property="Background" Duration="0:0:0.12"/>
+        <DoubleTransition Property="Width" Duration="0:0:0.26" Easing="BackEaseOut"/>
+        <ThicknessTransition Property="Margin" Duration="0:0:0.26" Easing="BackEaseOut"/>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.24" Easing="BackEaseOut"/>
       </Transitions>
     </Setter>
   </Style>
@@ -260,6 +270,7 @@
     <Setter Property="BorderThickness" Value="0"/>
     <Setter Property="CornerRadius" Value="12"/>
     <Setter Property="Padding" Value="10,0"/>
+    <Setter Property="MinHeight" Value="36"/>
     <Setter Property="HorizontalAlignment" Value="Stretch"/>
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
   </Style>
@@ -310,35 +321,29 @@
   <Style Selector="TextBlock.danger"><Setter Property="Foreground" Value="{DynamicResource Danger}"/></Style>
   <Style Selector="TextBlock.signal"><Setter Property="Foreground" Value="{DynamicResource AccentText}"/></Style>
 
-  <!-- Inputs take the pill and glass language; the open list grows out of its field. -->
-  <Style Selector="ComboBox">
-    <Setter Property="CornerRadius" Value="20"/>
-    <Setter Property="Padding" Value="16,5,6,6"/>
+  <!-- Select button and the rows of the glass list that grows out of it. -->
+  <Style Selector="Button.ph.select">
+    <Setter Property="Padding" Value="16,0,12,0"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
   </Style>
-  <Style Selector="ComboBox /template/ Border#PopupBorder">
-    <Setter Property="CornerRadius" Value="18"/>
-    <Setter Property="Padding" Value="4"/>
+  <Style Selector="Button.ph.select:pointerover"><Setter Property="RenderTransform" Value="scale(1,1)"/></Style>
+  <Style Selector="Button.ph.row.option">
+    <Setter Property="MinHeight" Value="40"/>
+    <Setter Property="Padding" Value="12,0"/>
+    <Setter Property="CornerRadius" Value="14"/>
+    <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
   </Style>
-  <Style Selector="ComboBox:dropdownopen /template/ Border#PopupBorder">
-    <Style.Animations>
-      <Animation Duration="0:0:0.26" Easing="CubicEaseOut">
-        <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0"/><Setter Property="ScaleTransform.ScaleY" Value="0.7"/><Setter Property="ScaleTransform.ScaleX" Value="0.94"/></KeyFrame>
-        <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/><Setter Property="ScaleTransform.ScaleY" Value="1"/><Setter Property="ScaleTransform.ScaleX" Value="1"/></KeyFrame>
-      </Animation>
-    </Style.Animations>
-  </Style>
-  <Style Selector="ComboBoxItem">
-    <Setter Property="CornerRadius" Value="12"/>
-    <Setter Property="Margin" Value="0,1"/>
-  </Style>
-  <Style Selector="ComboBoxItem:selected /template/ ContentPresenter"><Setter Property="Foreground" Value="{DynamicResource Ink}"/></Style>
+  <Style Selector="Button.ph.row.option:pointerover"><Setter Property="Foreground" Value="{DynamicResource Ink}"/></Style>
+  <Style Selector="Button.ph.row.option:focus-visible"><Setter Property="Background" Value="{DynamicResource Tint}"/></Style>
+  <Style Selector="Button.ph.row.option.chosen"><Setter Property="Foreground" Value="{DynamicResource Ink}"/></Style>
+
   <Style Selector="TextBox"><Setter Property="CornerRadius" Value="14"/></Style>
   <Style Selector="NumericUpDown"><Setter Property="CornerRadius" Value="14"/></Style>
   <Style Selector="CheckBox"><Setter Property="Foreground" Value="{DynamicResource Ink}"/></Style>
   <Style Selector="Slider Thumb">
     <Setter Property="RenderTransform" Value="scale(1,1)"/>
     <Setter Property="Transitions">
-      <Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.34" Easing="BackEaseOut"/></Transitions>
+      <Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.22" Easing="BackEaseOut"/></Transitions>
     </Setter>
   </Style>
   <Style Selector="Slider Thumb:pointerover"><Setter Property="RenderTransform" Value="scale(1.2,1.2)"/></Style>

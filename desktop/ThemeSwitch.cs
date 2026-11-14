@@ -16,7 +16,7 @@ internal sealed class ThemeSwitch : Control
     static readonly string[] Moon = ["...###...", "..###....", ".###...#.", ".###.....", ".###.....", ".####....", "..######.", "...####..", "........."];
     static readonly string[] Sun = ["....#....", ".#.....#.", "...###...", "..#####..", "#.#####.#", "..#####..", "...###...", ".#.....#.", "....#...."];
     static readonly (Point From, Point To, Vector Burst)[] Pixels = Plan();
-    readonly DispatcherTimer clock = new() { Interval = TimeSpan.FromMilliseconds(16) };
+    bool running;
     double t, from, to, pressX, pressT;
     DateTime started;
     bool light, dragging, moved, ring;
@@ -26,13 +26,14 @@ internal sealed class ThemeSwitch : Control
     public event Action<bool>? Toggled;
     // Raised on every step of the travel, 0 (dark) to 1 (light).
     public event Action<double>? Scrubbed;
+    // Raised when the knob has come to rest.
+    public event Action? Settled;
 
     public ThemeSwitch()
     {
         Width = W; Height = H; Focusable = true; FlowDirection = FlowDirection.LeftToRight; Cursor = new Cursor(StandardCursorType.Hand);
         AutomationProperties.SetName(this, "تبديل المظهر بين الفاتح والداكن");
-        clock.Tick += (_, _) => Step();
-        PointerPressed += (_, e) => { e.Pointer.Capture(this); clock.Stop(); dragging = true; moved = false; pressX = e.GetPosition(this).X; pressT = t; e.Handled = true; };
+        PointerPressed += (_, e) => { e.Pointer.Capture(this); running = false; dragging = true; moved = false; pressX = e.GetPosition(this).X; pressT = t; e.Handled = true; };
         PointerMoved += (_, e) =>
         {
             if (!dragging) return;
@@ -57,7 +58,7 @@ internal sealed class ThemeSwitch : Control
     public void Sync(bool isLight)
     {
         light = isLight;
-        if (!dragging && !clock.IsEnabled && t != (light ? 1 : 0)) { t = light ? 1 : 0; Scrubbed?.Invoke(t); InvalidateVisual(); }
+        if (!dragging && !running && t != (light ? 1 : 0)) { t = light ? 1 : 0; Scrubbed?.Invoke(t); InvalidateVisual(); }
     }
     void Set(double value)
     {
@@ -72,17 +73,24 @@ internal sealed class ThemeSwitch : Control
     void Glide(double target)
     {
         if (!Motion) { Set(target); Settle(); return; }
-        from = t; to = target; started = DateTime.UtcNow; clock.Start();
+        from = t; to = target; started = DateTime.UtcNow; if (!running) { running = true; Frame(); }
+    }
+    // One step per display frame, so the knob moves with the screen and not with a timer.
+    void Frame()
+    {
+        if (TopLevel.GetTopLevel(this) is { } top) top.RequestAnimationFrame(_ => Step());
+        else { running = false; Set(to); Settle(); }
     }
     void Step()
     {
-        double p = Math.Min(1, (DateTime.UtcNow - started).TotalMilliseconds / (220 + 460 * Math.Abs(to - from)));
-        double eased = p < .5 ? 4 * p * p * p : 1 - Math.Pow(-2 * p + 2, 3) / 2;
+        if (!running) return;
+        double p = Math.Min(1, (DateTime.UtcNow - started).TotalMilliseconds / (150 + 230 * Math.Abs(to - from)));
+        double eased = 1 - Math.Pow(1 - p, 3);
         Set(from + (to - from) * eased);
-        if (p >= 1) { clock.Stop(); Settle(); }
+        if (p >= 1) { running = false; Settle(); } else Frame();
     }
     // If the theme could not be saved, the knob returns to the theme that is really showing.
-    void Settle() { if (t != (light ? 1 : 0)) { t = light ? 1 : 0; Scrubbed?.Invoke(t); InvalidateVisual(); } }
+    void Settle() { if (t != (light ? 1 : 0)) { t = light ? 1 : 0; Scrubbed?.Invoke(t); InvalidateVisual(); } Settled?.Invoke(); }
 
     static Color Blend(uint dark, uint lightColor, double k)
     {
