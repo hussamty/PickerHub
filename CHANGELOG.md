@@ -1,3 +1,10 @@
+# 0.5.1 — glass and liquid consistency
+
+- Replace fragile blur-threshold button links with curved, outlined bridges that remain visible in dark and light themes and respond to keyboard focus.
+- Align popup themes with the workbench; use a shared glass finish for tooltips, fields and selected menu rows.
+- Constrain dropdowns to the available space above or below their anchor.
+- Add real pointer and menu bounds checks, with Arabic/English light/dark preview captures.
+
 # 0.5.0 — testing release
 
 - A second launch activates the existing window instead of opening a locked library.

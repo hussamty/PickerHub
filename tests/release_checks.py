@@ -8,6 +8,7 @@ import subprocess
 import tarfile
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,9 +27,10 @@ class ReleaseChecks(unittest.TestCase):
             self.assertEqual(sum(call.args[1] == 'verify' for call in run.call_args_list), 3)
     @unittest.skipUnless(platform.system() == 'Linux', 'Linux archive test')
     def test_clean_package(self):
-        version = json.loads((ROOT/'dist/native/PickerHub-0.5.0-linux-x64.manifest.json').read_text())
+        number = ET.parse(ROOT/'desktop/PickerHub.csproj').findtext('PropertyGroup/Version')
+        version = json.loads((ROOT/f'dist/native/PickerHub-{number}-linux-x64.manifest.json').read_text())
         with tempfile.TemporaryDirectory(prefix='pickerhub-package-') as tmp:
-            with tarfile.open(ROOT/'dist/native/PickerHub-0.5.0-linux-x64.tar.gz') as archive:
+            with tarfile.open(ROOT/f'dist/native/PickerHub-{number}-linux-x64.tar.gz') as archive:
                 archive.extractall(tmp, filter='data')
             runtime = Path(tmp)/'PickerHub'
             for name, checksum in version['files'].items():

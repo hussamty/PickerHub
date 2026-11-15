@@ -38,9 +38,12 @@
           <Color x:Key="GlassShade">#73000000</Color>
           <Color x:Key="CardTint">#1CFFFFFF</Color>
           <Color x:Key="DenseTint">#D11A1A18</Color>
+          <LinearGradientBrush x:Key="PopupFill" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Offset="0" Color="#F533332E"/><GradientStop Offset="1" Color="#F51C1C1A"/>
+          </LinearGradientBrush>
           <Color x:Key="SheetTint">#C7191917</Color>
           <SolidColorBrush x:Key="Scrim">#8C000000</SolidColorBrush>
-          <Color x:Key="GooBody">#24FFFFFF</Color>
+          <Color x:Key="GooBody">#36FFFFFF</Color>
           <SolidColorBrush x:Key="TextControlBackground">#12FFFFFF</SolidColorBrush>
           <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#1CFFFFFF</SolidColorBrush>
           <SolidColorBrush x:Key="TextControlBackgroundFocused">#0AFFFFFF</SolidColorBrush>
@@ -80,9 +83,12 @@
           <Color x:Key="GlassShade">#24111111</Color>
           <Color x:Key="CardTint">#8CFFFFFF</Color>
           <Color x:Key="DenseTint">#E6FFFFFF</Color>
+          <LinearGradientBrush x:Key="PopupFill" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Offset="0" Color="#FAFFFFFF"/><GradientStop Offset="1" Color="#F5EFEEE7"/>
+          </LinearGradientBrush>
           <Color x:Key="SheetTint">#E0FFFFFF</Color>
           <SolidColorBrush x:Key="Scrim">#47111111</SolidColorBrush>
-          <Color x:Key="GooBody">#1C111111</Color>
+          <Color x:Key="GooBody">#29111111</Color>
           <SolidColorBrush x:Key="TextControlBackground">#B3FFFFFF</SolidColorBrush>
           <SolidColorBrush x:Key="TextControlBackgroundPointerOver">#D9FFFFFF</SolidColorBrush>
           <SolidColorBrush x:Key="TextControlBackgroundFocused">#FFFFFF</SolidColorBrush>
@@ -304,10 +310,19 @@
   </Style>
   <Style Selector="Button.ph.row.option:pointerover"><Setter Property="Foreground" Value="{DynamicResource Ink}"/></Style>
   <Style Selector="Button.ph.row.option:focus-visible"><Setter Property="Background" Value="{DynamicResource Tint}"/></Style>
-  <Style Selector="Button.ph.row.option.chosen"><Setter Property="Foreground" Value="{DynamicResource Ink}"/></Style>
+  <Style Selector="Button.ph.row.option.chosen"><Setter Property="Foreground" Value="{DynamicResource Ink}"/><Setter Property="Background" Value="{DynamicResource TintStrong}"/></Style>
 
-  <Style Selector="TextBox"><Setter Property="CornerRadius" Value="14"/></Style>
-  <Style Selector="NumericUpDown"><Setter Property="CornerRadius" Value="14"/></Style>
+  <Style Selector="TextBox">
+    <Setter Property="CornerRadius" Value="14"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Rim}"/>
+    <Setter Property="MinHeight" Value="40"/>
+  </Style>
+  <Style Selector="NumericUpDown">
+    <Setter Property="CornerRadius" Value="14"/>
+    <Setter Property="Background" Value="{DynamicResource TextControlBackground}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Rim}"/>
+    <Setter Property="MinHeight" Value="40"/>
+  </Style>
   <!-- Fluent's spinner paints rectangular repeat buttons inside a rounded border.
        Clip the owning border, including hover/disabled fills, to the input's curve. -->
   <Style Selector="NumericUpDown /template/ ButtonSpinner /template/ Border">
@@ -325,6 +340,14 @@
 
   <Style Selector="ToolTip">
     <Setter Property="Background" Value="{DynamicResource Raised}"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{DynamicResource PopupFill}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                CornerRadius="16" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
     <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource Rim}"/>
     <Setter Property="BorderThickness" Value="1"/>

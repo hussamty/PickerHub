@@ -32,6 +32,21 @@ internal sealed partial class MainWindow
                 if (page == 1) SelfTests.Check(content.GetVisualDescendants().OfType<CheckBox>().Count() <= LibraryOps.PageSize + 2, "Library UI bounded at 2048 colors");
                 Console.WriteLine("FRAME " + L.Language + "-page-" + page); await Task.Run(Console.ReadLine);
             }
+            foreach (var theme in new[] { "dark", "light" })
+            {
+                page = 1; state.Theme = theme; state.ReduceTransparency = false; Render(); await Task.Delay(150);
+                var action = content.GetVisualDescendants().OfType<Button>().First(b => b.Classes.Contains("goo") && b.IsEffectivelyEnabled);
+                var position = action.PointToScreen(new Point(action.Bounds.Width / 2, action.Bounds.Height / 2));
+                Console.WriteLine($"HOVER {position.X} {position.Y}"); await Task.Run(Console.ReadLine); await Task.Delay(150);
+                SelfTests.Check(action.IsPointerOver, "Real pointer reaches the liquid action");
+                Console.WriteLine("FRAME " + L.Language + "-liquid-" + theme); await Task.Run(Console.ReadLine);
+                var select = content.GetVisualDescendants().OfType<Button>().First(b => b.Classes.Contains("select"));
+                select.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); await Task.Delay(100);
+                var menu = overlay.GetVisualDescendants().OfType<Glass>().Last();
+                SelfTests.Check(menu.Bounds.Right <= overlay.Bounds.Width && menu.Bounds.Bottom <= overlay.Bounds.Height, "Glass menu stays within the window");
+                Console.WriteLine("FRAME " + L.Language + "-menu-" + theme); await Task.Run(Console.ReadLine);
+                overlay.Children.Last().RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Escape });
+            }
             page = 1; state.Theme = "light"; state.ReduceTransparency = true; Width = 680; Height = 600; Render(); await Task.Delay(200);
             Console.WriteLine("FRAME " + L.Language + "-compact"); await Task.Run(Console.ReadLine);
             foreach (var (name, open) in new (string, Func<Task>)[] { ("choose", async () => { await SelectOption(L.T("إضافة إلى لوحة"), ["QA palette", "Another palette"]); }), ("roles", () => Roles(Current)), ("contrast", () => PaletteContrast(Current)), ("archive", DailyArchive) })

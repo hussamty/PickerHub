@@ -45,6 +45,11 @@ for language in ('ar','en'):
                 image = Image.frombytes('RGB',(im.width,im.height),C.string_at(im.data,im.stride*im.height),'raw','BGRX',im.stride)
                 image.save(OUT/(line.strip().split(' ',1)[1]+'.png')); x.XDestroyImage(frame)
                 process.stdin.write('\n'); process.stdin.flush()
+            elif line.startswith('HOVER '):
+                _, mx, my = line.split()
+                xt.XTestFakeMotionEvent(d, 0, int(mx), int(my), 0); x.XFlush(d)
+                time.sleep(.1)
+                process.stdin.write('\n'); process.stdin.flush()
             elif line.startswith('SINGLEPICK'):
                 until(lens)
                 xt.XTestFakeMotionEvent(d, 0, 20, 20, 0); x.XFlush(d); time.sleep(.2)
