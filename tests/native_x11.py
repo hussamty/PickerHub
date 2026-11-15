@@ -130,7 +130,20 @@ def main():
                     finally:x11.XDestroyImage(image)
                 # The input window can map before PipeWire delivers its first frame.
                 # Wait for the actual expected color rather than a fixed GPU deadline.
-                until(first_swatch)
+                try:
+                    until(first_swatch)
+                except AssertionError:
+                    print(windows(), flush=True)
+                    print(subprocess.check_output(["pw-dump"], text=True) if portal else "X11", flush=True)
+                    from PIL import Image
+                    class ImageInfo(ctypes.Structure):
+                        _fields_ = [(n,t) for n,t in [('width',ctypes.c_int),('height',ctypes.c_int),('offset',ctypes.c_int),('format',ctypes.c_int),('data',ctypes.c_void_p),('byte_order',ctypes.c_int),('unit',ctypes.c_int),('bit_order',ctypes.c_int),('pad',ctypes.c_int),('depth',ctypes.c_int),('stride',ctypes.c_int),('bits',ctypes.c_int)]]
+                    shot=x11.XGetImage(display,x11.XDefaultRootWindow(display),0,0,1400,900,ctypes.c_ulong(-1),2)
+                    info=ctypes.cast(shot,ctypes.POINTER(ImageInfo)).contents
+                    out=ROOT/'dist/qa';out.mkdir(parents=True,exist_ok=True)
+                    Image.frombytes('RGB',(info.width,info.height),ctypes.string_at(info.data,info.stride*info.height),'raw','BGRX',info.stride).save(out/'portal-failure.png')
+                    x11.XDestroyImage(shot)
+                    raise
                 # Change the source under a stationary pointer, with the lens still open.
                 if portal:
                     change = ["gdbus","call","--session","--dest","org.freedesktop.portal.Desktop","--object-path",

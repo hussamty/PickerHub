@@ -51,5 +51,5 @@ jobs="$! $jobs"
 jobs="$! $jobs"
 gdbus wait --session --timeout 8 org.freedesktop.portal.Desktop
 for live in 0 1; do
-    PICKERHUB_TEST_PORTAL=1 PICKERHUB_TEST_LIVE="$live" /usr/bin/python3 tests/native_x11.py || { cat "$runtime/fixture.log"; exit 1; }
+    GST_DEBUG=2 PICKERHUB_TEST_PORTAL=1 PICKERHUB_TEST_LIVE="$live" /usr/bin/python3 tests/native_x11.py || { cat "$runtime/fixture.log" "$runtime/pipewire.log" "$runtime/wireplumber.log"; exit 1; }
 done
