@@ -134,6 +134,7 @@ def main():
                     until(first_swatch)
                 except AssertionError:
                     print(windows(), flush=True)
+                    if portal: print(subprocess.check_output(["gdbus","call","--session","--dest","org.freedesktop.portal.Desktop","--object-path","/org/freedesktop/portal/desktop","--method","org.pickerhub.Test.Frames"], text=True), flush=True)
                     trace = subprocess.run(["sudo", "gdb", "-batch", "-ex", "set pagination off", "-ex", "thread apply all bt", "-p", str(process.pid)], capture_output=True, text=True, timeout=20)
                     print(trace.stdout + trace.stderr, flush=True)
                     print(subprocess.check_output(["pw-dump"], text=True) if portal else "X11", flush=True)
