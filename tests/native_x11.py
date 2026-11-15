@@ -123,11 +123,14 @@ def main():
                 x11.XGetPixel.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_int]
                 x11.XGetPixel.restype=ctypes.c_ulong
                 x11.XDestroyImage.argtypes=[ctypes.c_void_p]
-                image=x11.XGetImage(display,x11.XDefaultRootWindow(display),1127,765,1,1,ctypes.c_ulong(-1),2)
-                assert image
-                try:
-                    assert x11.XGetPixel(image,0,0)&0xffffff == (0x336699 if portal else 0x745AC3), f"Magnifier swatch must update before clicking: {x11.XGetPixel(image,0,0):06X}"
-                finally:x11.XDestroyImage(image)
+                def first_swatch():
+                    image=x11.XGetImage(display,x11.XDefaultRootWindow(display),1127,765,1,1,ctypes.c_ulong(-1),2)
+                    assert image
+                    try: return x11.XGetPixel(image,0,0)&0xffffff == (0x336699 if portal else 0x745AC3)
+                    finally:x11.XDestroyImage(image)
+                # The input window can map before PipeWire delivers its first frame.
+                # Wait for the actual expected color rather than a fixed GPU deadline.
+                until(first_swatch)
                 # Change the source under a stationary pointer, with the lens still open.
                 if portal:
                     change = ["gdbus","call","--session","--dest","org.freedesktop.portal.Desktop","--object-path",
