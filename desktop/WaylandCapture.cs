@@ -52,7 +52,7 @@ internal sealed class WaylandCapture : IDisposable
         if (screens.Length != current.sources.Count)
         {
             Stop();
-            throw new InvalidOperationException("اختر جميع الشاشات المتصلة في نافذة المشاركة. أعد فتح القطّارة لاختيارها.");
+            throw new InvalidOperationException(L.T("اختر جميع الشاشات المتصلة في نافذة المشاركة. أعد فتح القطّارة لاختيارها."));
         }
         current.monitors = screens.Select(s => s.Bounds).Zip(current.sources.OrderBy(s => s.x).ThenBy(s => s.y),
             (bounds, source) => (bounds, source.capture)).ToDictionary(pair => pair.bounds, pair => pair.capture);
@@ -66,12 +66,12 @@ internal sealed class WaylandCapture : IDisposable
     public static bool Sample(Window owner, PixelPoint p, int radius, byte[] pixels)
     {
         if (current == null || current.ended)
-            throw new IOException("توقفت مشاركة الشاشة. افتح القطّارة لإعادة الاتصال.");
+            throw new IOException(L.T("توقفت مشاركة الشاشة. افتح القطّارة لإعادة الاتصال."));
         var bounds = owner.Screens.ScreenFromPoint(p)?.Bounds;
         if (bounds == null || !current.monitors.TryGetValue(bounds.Value, out var capture))
         {
             Stop();
-            throw new IOException("تغيّر ترتيب الشاشات. افتح القطّارة لاختيار الشاشات مجدداً.");
+            throw new IOException(L.T("تغيّر ترتيب الشاشات. افتح القطّارة لاختيار الشاشات مجدداً."));
         }
         try { return capture.Sample(bounds.Value, p, radius, pixels); }
         catch { Stop(); throw; }
@@ -82,18 +82,24 @@ internal sealed class WaylandCapture : IDisposable
         var path="/org/freedesktop/portal/desktop/request/"+peer.TrimStart(':').Replace('.','_')+"/"+token;
         var result=new TaskCompletionSource<(uint code,IDictionary<string,object> data)>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var watch=await connection.CreateProxy<IRequest>(Service,path).WatchResponseAsync(r=>result.TrySetResult(r),ex=>result.TrySetException(ex));
-        var actual=await invoke(new(){{"handle_token",token}});
-        if(actual.ToString()!=path)throw new InvalidOperationException("مسار طلب مشاركة الشاشة غير متوقع.");
-        var response=await result.Task;
+        var actual=await invoke(new(){{"handle_token",token}}).WaitAsync(TimeSpan.FromSeconds(10));
+        if(actual.ToString()!=path)throw new InvalidOperationException(L.T("مسار طلب مشاركة الشاشة غير متوقع."));
+        (uint code, IDictionary<string, object> data) response;
+        try { response=await result.Task.WaitAsync(TimeSpan.FromMinutes(2)); }
+        catch
+        {
+            try { await connection.CreateProxy<IRequest>(Service,path).CloseAsync().WaitAsync(TimeSpan.FromSeconds(1)); } catch { }
+            throw new IOException(L.T("انتهت مهلة قطّارة النظام. أعد المحاولة أو افتح إعدادات القطّارة."));
+        }
         if(response.code==1)return null;
-        if(response.code!=0)throw new InvalidOperationException("لم يُسمح بمشاركة الشاشة. أعد فتح القطّارة واسمح بمشاركة الشاشات المطلوبة.");
+        if(response.code!=0)throw new InvalidOperationException(L.T("لم يُسمح بمشاركة الشاشة. أعد فتح القطّارة واسمح بمشاركة الشاشات المطلوبة."));
         return response.data;
     }
     async Task<bool> Open(Window owner)
     {
         // Fail before asking the user to share if the frame reader is unavailable.
         GstCapture.Initialize();
-        peer=(await connection.ConnectAsync()).LocalName;
+        peer=(await connection.ConnectAsync().WaitAsync(TimeSpan.FromSeconds(5))).LocalName;
         try{await connection.CreateProxy<IPortalRegistry>(Service,"/org/freedesktop/portal/desktop").RegisterAsync("pickerhub",new Dictionary<string,object>());}
         catch(DBusException ex) when(ex.ErrorName is "org.freedesktop.DBus.Error.UnknownMethod" or "org.freedesktop.DBus.Error.UnknownInterface"){}
         var cast=connection.CreateProxy<IScreenCast>(Service,"/org/freedesktop/portal/desktop");
@@ -109,7 +115,7 @@ internal sealed class WaylandCapture : IDisposable
         var started=await Request(options=>cast.StartAsync(path,parent,options));
         if(started==null)return false;
         if(!started.TryGetValue("streams",out var value) || value is not ValueTuple<uint,IDictionary<string,object>>[] streams || streams.Length==0)
-            throw new InvalidOperationException("اختر شاشة واحدة على الأقل في نافذة المشاركة.");
+            throw new InvalidOperationException(L.T("اختر شاشة واحدة على الأقل في نافذة المشاركة."));
         remote=await cast.OpenPipeWireRemoteAsync(path,new Dictionary<string,object>());
         try
         {
@@ -159,14 +165,14 @@ internal sealed class GstCapture : IDisposable
     public static void Initialize()
     {
         try{gst_init(0,0);}
-        catch(DllNotFoundException){throw new InvalidOperationException("ثبّت GStreamer وملحق PipeWire لالتقاط الشاشة دون وميض.");}
+        catch(DllNotFoundException){throw new InvalidOperationException(L.T("ثبّت GStreamer وملحق PipeWire لالتقاط الشاشة دون وميض."));}
     }
     public GstCapture(int fd,uint node)
     {
         pipeline=gst_parse_launch($"pipewiresrc fd={fd} path={node} ! videoconvert ! video/x-raw,format=RGBA ! appsink name=sample max-buffers=1 drop=true sync=false",out var error);
-        if(error!=0){g_error_free(error);Dispose();throw new InvalidOperationException("تعذّر تشغيل قارئ PipeWire. تحقق من تثبيت gstreamer1.0-pipewire وملحقات الفيديو.");}
+        if(error!=0){g_error_free(error);Dispose();throw new InvalidOperationException(L.T("تعذّر تشغيل قارئ PipeWire. تحقق من تثبيت gstreamer1.0-pipewire وملحقات الفيديو."));}
         sink=gst_bin_get_by_name(pipeline,"sample");
-        if(sink==0||gst_element_set_state(pipeline,4)==0){Dispose();throw new InvalidOperationException("تعذّر بدء تدفق الشاشة.");}
+        if(sink==0||gst_element_set_state(pipeline,4)==0){Dispose();throw new InvalidOperationException(L.T("تعذّر بدء تدفق الشاشة."));}
     }
     [DllImport(App)] static extern int gst_app_sink_is_eos(nint sink);
     nint latest;
@@ -186,17 +192,17 @@ internal sealed class GstCapture : IDisposable
             if (latest != 0) gst_sample_unref(latest);
             latest = next;
         }
-        if (gst_app_sink_is_eos(sink) != 0) throw new IOException("توقفت مشاركة الشاشة. أعد فتح القطّارة.");
+        if (gst_app_sink_is_eos(sink) != 0) throw new IOException(L.T("توقفت مشاركة الشاشة. أعد فتح القطّارة."));
         if (latest == 0) return false;
         var caps = gst_caps_get_structure(gst_sample_get_caps(latest), 0);
         if (gst_structure_get_int(caps, "width", out int w) == 0 || gst_structure_get_int(caps, "height", out int h) == 0
-            || w <= 0 || h <= 0 || (long)w*h > 150_000_000) throw new IOException("أبعاد تدفق الشاشة غير صالحة.");
+            || w <= 0 || h <= 0 || (long)w*h > 150_000_000) throw new IOException(L.T("أبعاد تدفق الشاشة غير صالحة."));
         var buffer = gst_sample_get_buffer(latest);
-        if (gst_buffer_map(buffer, out var map, 1) == 0) throw new IOException("تعذّرت قراءة بكسلات الشاشة.");
+        if (gst_buffer_map(buffer, out var map, 1) == 0) throw new IOException(L.T("تعذّرت قراءة بكسلات الشاشة."));
         try
         {
             int stride = checked(w * 4);
-            if (map.size < (nuint)((long)stride*h)) throw new IOException("إطار الشاشة غير مكتمل.");
+            if (map.size < (nuint)((long)stride*h)) throw new IOException(L.T("إطار الشاشة غير مكتمل."));
             int side = 2*radius+1;
             for (int row = 0; row < side; row++)
             {

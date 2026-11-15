@@ -61,9 +61,9 @@ internal sealed partial class MainWindow
             dim.PointerPressed += (_, e) => { e.Handled = true; Close(); };
             pane = new Glass("SheetTint")
             {
-                Radius = 26, Blur = 26, Padding = new Thickness(24), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
-                Width = Math.Min(Width, Math.Max(280, window.Bounds.Width - 32)), MaxHeight = Math.Max(240, window.Bounds.Height - 48), FlowDirection = FlowDirection.RightToLeft,
-                Child = new ScrollViewer { Content = Content, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled }
+                Focusable = true, Radius = 26, Blur = 26, Padding = new Thickness(16, 18, 16, 0), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                Width = Math.Min(Width, Math.Max(280, window.Bounds.Width - 32)), MaxHeight = Math.Max(240, window.Bounds.Height - 48), FlowDirection = L.Flow,
+                Child = new ScrollViewer { Content = new Border { Padding = new Thickness(8, 6, 8, 24), Child = Content }, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled }
             };
             AutomationProperties.SetName(pane, title);
             layer = new Panel(); layer.Children.Add(dim); layer.Children.Add(pane);
@@ -76,7 +76,12 @@ internal sealed partial class MainWindow
             {
                 Opened?.Invoke();
                 if (window.FocusManager?.GetFocusedElement() is not Visual focused || !pane.IsVisualAncestorOf(focused))
-                    pane.GetVisualDescendants().OfType<InputElement>().FirstOrDefault(c => c.Focusable && c.IsEffectivelyEnabled && c.IsEffectivelyVisible)?.Focus();
+                {
+                    var first = pane.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => c.Focusable && c.IsEffectivelyEnabled && c.IsEffectivelyVisible);
+                    // Do not scroll a long sheet to its bottom just to focus its only button.
+                    if (first?.TranslatePoint(new Point(), pane) is Point pos && pos.Y >= 0 && pos.Y + first.Bounds.Height <= pane.Bounds.Height) first.Focus();
+                    else pane.Focus();
+                }
             }, DispatcherPriority.Loaded);
             return await done.Task is T value ? value : default;
         }
@@ -87,16 +92,18 @@ internal sealed partial class MainWindow
     // A select button. Its list is a pane of glass that grows out of the button and flips above it when there is no room below.
     Button Choose(IEnumerable<string> options, int index, Action<int> changed)
     {
-        var items = options.ToArray(); int selected = Math.Clamp(index, 0, Math.Max(0, items.Length - 1));
+        var items = options.Select(L.T).ToArray(); int selected = Math.Clamp(index, 0, Math.Max(0, items.Length - 1));
         var label = new TextBlock { Text = items.Length > 0 ? items[selected] : "", VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis };
-        var chevron = new Icon("chevron-right", 16) { RenderTransform = TransformOperations.Parse("rotate(-90deg)") };
+        var restingChevron = TransformOperations.Parse(L.Language == "ar" ? "rotate(-90deg)" : "rotate(90deg)");
+        var openChevron = TransformOperations.Parse(L.Language == "ar" ? "rotate(90deg)" : "rotate(-90deg)");
+        var chevron = new Icon("chevron-right", 16) { RenderTransform = restingChevron };
         if (Motion) chevron.Transitions = [new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(220), Easing = new BackEaseOut() }];
         var face = new DockPanel(); DockPanel.SetDock(chevron, Dock.Right); face.Children.Add(chevron); face.Children.Add(label);
         var button = Of(new Button { Content = face, MinWidth = 150, VerticalAlignment = VerticalAlignment.Center }, "ph", "select");
         button.Click += (_, _) =>
         {
-            chevron.RenderTransform = TransformOperations.Parse("rotate(90deg)");
-            Drop(button, items, selected, i => { selected = i; label.Text = items[i]; changed(i); }, () => chevron.RenderTransform = TransformOperations.Parse("rotate(-90deg)"));
+            chevron.RenderTransform = openChevron;
+            Drop(button, items, selected, i => { selected = i; label.Text = items[i]; changed(i); }, () => chevron.RenderTransform = restingChevron);
         };
         return button;
     }
@@ -121,7 +128,7 @@ internal sealed partial class MainWindow
         var list = new StackPanel { Spacing = 2 };
         var pane = new Glass("SheetTint")
         {
-            Radius = 20, Blur = 22, Padding = new Thickness(6), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, FlowDirection = FlowDirection.RightToLeft,
+            Radius = 20, Blur = 22, Padding = new Thickness(6), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, FlowDirection = L.Flow,
             Child = new ScrollViewer { Content = list, MaxHeight = 304, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled }
         };
         void Close(bool refocus)

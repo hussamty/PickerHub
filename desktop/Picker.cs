@@ -24,7 +24,7 @@ internal static class Picker
         if(handle?.HandleDescriptor=="XID")
         {
             if(pickerhub_window_transparent((nuint)handle.Handle,transparent?1:0)==0 && transparent)
-                throw new InvalidOperationException("تعذّر تجهيز نافذة التطبيق لطلب إذن الشاشة.");
+                throw new InvalidOperationException(L.T("تعذّر تجهيز نافذة التطبيق لطلب إذن الشاشة."));
         }
         else owner.Opacity=transparent?0:1;
     }
@@ -32,16 +32,22 @@ internal static class Picker
     public static bool UsesPortal => OperatingSystem.IsLinux() &&
         (Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")=="wayland" ||
         !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")));
-    public static async Task<string?> Start(Window owner, bool useScreenSharing)
+    public static async Task<string?> Start(Window owner, bool useScreenSharing, Action<string>? collected = null)
     {
-        if (OperatingSystem.IsMacOS()) return await MacSampler.Start();
+        if (OperatingSystem.IsMacOS())
+        {
+            string? selected;
+            do { selected = await MacSampler.Start(); if (selected != null) collected?.Invoke(selected); }
+            while (collected != null && selected != null);
+            return selected;
+        }
         if (UsesPortal)
         {
             if (!useScreenSharing) return await WaylandColorPicker.Pick(owner);
             if (!await WaylandCapture.Prepare(owner)) return null;
         }
         owner.Hide();
-        return await MagnifierSession.Start(owner);
+        return await MagnifierSession.Start(owner, collected);
     }
 
 }
@@ -70,7 +76,7 @@ internal static unsafe class MacSampler
         if (waiting != null) return waiting.Task;
         var result = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var cls = objc_getClass("NSColorSampler");
-        if (cls == 0) throw new InvalidOperationException("تعذّر تحميل قطّارة macOS.");
+        if (cls == 0) throw new InvalidOperationException(L.T("تعذّر تحميل قطّارة macOS."));
         var stackClass = NativeLibrary.GetExport(NativeLibrary.Load("/usr/lib/libSystem.B.dylib"), "_NSConcreteStackBlock");
         Block block = new() { isa = stackClass, invoke = (nint)(delegate* unmanaged[Cdecl]<nint, nint, void>)&Complete, descriptor = descriptor };
         sampler = Send(cls, sel_registerName("new")); waiting = result;
@@ -87,7 +93,7 @@ internal static unsafe class MacSampler
             {
                 nint space = Send(objc_getClass("NSColorSpace"), sel_registerName("sRGBColorSpace"));
                 var converted = SendArg(color, sel_registerName("colorUsingColorSpace:"), space);
-                if (converted == 0) throw new InvalidOperationException("تعذّر تحويل اللون إلى sRGB.");
+                if (converted == 0) throw new InvalidOperationException(L.T("تعذّر تحويل اللون إلى sRGB."));
                 int C(string channel) => (int)Math.Round(Math.Clamp(Component(converted, sel_registerName(channel)), 0, 1) * 255, MidpointRounding.AwayFromZero);
                 hex = $"#{C("redComponent"):X2}{C("greenComponent"):X2}{C("blueComponent"):X2}";
             }

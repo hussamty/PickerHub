@@ -5,6 +5,7 @@ import json
 import os
 import socket
 import threading
+import time
 import subprocess
 import gi
 gi.require_version("Gst","1.0")
@@ -20,8 +21,13 @@ pipeline.set_state(Gst.State.PLAYING)
 node_id=None
 def find_node():
     global node_id
-    nodes=json.loads(subprocess.check_output(["pw-dump","-r","pipewire-0-manager"],timeout=6))
-    node_id=next(n["id"] for n in nodes if n.get("info",{}).get("props",{}).get("node.name")=="PickerHubFixture")
+    for _ in range(80):
+        try:
+            nodes=json.loads(subprocess.check_output(["pw-dump","-r","pipewire-0"],timeout=2))
+            node_id=next((n["id"] for n in nodes if n.get("info",{}).get("props",{}).get("node.name")=="PickerHubFixture"),None)
+            if node_id is not None:return
+        except (subprocess.SubprocessError, json.JSONDecodeError):pass
+        time.sleep(.1)
 threading.Thread(target=find_node,daemon=True).start()
 
 class Request(dbus.service.Object):
@@ -81,7 +87,7 @@ class Portal(dbus.service.Object):
     @dbus.service.method("org.freedesktop.portal.ScreenCast",in_signature="oa{sv}",out_signature="h")
     def OpenPipeWireRemote(self,session,options):
         sock=socket.socket(socket.AF_UNIX)
-        sock.connect(os.path.join(os.environ["XDG_RUNTIME_DIR"],"pipewire-0-manager"))
+        sock.connect(os.path.join(os.environ["XDG_RUNTIME_DIR"],"pipewire-0"))
         fd=dbus.types.UnixFd(sock.fileno())
         sock.close()
         return fd

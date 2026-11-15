@@ -18,11 +18,28 @@ internal sealed partial class MainWindow
     readonly Border currentDot = new() { Width = 14, Height = 14, CornerRadius = new CornerRadius(7), VerticalAlignment = VerticalAlignment.Center };
     readonly ThemeSwitch themeSwitch = new() { VerticalAlignment = VerticalAlignment.Center };
     readonly Backdrop backdrop = new();
-    readonly string[] symbols = ["color-picker", "palette", "contrast-2", "photo", "color-swatch", "history"];
-    readonly string[] descriptions = ["اختر لوناً واضبطه وانسخ قيمه.", "ألوان مشاريعك في مكان واحد.", "تأكد من وضوح النص على الخلفية.", "استخرج لوحة ألوان من صورتك.", "امزج الألوان واصنع تدرجك.", "كل الألوان التي التقطتها مؤخراً."];
+    // Every tool in one place: its name, icon, one-line purpose and the method that builds its page.
+    readonly record struct Tool(string Title, string Symbol, string About, Action Build);
+    Tool[] tools = [];
+    const int DailyTool = 6;
 
+    static string Idle => L.T("جاهز لالتقاط الألوان");
+    void DefineTools()
+    {
+        tools =
+        [
+            new(L.T("ملتقط الألوان"), "color-picker", L.T("اختر لوناً واضبطه وانسخ قيمه."), ColorPage),
+            new(L.T("لوحات الألوان"), "palette", L.T("ألوان مشاريعك في مكان واحد."), Palettes),
+            new(L.T("فحص التباين"), "contrast-2", L.T("تأكد من وضوح النص على الخلفية."), ContrastPage),
+            new(L.T("تحليل الصور"), "photo", L.T("استخرج كل ألوان صورتك، الكبيرة والصغيرة."), Images),
+            new(L.T("محرّر التدرجات"), "color-swatch", L.T("امزج الألوان واصنع تدرجك."), Gradients),
+            new(L.T("السجل"), "history", L.T("كل الألوان التي التقطتها مؤخراً."), History),
+            new(L.T("باقة اليوم"), "sparkles", L.T("باقة متناسقة من الطبيعة، واحدة كل 24 ساعة."), DailyPage),
+        ];
+    }
     void BuildShell()
     {
+        DefineTools();
         this[!BackgroundProperty] = new DynamicResourceExtension("Canvas");
         // The switch plays the change: the room behind the glass follows the knob, and the theme itself turns at the midpoint.
         themeSwitch.Scrubbed += mix => backdrop.Mix = mix;
@@ -30,24 +47,28 @@ internal sealed partial class MainWindow
         themeSwitch.Toggled += light =>
         {
             if (dark != light) return;
-            if (damaged) { status.Text = "المكتبة للقراءة فقط، لذلك لا يمكن حفظ المظهر."; return; }
-            state.Theme = light ? "light" : "dark"; RequestedThemeVariant = dark ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Light; App.Accent(dark); themeSwitch.Sync(!dark);
+            if (damaged) { status.Text = L.T("المكتبة للقراءة فقط، لذلك لا يمكن حفظ المظهر."); return; }
+            state.FollowSystemTheme = false; state.Theme = light ? "light" : "dark"; Glass.Dark = dark; RequestedThemeVariant = dark ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Light; App.Accent(dark); themeSwitch.Sync(!dark);
         };
-        themeSwitch.Settled += () => _ = Guard(() => { if (!damaged && Serialize(state) != lastSaved) { state.Save(); lastSaved = Serialize(state); } return Task.CompletedTask; });
-        ToolTip.SetTip(themeSwitch, "المظهر"); ToolTip.SetPlacement(themeSwitch, PlacementMode.Bottom);
+        themeSwitch.Settled += () => _ = Guard(() => { if (!damaged && Serialize(state) != lastSaved) { var next = Serialize(state); writer.Enqueue(next); edits.Commit(lastSaved, next); lastSaved = next; } return Task.CompletedTask; });
+        ToolTip.SetTip(themeSwitch, L.T("المظهر")); ToolTip.SetPlacement(themeSwitch, PlacementMode.Bottom);
         // A click anywhere else lets a pinned spine close.
         AddHandler(PointerPressedEvent, (_, e) => { if (e.Source is Visual hit && hit != spine && !spine.IsVisualAncestorOf(hit)) spine.Release(); }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         this[!ForegroundProperty] = new DynamicResourceExtension("Ink");
 
         // The eyedropper keeps its top-left position: it is the one global action.
         eyedropper.Height = 44; eyedropper.CornerRadius = new CornerRadius(22); eyedropper.HorizontalAlignment = HorizontalAlignment.Left; eyedropper.VerticalAlignment = VerticalAlignment.Center;
-        eyedropper.Content = Line(9, new Icon("color-picker", 19), new TextBlock { Text = "القطّارة", VerticalAlignment = VerticalAlignment.Center },
+        eyedropper.Content = Line(9, new Icon("color-picker", 19), new TextBlock { Text = L.T("القطّارة"), VerticalAlignment = VerticalAlignment.Center },
             Of(new Border { VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = "F8", FontSize = 11, FontFamily = Code } }, "keycap"));
-        eyedropper.FlowDirection = FlowDirection.RightToLeft;
-        AutomationProperties.SetName(eyedropper, "القطّارة");
+        eyedropper.FlowDirection = L.Flow;
+        AutomationProperties.SetName(eyedropper, L.T("القطّارة"));
 
-        status.Text = "جاهز لالتقاط الألوان"; status.FontSize = 12; status.TextWrapping = TextWrapping.NoWrap; status.TextTrimming = TextTrimming.CharacterEllipsis;
-        Tone(status, "Muted"); status.FlowDirection = FlowDirection.RightToLeft;
+        status.Text = Idle; status.FontSize = 12;
+        // A message is news for a few seconds, then the line goes back to rest.
+        var settle = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        settle.Tick += (_, _) => { settle.Stop(); if (!picking) status.Text = Idle; };
+        status.PropertyChanged += (_, change) => { if (change.Property == TextBlock.TextProperty) { settle.Stop(); if (status.Text != Idle) settle.Start(); } }; status.TextWrapping = TextWrapping.NoWrap; status.TextTrimming = TextTrimming.CharacterEllipsis;
+        Tone(status, "Muted"); status.FlowDirection = L.Flow;
         AutomationProperties.SetLiveSetting(status, AutomationLiveSetting.Polite);
         var notice = Of(new Border { Child = status, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(14, 0) }, "status");
 
@@ -55,31 +76,33 @@ internal sealed partial class MainWindow
         var wordmark = new TextBlock { FontSize = 19, FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center };
         var signal = new Avalonia.Controls.Documents.Run("H"); signal[!Avalonia.Controls.Documents.TextElement.ForegroundProperty] = new DynamicResourceExtension("AccentText");
         wordmark.Inlines = [new Avalonia.Controls.Documents.Run("Picker"), signal, new Avalonia.Controls.Documents.Run("ub")];
-        var brand = Line(14, themeSwitch, currentDot, wordmark);
+        undoButton = Liquid("chevron-right", L.T("تراجع · Ctrl+Z"), () => Travel(false));
+        redoButton = Liquid("chevron-left", L.T("إعادة · Ctrl+Shift+Z"), () => Travel(true));
+        var brand = Line(10, undoButton, redoButton, themeSwitch, currentDot, wordmark);
         brand.VerticalAlignment = VerticalAlignment.Center;
 
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Height = 68, Margin = new Thickness(24, 0), FlowDirection = FlowDirection.LeftToRight };
         header.Children.Add(eyedropper); Grid.SetColumn(notice, 1); header.Children.Add(notice); Grid.SetColumn(brand, 2); header.Children.Add(brand);
 
-        for (int i = 0; i < pages.Length; i++)
+        for (int i = 0; i < tools.Length; i++)
         {
             int index = i;
-            AutomationProperties.SetAutomationId(spine.Add(symbols[i], pages[i], () => Go(index)), "nav-" + i);
+            AutomationProperties.SetAutomationId(spine.Add(tools[i].Symbol, tools[i].Title, () => Go(index)), "nav-" + i);
         }
         spine.Divide();
-        spine.Add("settings", "الإعدادات", () => _ = Guard(Settings), false);
+        spine.Add("settings", L.T("الإعدادات"), () => _ = Guard(Settings), false);
         spine.Margin = new Thickness(0, 0, 0, 16);
 
         // Title and its one-line purpose share a row, so the page keeps the height for its tools.
-        pageDescription.VerticalAlignment = VerticalAlignment.Bottom; pageDescription.Margin = new Thickness(0, 0, 0, 9); pageDescription.TextWrapping = TextWrapping.NoWrap;
-        var heading = Line(14, pageTitle, pageDescription); heading.Margin = new Thickness(0, 0, 0, 12);
-        var work = new DockPanel { FlowDirection = FlowDirection.RightToLeft, Margin = new Thickness(28, 0, Spine.Closed + 22, 0), MaxWidth = 1300 };
+        pageDescription.VerticalAlignment = VerticalAlignment.Bottom; pageDescription.Margin = new Thickness(0, 0, 0, 9); pageDescription.TextWrapping = TextWrapping.Wrap;
+        var heading = new WrapPanel { Orientation = Orientation.Horizontal, FlowDirection = L.Flow }; heading.Children.Add(pageTitle); pageDescription.Margin = new Thickness(14, 8, 0, 4); heading.Children.Add(pageDescription); heading.Margin = new Thickness(18, 0, 18, 6);
+        var work = new DockPanel { FlowDirection = L.Flow, Margin = new Thickness(10, 0, Spine.Closed + 4, 0), MaxWidth = 1336 };
         DockPanel.SetDock(heading, Dock.Top); work.Children.Add(heading);
-        work.Children.Add(new ScrollViewer { Content = content, Padding = new Thickness(0, 0, 0, 24), HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
+        work.Children.Add(new ScrollViewer { Content = content, Padding = new Thickness(0, 8, 0, 32), HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
 
-        var body = new Panel(); body.Children.Add(work); body.Children.Add(spine);
-        var shell = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), FlowDirection = FlowDirection.LeftToRight };
-        shell.Children.Add(header); Grid.SetRow(body, 1); shell.Children.Add(body);
+        var body = new Panel(); body.Children.Add(work); body.Children.Add(spine); body.SizeChanged += (_, _) => spine.Fit(body.Bounds.Height);
+        var shell = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*"), FlowDirection = FlowDirection.LeftToRight };
+        shell.Children.Add(header); Grid.SetRow(errorBanner, 1); shell.Children.Add(errorBanner); Grid.SetRow(body, 2); shell.Children.Add(body);
         var room = new Panel(); room.Children.Add(backdrop); room.Children.Add(shell); room.Children.Add(overlay);
         Content = room;
     }
@@ -88,27 +111,55 @@ internal sealed partial class MainWindow
     void Go(int index)
     {
         page = index; StyleShell();
+        QueueRender();
+    }
+    void QueueRender()
+    {
         if (pageQueued) return;
         pageQueued = true;
         Avalonia.Threading.Dispatcher.UIThread.Post(() => { pageQueued = false; Render(); }, Avalonia.Threading.DispatcherPriority.Background);
     }
+    void ApplyLanguage()
+    {
+        L.Language = state.Language; FlowDirection = L.Flow;
+        DefineTools();
+        spine.Relabel(tools.Select(t => (t.Symbol, t.Title)).ToArray());
+        eyedropper.FlowDirection = L.Flow;
+        eyedropper.Content = Line(9, new Icon("color-picker", 19), Text(L.T("القطّارة"), 13), Mono("F8", 11));
+        AutomationProperties.SetName(eyedropper, L.T("القطّارة"));
+        modes = [L.T("متجاورة"), L.T("متكاملة"), L.T("ثلاثية"), L.T("متكاملة منقسمة"), L.T("أحادية اللون"), L.T("عالية التباين")];
+        status.FlowDirection = L.Flow; status.Text = Idle;
+        if (content.Parent is ScrollViewer scroll && scroll.Parent is DockPanel work) work.FlowDirection = L.Flow;
+        SetTrayMenu();
+    }
     void StyleShell()
     {
-        pageTitle.Text = pages[page]; pageDescription.Text = descriptions[page];
+        pageTitle.Text = tools[page].Title; pageDescription.Text = tools[page].About;
         currentDot.Background = Paint(state.Color); ToolTip.SetTip(currentDot, state.Color);
         spine.Motion = Motion; spine.Activate(page);
         themeSwitch.Motion = Motion; themeSwitch.Sync(!dark);
     }
     async Task Settings()
     {
-        var d = Dialog("الإعدادات"); d.Width = 440;
-        var panel = Col(Text("الإعدادات", 20, true)); panel.Spacing = 12;
-        var calm = new CheckBox { Content = "تقليل الحركة", IsChecked = state.ReduceMotion, IsEnabled = !damaged };
+        var d = Dialog(L.T("الإعدادات")); d.Width = 440;
+        var panel = Col(Text(L.T("الإعدادات"), 20, true), Label("PickerHub " + App.Version)); panel.Spacing = 12;
+        var calm = new CheckBox { Content = L.T("تقليل الحركة"), IsChecked = state.ReduceMotion, IsEnabled = !damaged };
         calm.IsCheckedChanged += async (_, _) => await Guard(() => { Edit(() => state.ReduceMotion = calm.IsChecked == true); return Task.CompletedTask; });
-        panel.Children.Add(Col(Label("الحركة"), calm));
+        panel.Children.Add(Field(L.T("اللغة"), Choose(["العربية", "English"], state.Language == "ar" ? 0 : 1, i =>
+        {
+            Edit(() => state.Language = i == 0 ? "ar" : "en", false);
+            d.Close(); ApplyLanguage(); Render();
+            _ = Guard(Settings);
+        })));
+        panel.Children.Add(QuickSettings());
+        var opaque = new CheckBox { Content = L.T("تقليل الشفافية"), IsChecked = state.ReduceTransparency };
+        opaque.IsCheckedChanged += (_, _) => _ = Guard(() => { Edit(() => state.ReduceTransparency = opaque.IsChecked == true); return Task.CompletedTask; });
+        var system = new CheckBox { Content = L.T("اتباع مظهر النظام"), IsChecked = state.FollowSystemTheme };
+        system.IsCheckedChanged += (_, _) => _ = Guard(() => { Edit(() => state.FollowSystemTheme = system.IsChecked == true); return Task.CompletedTask; });
+        panel.Children.Add(Col(Label(L.T("المظهر والحركة")), calm, opaque, system));
         if (Picker.UsesPortal)
         {
-            var mode = new CheckBox { Content = "استخدام عدسة PickerHub عبر مشاركة الشاشة", IsChecked = state.UseWaylandScreenSharing, IsEnabled = !damaged };
+            var mode = new CheckBox { Content = L.T("استخدام عدسة PickerHub عبر مشاركة الشاشة"), IsChecked = state.UseWaylandScreenSharing, IsEnabled = !damaged };
             Button? stop = null;
             mode.IsCheckedChanged += async (_, _) => await Guard(() =>
             {
@@ -120,19 +171,25 @@ internal sealed partial class MainWindow
                 }
                 return Task.CompletedTask;
             });
-            var section = Col(Label("القطّارة"), mode, Label("تستخدم القطّارة العادية منتقي ألوان النظام. فعّل المشاركة للعدسة الحيّة والتبديل بين النوافذ أثناء الالتقاط."));
-            if (WaylandCapture.IsSharing) section.Children.Add(stop = Btn("إنهاء مشاركة الشاشة", async () =>
+            var section = Col(Label(L.T("القطّارة")), mode, Label(L.T("تستخدم القطّارة العادية منتقي ألوان النظام. فعّل المشاركة للعدسة الحيّة والتبديل بين النوافذ أثناء الالتقاط.")));
+            if (WaylandCapture.IsSharing) section.Children.Add(stop = Btn(L.T("إنهاء مشاركة الشاشة"), async () =>
             {
                 await Picker.RequestPermissionAgain();
                 d.Close();
-                status.Text = "توقفت مشاركة الشاشة.";
+                status.Text = L.T("توقفت مشاركة الشاشة.");
             }));
             panel.Children.Add(section);
         }
-        panel.Children.Add(Col(Label("المكتبة المحلية"),
-            Btn("download", "تنزيل نسخة احتياطية", async () => { d.Close(); await WriteFile("PickerHub-backup.json", Serialize(state)); }),
-            Btn("upload", "استعادة نسخة احتياطية", async () => { d.Close(); await Restore(); })));
-        panel.Children.Add(Choices(Btn("إغلاق", () => d.Close())));
+        panel.Children.Add(Col(Label(L.T("المكتبة المحلية")),
+            Btn("download", L.T("تنزيل نسخة احتياطية"), async () => { d.Close(); await WriteFile("PickerHub-backup.json", BackupBundle.Export(state)); }),
+            Btn("upload", L.T("استعادة نسخة احتياطية"), async () => { d.Close(); await Restore(); })));
+        var diagnostic = new CheckBox { Content = L.T("تسجيل أخطاء محلي اختياري"), IsChecked = state.DiagnosticsEnabled };
+        diagnostic.IsCheckedChanged += (_, _) => _ = Guard(() => { Edit(() => state.DiagnosticsEnabled = diagnostic.IsChecked == true, false); SupportLog.Enabled = state.DiagnosticsEnabled; return Task.CompletedTask; });
+        panel.Children.Add(diagnostic);
+        panel.Children.Add(Label(L.T("يبقى السجل على جهازك؛ لا تُرسل أي بيانات تلقائياً.")));
+        panel.Children.Add(Btn(L.T("تنزيل تقرير الدعم"), async () => { d.Close(); await WriteFile("PickerHub-diagnostics.json", Diagnostics()); }));
+        panel.Children.Add(Label(L.T("تقرير الدعم لا يتضمن ألوانك أو صورك أو مسارات ملفاتك.")));
+        panel.Children.Add(Choices(Btn(L.T("إغلاق"), () => d.Close())));
         foreach (var group in panel.Children.OfType<StackPanel>()) foreach (var b in group.Children.OfType<Button>()) b.HorizontalAlignment = HorizontalAlignment.Stretch;
         d.Content = panel;
         await d.Show();

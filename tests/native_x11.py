@@ -97,7 +97,10 @@ def main():
                     until(is_visible)
                     files = list(Path(home).rglob("workspace.json"))
                     if os.environ.get("PICKERHUB_PORTAL_RESULT", "0") == "0":
-                        assert len(files) == 1 and json.loads(files[0].read_text())["history"] == ["#3175B3"]
+                        # Return to the UI is independent of the coalesced disk write.
+                        until(lambda: len(list(Path(home).rglob("workspace.json"))) == 1)
+                        files = list(Path(home).rglob("workspace.json"))
+                        until(lambda: json.loads(files[0].read_text())["history"] == ["#3175B3"])
                     else:
                         assert not files
                     print("PASS: system color request completed and the workbench returned")
@@ -114,12 +117,13 @@ def main():
                 assert not mapped(), "PickerHub must hide while the magnifier is active"
                 move(1350,850)
                 time.sleep(.48)
-                # The lens itself shows the sampled color while moving, before selection.
+                # The lens itself shows the sampled color while moving, before selection. The lens is 232x314 and sits
+                # up-left of the pointer here, at (1094,512); the swatch is a disc centred 33 across and 253 down.
                 x11.XGetImage.restype=ctypes.c_void_p
                 x11.XGetPixel.argtypes=[ctypes.c_void_p,ctypes.c_int,ctypes.c_int]
                 x11.XGetPixel.restype=ctypes.c_ulong
                 x11.XDestroyImage.argtypes=[ctypes.c_void_p]
-                image=x11.XGetImage(display,x11.XDefaultRootWindow(display),1118,750,1,1,ctypes.c_ulong(-1),2)
+                image=x11.XGetImage(display,x11.XDefaultRootWindow(display),1127,765,1,1,ctypes.c_ulong(-1),2)
                 assert image
                 try:
                     assert x11.XGetPixel(image,0,0)&0xffffff == (0x336699 if portal else 0x745AC3), f"Magnifier swatch must update before clicking: {x11.XGetPixel(image,0,0):06X}"
@@ -135,15 +139,15 @@ def main():
                     x11.XSetInputFocus(display, other, 1, 0)
                     x11.XSync(display, False)
                 def live_swatch():
-                    image = x11.XGetImage(display,x11.XDefaultRootWindow(display),1118,750,1,1,ctypes.c_ulong(-1),2)
+                    image = x11.XGetImage(display,x11.XDefaultRootWindow(display),1127,765,1,1,ctypes.c_ulong(-1),2)
                     try: return x11.XGetPixel(image,0,0)&0xffffff == 0x297351
                     finally: x11.XDestroyImage(image)
                 until(live_swatch)
                 click(1350,850)
                 until(mapped)
                 file=until(lambda:next(Path(home).rglob("workspace.json"),None))
+                until(lambda: json.loads(file.read_text())["history"] == ["#297351"])
                 original=json.loads(file.read_text())
-                assert original["history"] == ["#297351"]
                 if portal:
                     result=subprocess.check_output(["gdbus","call","--session","--dest","org.freedesktop.portal.Desktop","--object-path","/org/freedesktop/portal/desktop","--method","org.pickerhub.Test.Color","2113632"],text=True)
                     assert "uint32 1" in result, "Only one sharing session should be started"
@@ -155,7 +159,7 @@ def main():
                 if portal:
                     move(1350,850)
                     time.sleep(.48)
-                    image=x11.XGetImage(display,x11.XDefaultRootWindow(display),1118,750,1,1,ctypes.c_ulong(-1),2)
+                    image=x11.XGetImage(display,x11.XDefaultRootWindow(display),1127,765,1,1,ctypes.c_ulong(-1),2)
                     try:assert x11.XGetPixel(image,0,0)&0xffffff==0x204060,"Second capture must show the updated stream, not an old screenshot"
                     finally:x11.XDestroyImage(image)
                 if not portal:
@@ -165,6 +169,15 @@ def main():
                 until(lambda:not re.search(r'"PickerHub Magnifier"',windows()))
                 until(mapped)
                 assert json.loads(file.read_text())==original
+                if not portal:
+                    x11.XSetInputFocus(display,int(window,16),1,0)
+                    ctrl = x11.XKeysymToKeycode(display, x11.XStringToKeysym(b"Control_L"))
+                    input_api.XTestFakeKeyEvent(display, ctrl, 1, 0); key("z")
+                    input_api.XTestFakeKeyEvent(display, ctrl, 0, 0); x11.XFlush(display)
+                    until(lambda: json.loads(file.read_text())["history"] == [])
+                    input_api.XTestFakeKeyEvent(display, ctrl, 1, 0); key("y")
+                    input_api.XTestFakeKeyEvent(display, ctrl, 0, 0); x11.XFlush(display)
+                    until(lambda: json.loads(file.read_text())["history"] == original["history"])
                 assert process.poll() is None
                 print("PASS: desktop eyedropper and persisted selected color", original["color"])
             finally:

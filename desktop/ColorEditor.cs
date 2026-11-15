@@ -16,11 +16,12 @@ internal sealed class Spectrum : Control
     public Spectrum(string hex)
     {
         Value = Color.Parse(hex).ToHsv(); Height = 120; MinWidth = 150; Cursor = new Cursor(StandardCursorType.Cross);
-        FlowDirection = FlowDirection.LeftToRight; Focusable = true; AutomationProperties.SetName(this, "تشبع اللون وسطوعه");
+        FlowDirection = FlowDirection.LeftToRight; Focusable = true; AutomationProperties.SetName(this, L.T("تشبع اللون وسطوعه"));
         PointerPressed += (_, e) => { e.Pointer.Capture(this); Update(e.GetPosition(this)); };
         PointerMoved += (_, e) => { if (e.Pointer.Captured == this) Update(e.GetPosition(this)); };
         PointerReleased += (_, e) => { if (e.Pointer.Captured == this) { e.Pointer.Capture(null); Selected?.Invoke(Hex()); } };
-        KeyDown += (_, e) => { double s = Value.S, v = Value.V; switch (e.Key) { case Key.Left: s -= .01; break; case Key.Right: s += .01; break; case Key.Up: v += .01; break; case Key.Down: v -= .01; break; default: return; } e.Handled = true; Value = HsvColor.FromHsv(Value.H, Math.Clamp(s, 0, 1), Math.Clamp(v, 0, 1)); Selected?.Invoke(Hex()); InvalidateVisual(); };
+        KeyDown += (_, e) => { double s = Value.S, v = Value.V; switch (e.Key) { case Key.Left: s -= .01; break; case Key.Right: s += .01; break; case Key.Up: v += .01; break; case Key.Down: v -= .01; break; default: return; } e.Handled = true; Value = HsvColor.FromHsv(Value.H, Math.Clamp(s, 0, 1), Math.Clamp(v, 0, 1)); InvalidateVisual(); };
+        KeyUp += (_, e) => { if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down) { e.Handled = true; Selected?.Invoke(Hex()); } };
     }
     string Hex() { var c = Value.ToRgb(); return $"#{c.R:X2}{c.G:X2}{c.B:X2}"; }
     void Update(Point p) { Value = HsvColor.FromHsv(Value.H, Math.Clamp(p.X / Bounds.Width, 0, 1), 1 - Math.Clamp(p.Y / Bounds.Height, 0, 1)); InvalidateVisual(); }
@@ -37,6 +38,7 @@ internal sealed class Spectrum : Control
 
 internal sealed partial class MainWindow
 {
+    Action? refreshColor;
     void ColorPage()
     {
         var c = Core.Describe(state.Color);
@@ -44,65 +46,84 @@ internal sealed partial class MainWindow
         string ink = c.Text("ink");
 
         // The specimen: the selected color at full size, labelled in its own readable ink.
-        var title = Col(Text(c.Text("name"), 26, true), Text(c.Text("base") + "، " + c.Text("shade"), 12)); title.Spacing = 0; title.VerticalAlignment = VerticalAlignment.Bottom; title.HorizontalAlignment = HorizontalAlignment.Right; title.FlowDirection = FlowDirection.RightToLeft;
+        var title = Col(Text(c.Text("name"), 26, true), Text(c.Text("base") + L.T("، ") + c.Text("shade"), 12)); title.Spacing = 0; title.VerticalAlignment = VerticalAlignment.Bottom; title.HorizontalAlignment = HorizontalAlignment.Right; title.FlowDirection = L.Flow;
         var code = Mono(state.Color, 20, true); code.VerticalAlignment = VerticalAlignment.Bottom; code.HorizontalAlignment = HorizontalAlignment.Left;
         var english = Mono(c.Text("english").ToLowerInvariant(), 12); english.VerticalAlignment = VerticalAlignment.Top; english.HorizontalAlignment = HorizontalAlignment.Right; english.Opacity = .8;
-        var quick = Cluster(LiquidOn(ink, "copy", "نسخ HEX", () => Copy(state.Color)), LiquidOn(ink, "download", "تصدير اللون", () => Export(new Palette { Name = c.Text("name"), Colors = [Swatch.From(state.Color)] })));
+        var quick = Cluster(LiquidOn(ink, "copy", L.T("نسخ اللون"), () => Copy(PickValue(state, state.Color))), LiquidOn(ink, "download", L.T("تصدير اللون"), () => Export(new Palette { Name = c.Text("name"), Colors = [Swatch.From(state.Color)] })));
         quick.HorizontalAlignment = HorizontalAlignment.Left; quick.VerticalAlignment = VerticalAlignment.Top; quick.FlowDirection = FlowDirection.LeftToRight;
         var face = new Panel { FlowDirection = FlowDirection.LeftToRight }; face.Children.AddRange([english, quick, title, code]);
-        var specimen = new Border { Background = Paint(state.Color), CornerRadius = new CornerRadius(24), Padding = new Thickness(22), Height = 172, Child = face };
+        var specimen = new Border { Background = Paint(state.Color), CornerRadius = new CornerRadius(24), Padding = new Thickness(22), Height = 136, Child = face };
         specimen[!Border.BorderBrushProperty] = new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("Line"); specimen.BorderThickness = new Thickness(1);
         Avalonia.Controls.Documents.TextElement.SetForeground(specimen, Paint(ink));
 
         var hex = new TextBox { Text = state.Color, MaxLength = 7, FlowDirection = FlowDirection.LeftToRight, FontFamily = Code, FontSize = 17, MinHeight = 44, VerticalContentAlignment = VerticalAlignment.Center };
-        AutomationProperties.SetAutomationId(hex, "hex-input"); AutomationProperties.SetName(hex, "قيمة HEX");
+        AutomationProperties.SetAutomationId(hex, "hex-input"); AutomationProperties.SetName(hex, L.T("قيمة HEX"));
         var error = Of(Text("", 12), "danger"); error.IsVisible = false;
-        void Apply() { var next = "#" + (hex.Text ?? "").Trim().TrimStart('#'); if (!Workspace.Hex(next)) { error.IsVisible = true; error.Text = "أدخل ست خانات HEX."; return; } Select(next); }
+        void Apply() { var next = "#" + (hex.Text ?? "").Trim().TrimStart('#'); if (!Workspace.Hex(next)) { error.IsVisible = true; error.Text = L.T("أدخل ست خانات HEX."); return; } Select(next); }
         hex.KeyDown += (_, ev) => { if (ev.Key == Key.Enter) { ev.Handled = true; _ = Guard(() => { Apply(); return Task.CompletedTask; }); } };
         var input = new Grid { ColumnDefinitions = new ColumnDefinitions("*,8,Auto"), FlowDirection = FlowDirection.LeftToRight };
         input.Children.Add(hex);
-        var apply = Of(Liquid("check", "اعتماد HEX", Apply), "still"); Grid.SetColumn(apply, 2); input.Children.Add(apply);
+        var apply = Of(Liquid("check", L.T("اعتماد HEX"), Apply), "still"); Grid.SetColumn(apply, 2); input.Children.Add(apply);
 
-        var spectrum = new Spectrum(state.Color) { Height = 150 }; spectrum.Selected += h => _ = Guard(() => { Select(h); return Task.CompletedTask; });
+        var spectrum = new Spectrum(state.Color) { Height = 120 }; spectrum.Selected += h => _ = Guard(() => { Select(h, false); return Task.CompletedTask; });
         var hue = new Slider { Height = 40, MinHeight = 40, Minimum = 0, Maximum = 359.99, Value = spectrum.Value.H, FlowDirection = FlowDirection.LeftToRight };
-        AutomationProperties.SetName(hue, "درجة اللون");
+        AutomationProperties.SetName(hue, L.T("درجة اللون"));
         var hueBrush = new LinearGradientBrush { StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(1, 0, RelativeUnit.Relative) };
         for (int i = 0; i <= 6; i++) hueBrush.GradientStops.Add(new GradientStop(HsvColor.FromHsv(i * 60 % 360, 1, 1).ToRgb(), i / 6d));
         hue.Background = hueBrush;
-        void Commit() { var rgb = spectrum.Value.ToRgb(); var h = $"#{rgb.R:X2}{rgb.G:X2}{rgb.B:X2}"; if (h != state.Color) _ = Guard(() => { Select(h); return Task.CompletedTask; }); }
+        void Commit() { var rgb = spectrum.Value.ToRgb(); var h = $"#{rgb.R:X2}{rgb.G:X2}{rgb.B:X2}"; if (h != state.Color) _ = Guard(() => { Select(h, false); return Task.CompletedTask; }); }
         hue.ValueChanged += (_, _) => { spectrum.Value = HsvColor.FromHsv(hue.Value, spectrum.Value.S, spectrum.Value.V); spectrum.InvalidateVisual(); };
         hue.PointerCaptureLost += (_, _) => Commit();
         hue.KeyUp += (_, _) => Commit();
-        var save = Btn("plus", "إضافة إلى لوحة", () => AddToPalette([state.Color]), true); save.HorizontalAlignment = HorizontalAlignment.Stretch;
+        var save = Btn("plus", L.T("إضافة إلى لوحة"), () => AddToPalette([state.Color]), true); save.HorizontalAlignment = HorizontalAlignment.Stretch;
         var editor = Col(new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = spectrum }, hue, Field("HEX", input), error, save);
 
         // Every format is one click away from the clipboard.
         var rows = new StackPanel { Spacing = 2 };
-        foreach (var key in new[] { "HEX", "RGB", "RGBA", "HSL", "HSV", "HSB", "CMYK" })
+        var extraRows = new StackPanel { Spacing = 2 };
+        var formatRows = new Dictionary<string, (Button Button, TextBlock Value)>();
+        foreach (var key in new[] { "HEX", "RGB", "RGBA", "HSL", "HSV", "HSB", "OKLCH", "CMYK" })
         {
-            string value = formats.Text(key); var b = Of(Btn("", () => Copy(value)), "row");
+            string value = formats.Text(key); var b = Of(Btn("", () => Copy(Core.Describe(state.Color).GetProperty("formats").Text(key))), "row");
             var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("52,*,20"), FlowDirection = FlowDirection.LeftToRight };
             grid.Children.Add(Tone(Mono(key, 11, true), "Muted"));
             var val = Mono(value, 13); val.TextWrapping = TextWrapping.NoWrap; val.TextTrimming = TextTrimming.CharacterEllipsis; Grid.SetColumn(val, 1); grid.Children.Add(val);
             var copy = Tone(new Icon("copy", 15), "Muted"); Grid.SetColumn(copy, 2); grid.Children.Add(copy); b.Content = grid;
-            AutomationProperties.SetName(b, "نسخ " + key + " " + value); ToolTip.SetTip(b, "نسخ " + key); ToolTip.SetPlacement(b, PlacementMode.Top); rows.Children.Add(b);
+            AutomationProperties.SetName(b, L.T("نسخ ") + key + " " + value); ToolTip.SetTip(b, L.T("نسخ ") + key); ToolTip.SetPlacement(b, PlacementMode.Top); (key is "HEX" or "RGB" or "HSL" or "OKLCH" ? rows : extraRows).Children.Add(b); formatRows[key] = (b, val);
         }
-        var formatList = Section("صيغ اللون", rows, Of(Liquid("copy", "نسخ جميع الصيغ", () => Copy(string.Join("\n", formats.EnumerateObject().Select(k => k.Name + ": " + k.Value.GetString())))), "still"));
+        extraRows.Children.Add(Label(L.T("sRGB · CMYK تقريبي للطباعة")));
+        rows.Children.Add(new Expander { Header = L.T("المزيد من الصيغ"), Content = extraRows, HorizontalAlignment = HorizontalAlignment.Stretch });
+        var formatList = Section(L.T("صيغ اللون"), rows, Of(Liquid("copy", L.T("نسخ جميع الصيغ"), () => Copy(string.Join("\n", formats.EnumerateObject().Select(k => k.Name + ": " + k.Value.GetString())))), "still"));
 
         var colors = Core.Harmony(state.Color, harmony);
         var strip = new Grid { ColumnDefinitions = new ColumnDefinitions(string.Join(",", colors.Select(_ => "*"))), Height = 64, FlowDirection = FlowDirection.LeftToRight };
         for (int i = 0; i < colors.Length; i++) { var h = colors[i]; var b = Of(Chip(h, () => Select(h), colors.Length > 5 ? "" : null), "flat"); b.CornerRadius = new CornerRadius(0); ToolTip.SetTip(b, h); Grid.SetColumn(b, i); strip.Children.Add(b); }
-        var harmonyTools = Line(8, Choose(modes, harmony, i => { harmony = i; Render(); }), Of(Liquid("plus", "إضافة المجموعة إلى لوحة", () => AddToPalette(colors)), "still"));
-        var harmonies = Section("تناغم الألوان", new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = strip }, harmonyTools);
+        var harmonyTools = Line(8, Choose(modes, harmony, i => { harmony = i; Render(); }), Of(Liquid("plus", L.T("إضافة المجموعة إلى لوحة"), () => AddToPalette(colors)), "still"));
+        var harmonies = Section(L.T("تناغم الألوان"), new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = strip }, harmonyTools);
 
         // Recent colors sit under the harmonies, where the shorter column has room, so the whole page shows without scrolling.
         var side = Col(formatList, harmonies); side.Spacing = 18;
-        if (state.History.Count > 0)
+        var recent = new WrapPanel();
+        var block = Col(Line(10, Label(L.T("الألوان الأخيرة")), Btn(L.T("عرض السجل"), () => Go(5))), recent); block.Margin = new Thickness(6, 0); side.Children.Add(block);
+        refreshColor = () =>
         {
-            var recent = new WrapPanel { MaxHeight = 84, ClipToBounds = true };
-            foreach (var h in state.History.Take(18)) { var dot = Dot(h, () => Select(h)); dot.Margin = new Thickness(0, 0, 8, 8); recent.Children.Add(dot); }
-            var block = Col(Label("الألوان الأخيرة"), recent); block.Margin = new Thickness(6, 0); side.Children.Add(block);
-        }
+            c = Core.Describe(state.Color); formats = c.GetProperty("formats"); ink = c.Text("ink");
+            ((TextBlock)title.Children[0]).Text = c.Text("name"); ((TextBlock)title.Children[1]).Text = c.Text("base") + L.T("، ") + c.Text("shade");
+            code.Text = hex.Text = state.Color; english.Text = c.Text("english").ToLowerInvariant();
+            specimen.Background = Paint(state.Color); Avalonia.Controls.Documents.TextElement.SetForeground(specimen, Paint(ink));
+            foreach (var b in quick.Children.OfType<Button>()) { b.Foreground = Paint(ink); b.Background = Paint(ink, .16); b.BorderBrush = Paint(ink, .28); }
+            foreach (var (key, row) in formatRows) { row.Value.Text = formats.Text(key); AutomationProperties.SetName(row.Button, L.T("نسخ ") + key + " " + formats.Text(key)); }
+            strip.Children.Clear();
+            var colorsNow = Core.Harmony(state.Color, harmony);
+            strip.ColumnDefinitions = new ColumnDefinitions(string.Join(",", colorsNow.Select(_ => "*")));
+            for (int i = 0; i < colorsNow.Length; i++) { var h = colorsNow[i]; var b = Chip(h, () => Select(h)); b.CornerRadius = new CornerRadius(0); Grid.SetColumn(b, i); strip.Children.Add(b); }
+            recent.Children.Clear(); block.IsVisible = state.History.Count > 0;
+            foreach (var h in state.History.Take(8)) { var dot = Dot(h, () => Select(h)); dot.Margin = new Thickness(0, 0, 8, 8); recent.Children.Add(dot); }
+            StyleShell();
+            if (undoButton != null) undoButton.IsEnabled = edits.CanUndo;
+            if (redoButton != null) redoButton.IsEnabled = edits.CanRedo;
+        };
+        refreshColor();
         var main = Col(specimen, Surface(editor)); main.Spacing = 18;
         content.Children.Add(Pair(main, side, 1.1, 1));
     }

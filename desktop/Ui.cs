@@ -4,6 +4,8 @@ using Avalonia.Animation.Easings;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
+using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
@@ -104,10 +106,13 @@ internal sealed partial class MainWindow
     static Control Pair(Control first, Control second, double firstWidth = 1, double secondWidth = 1)
     {
         var grid = new Grid();
+        bool? wasNarrow = null;
         grid.Children.Add(first); grid.Children.Add(second);
         void Layout()
         {
-            bool narrow = grid.Bounds.Width < 620;
+            bool narrow = grid.Bounds.Width < 720;
+            if (wasNarrow == narrow) return;
+            wasNarrow = narrow;
             grid.ColumnDefinitions = new ColumnDefinitions(narrow ? "*" : FormattableString.Invariant($"{firstWidth}*,18,{secondWidth}*"));
             grid.RowDefinitions = new RowDefinitions(narrow ? "Auto,18,Auto" : "Auto");
             Grid.SetColumn(second, narrow ? 0 : 2); Grid.SetRow(second, narrow ? 2 : 0);
@@ -127,11 +132,11 @@ internal sealed partial class MainWindow
         }, DispatcherPriority.Background);
     }
 
-    async Task Copy(string value) { if (Clipboard == null) throw new InvalidOperationException("الحافظة غير متاحة."); await Clipboard.SetTextAsync(value); status.Text = "نُسخت القيمة إلى الحافظة"; }
+    async Task Copy(string value) { if (Clipboard == null) throw new InvalidOperationException(L.T("الحافظة غير متاحة.")); await Clipboard.SetValueAsync(DataFormat.Text, value); status.Text = L.T("نُسخت القيمة إلى الحافظة"); }
     static Control Choices(params Control[] buttons) { var row = Line(8, buttons); row.Margin = new Thickness(0, 8, 0, 0); return row; }
     async Task<string?> Prompt(string title, string initial, bool hex = false)
     {
-        var input = new TextBox { Text = initial, MaxLength = hex ? 7 : 100, MinHeight = 42, VerticalContentAlignment = VerticalAlignment.Center, FlowDirection = hex ? FlowDirection.LeftToRight : FlowDirection.RightToLeft };
+        var input = new TextBox { Text = initial, MaxLength = hex ? 7 : 100, MinHeight = 42, VerticalContentAlignment = VerticalAlignment.Center, FlowDirection = hex ? FlowDirection.LeftToRight : L.Flow };
         if (hex) input.FontFamily = Code;
         AutomationProperties.SetName(input, title);
         var feedback = Of(Text("", 12), "danger"); feedback.IsVisible = false;
@@ -140,22 +145,22 @@ internal sealed partial class MainWindow
         {
             var val = (input.Text ?? "").Trim(); if (hex) val = "#" + val.TrimStart('#').ToUpperInvariant();
             if (val.Length > 0 && (!hex || Workspace.Hex(val))) d.Close(val);
-            else { feedback.IsVisible = true; feedback.Text = hex ? "أدخل ست خانات HEX." : "أدخل اسماً."; }
+            else { feedback.IsVisible = true; feedback.Text = hex ? L.T("أدخل ست خانات HEX.") : L.T("أدخل اسماً."); }
         }
-        d.Content = Col(Text(title, 18, true), input, feedback, Choices(Btn("حفظ", OK, true), Btn("إلغاء", () => d.Close())));
+        d.Content = Col(Text(title, 18, true), input, feedback, Choices(Btn(L.T("حفظ"), OK, true), Btn(L.T("إلغاء"), () => d.Close())));
         input.KeyDown += (_, ev) => { if (ev.Key == Avalonia.Input.Key.Enter) { ev.Handled = true; OK(); } };
         d.Opened += () => { input.Focus(); input.SelectAll(); }; return await d.Show<string?>();
     }
     async Task<bool> Confirm(string title)
     {
-        var d = Dialog(title); d.Content = Col(Text(title, 16), Choices(Btn("تأكيد", () => d.Close(true), true), Btn("إلغاء", () => d.Close(false))));
+        var d = Dialog(title); d.Content = Col(Text(title, 16), Choices(Btn(L.T("تأكيد"), () => d.Close(true), true), Btn(L.T("إلغاء"), () => d.Close(false))));
         return await d.Show<bool>();
     }
     async Task<int?> SelectOption(string title, string[] choices, int start = 0)
     {
         var d = Dialog(title); int picked = start; var choice = Choose(choices, start, i => picked = i); choice.HorizontalAlignment = HorizontalAlignment.Stretch;
         AutomationProperties.SetName(choice, title);
-        d.Content = Col(Text(title, 16), choice, Choices(Btn("اختيار", () => d.Close((int?)picked), true), Btn("إلغاء", () => d.Close())));
+        d.Content = Col(Text(title, 16), choice, Choices(Btn(L.T("اختيار"), () => d.Close((int?)picked), true), Btn(L.T("إلغاء"), () => d.Close())));
         return await d.Show<int?>();
     }
 }

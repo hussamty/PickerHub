@@ -41,12 +41,32 @@ internal class Glass : Decorator, ICustomHitTest
     public double Shoulder { get => GetValue(ShoulderProperty); set => SetValue(ShoulderProperty, value); }
 
     public bool HitTest(Point point) => new Rect(Bounds.Size).Contains(point);
+    static bool reduceTransparency;
+    internal static bool ReduceTransparency
+    {
+        get => reduceTransparency;
+        set
+        {
+            if (reduceTransparency == value) return;
+            reduceTransparency = value;
+            foreach (var weak in panes.ToArray())
+            {
+                if (weak.TryGetTarget(out var pane)) pane.InvalidateVisual(); else panes.Remove(weak);
+            }
+        }
+    }
+    static readonly List<WeakReference<Glass>> panes = [];
+    internal static bool Dark = true;
     public override void Render(DrawingContext context) =>
-        context.Custom(new Pane(new Rect(Bounds.Size), Tint, Rim, Shade, Wash, Radius, Blur, Shoulder, behind));
-    Backing behind = Backing.Take();
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { base.OnDetachedFromVisualTree(e); behind.Return(); behind = Backing.Take(); }
+        context.Custom(new Pane(new Rect(Bounds.Size), ReduceTransparency ? Color.Parse(Dark ? "#232321" : "#FFFFFF") : Tint, Rim, Shade, Wash, Radius, ReduceTransparency ? 0 : Blur, Shoulder, key));
+    // The pane's backdrop copy lives on the render thread under this key. The control holds no
+    // graphics memory itself, so nothing of it is ever freed by the garbage collector.
+    static long last;
+    readonly long key = Interlocked.Increment(ref last);
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e) { base.OnAttachedToVisualTree(e); panes.Add(new(this)); Backing.Mark(key, true); }
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e) { base.OnDetachedFromVisualTree(e); panes.RemoveAll(w => !w.TryGetTarget(out var p) || p == this); Backing.Mark(key, false); }
 
-    sealed record Pane(Rect Area, Color Tint, Color Rim, Color Shade, Color Wash, double Radius, double Blur, double Shoulder, Backing Behind) : ICustomDrawOperation
+    sealed record Pane(Rect Area, Color Tint, Color Rim, Color Shade, Color Wash, double Radius, double Blur, double Shoulder, long Key) : ICustomDrawOperation
     {
         const float Spread = 14, Drop = 10;
         public Rect Bounds => Area.Inflate(Shade.A == 0 ? 1 : Spread * 3);
@@ -77,12 +97,14 @@ internal class Glass : Decorator, ICustomHitTest
             if (Area.Width < 1 || Area.Height < 1 || context.TryGetFeature<ISkiaSharpApiLeaseFeature>() is not { } feature) return;
             using var lease = feature.Lease();
             var canvas = lease.SkCanvas;
+            Backing.Sweep();
             using var path = Shape();
             float h = (float)Area.Height;
 
             if (Shade.A > 0)
             {
-                using var shadow = new SKPaint { Color = Sk(Shade), IsAntialias = true, MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Spread) };
+                using var mask = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, Spread);
+                using var shadow = new SKPaint { Color = Sk(Shade), IsAntialias = true, MaskFilter = mask };
                 canvas.Save();
                 if (Shoulder > 0) { canvas.ClipPath(path, SKClipOperation.Difference, true); canvas.Translate(0, Drop); canvas.DrawPath(path, shadow); }
                 else
@@ -101,19 +123,19 @@ internal class Glass : Decorator, ICustomHitTest
             using (var fill = new SKPaint { Color = Sk(Tint) }) canvas.DrawPaint(fill);
             if (Wash.A > 0) { using var wash = new SKPaint { Color = Sk(Wash) }; canvas.DrawPaint(wash); }
             // Light falls from the top-left corner and fades across the pane.
-            using (var sheen = new SKPaint())
+            using (var sheen = new SKPaint { IsDither = true })
             {
-                sheen.Shader = SKShader.CreateLinearGradient(new SKPoint(0, 0), new SKPoint((float)Area.Width * .7f, h * .7f),
+                using var sheenShader = SKShader.CreateLinearGradient(new SKPoint(0, 0), new SKPoint((float)Area.Width * .7f, h * .7f),
                     [Sk(Rim, .22), Sk(Rim, 0)], null, SKShaderTileMode.Clamp);
-                canvas.DrawPaint(sheen);
+                sheen.Shader = sheenShader; canvas.DrawPaint(sheen);
             }
             canvas.Restore();
 
             using var rim = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1 };
-            rim.Shader = SKShader.CreateLinearGradient(new SKPoint(0, 0), new SKPoint(0, h), [Sk(Rim), Sk(Rim, .22)], null, SKShaderTileMode.Clamp);
+            using var rimShader = SKShader.CreateLinearGradient(new SKPoint(0, 0), new SKPoint(0, h), [Sk(Rim), Sk(Rim, .22)], null, SKShaderTileMode.Clamp);
             canvas.Save();
             canvas.ClipPath(path, SKClipOperation.Intersect, true);
-            rim.StrokeWidth = 2;
+            rim.Shader = rimShader; rim.StrokeWidth = 2;
             canvas.DrawPath(path, rim);
             canvas.Restore();
         }
@@ -135,6 +157,8 @@ internal class Glass : Decorator, ICustomHitTest
             using var seen = surface.Snapshot(region);
             if (seen == null) return;
             int w = (region.Width + Down - 1) / Down, h = (region.Height + Down - 1) / Down;
+            // A pane that has left the screen may still be painted once from the previous scene: it gets no surfaces.
+            if (Backing.Of(Key) is not { } Behind) return;
             bool whole = Behind.Fit(gpu, w, h) || Behind.Region != region;
             if (Behind.Copy == null || Behind.Soft == null) return;
             Behind.Region = region;
@@ -167,20 +191,42 @@ internal class Glass : Decorator, ICustomHitTest
             canvas.Restore();
         }
     }
-    // A pane's private copy of what lies behind it, and its blurred form. Only the render thread draws
-    // into them. They are pooled rather than left to the finalizer, which must not free GPU surfaces.
+    // A pane's private copy of what lies behind it, and its blurred form. These may be GPU
+    // surfaces, which must be created, drawn and freed on the render thread while its context is
+    // current. So they are owned by this table, never by a control: a control that goes away only
+    // posts its key, and the render thread frees the surfaces on its next pass. Leaving them to the
+    // garbage collector frees them from the finalizer thread, which crashes the graphics driver.
     sealed class Backing
     {
-        static readonly System.Collections.Concurrent.ConcurrentBag<Backing> spare = [];
+        static readonly Dictionary<long, Backing> live = [];
+        static readonly HashSet<long> attached = [];
+        static readonly System.Collections.Concurrent.ConcurrentQueue<(long Key, bool Shown)> changes = new();
         public SKSurface? Copy, Soft; public SKRectI Region;
         GRContext? owner; int wide, high;
-        public static Backing Take() => spare.TryTake(out var found) ? found : new Backing();
-        public void Return() { Region = default; spare.Add(this); }
+        // Any thread: the pane with this key has entered or left the screen.
+        public static void Mark(long key, bool shown) => changes.Enqueue((key, shown));
+        // Render thread only, as is everything below.
+        public static void Sweep()
+        {
+            while (changes.TryDequeue(out var change))
+            {
+                if (change.Shown) { attached.Add(change.Key); continue; }
+                attached.Remove(change.Key);
+                if (live.Remove(change.Key, out var left)) left.Free();
+            }
+        }
+        public static Backing? Of(long key)
+        {
+            if (!attached.Contains(key)) return null;
+            if (!live.TryGetValue(key, out var found)) live[key] = found = new Backing();
+            return found;
+        }
+        void Free() { Copy?.Dispose(); Soft?.Dispose(); Copy = Soft = null; }
         // True when the surfaces were (re)made and hold nothing yet.
         public bool Fit(GRContext? gpu, int w, int h)
         {
             if (Copy != null && Soft != null && owner == gpu && w <= wide && h <= high) return false;
-            Copy?.Dispose(); Soft?.Dispose();
+            Free();
             wide = Math.Max(wide, (w + 31) / 32 * 32); high = Math.Max(high, (h + 31) / 32 * 32); owner = gpu;
             var info = new SKImageInfo(wide, high, SKColorType.Rgba8888, SKAlphaType.Premul);
             Copy = (gpu != null ? SKSurface.Create(gpu, false, info) : null) ?? SKSurface.Create(info);
@@ -255,32 +301,73 @@ internal sealed class Goo : Panel
     }
 }
 
-// The room behind the glass: brand black or its light inverse, with two pools of light for the
+// Shared color arithmetic for the pieces that draw themselves.
+internal static class Tones
+{
+    // Mix two ARGB colors: 0 gives the first, 1 the second.
+    public static Color Blend(uint from, uint to, double t)
+    {
+        Color a = Color.FromUInt32(from), b = Color.FromUInt32(to); t = Math.Clamp(t, 0, 1);
+        byte Channel(byte x, byte y) => (byte)Math.Round(x + (y - x) * t);
+        return Color.FromArgb(Channel(a.A, b.A), Channel(a.R, b.R), Channel(a.G, b.G), Channel(a.B, b.B));
+    }
+}
+
+// The room behind the glass: brand black or its light inverse, with pools of light for the
 // panes to catch. Mix runs from 0 (dark) to 1 (light) so the theme switch can scrub it.
+// Wide, faint gradients show steps on an 8-bit screen, and a pool that stops at a hard radius
+// shows its edge. So each pool fades along an eased curve, is dithered, and a fine grain is laid
+// over the whole room: the steps break up below what the eye can follow.
 internal sealed class Backdrop : Control
 {
     public static readonly StyledProperty<double> MixProperty = AvaloniaProperty.Register<Backdrop, double>(nameof(Mix));
     static Backdrop() => AffectsRender<Backdrop>(MixProperty);
     public double Mix { get => GetValue(MixProperty); set => SetValue(MixProperty, value); }
-    static Color Blend(uint dark, uint light, double t)
+    public override void Render(DrawingContext context) => context.Custom(new Room(new Rect(Bounds.Size), Math.Clamp(Mix, 0, 1)));
+
+    sealed record Room(Rect Area, double Mix) : ICustomDrawOperation
     {
-        Color a = Color.FromUInt32(dark), b = Color.FromUInt32(light);
-        byte Channel(byte x, byte y) => (byte)Math.Round(x + (y - x) * t);
-        return Color.FromArgb(Channel(a.A, b.A), Channel(a.R, b.R), Channel(a.G, b.G), Channel(a.B, b.B));
-    }
-    static RadialGradientBrush Pool(Color color, double x, double y, double radius) => new()
-    {
-        Center = new RelativePoint(x, y, RelativeUnit.Relative), GradientOrigin = new RelativePoint(x, y, RelativeUnit.Relative),
-        RadiusX = new RelativeScalar(radius, RelativeUnit.Relative), RadiusY = new RelativeScalar(radius, RelativeUnit.Relative),
-        GradientStops = [new(color, 0), new(Color.FromArgb(0, color.R, color.G, color.B), 1)]
-    };
-    public override void Render(DrawingContext context)
-    {
-        double t = Math.Clamp(Mix, 0, 1); var area = new Rect(Bounds.Size);
-        context.DrawRectangle(new SolidColorBrush(Blend(0xFF111111, 0xFFF4F3EE, t)), null, area);
-        // Yellow light from the top corner where the eyedropper lives; a neutral pool opposite it.
-        context.DrawRectangle(Pool(Blend(0x3DFFF000, 0x6BFFF000, t), .12, -.05, .62), null, area);
-        context.DrawRectangle(Pool(Blend(0x1FFFFFFF, 0x1A111111, t), .95, 1.05, .7), null, area);
-        context.DrawRectangle(Pool(Blend(0x17FFF000, 0x38FFF000, t), .62, .6, .34), null, area);
+        const int Steps = 12;
+        static readonly float[] stops = Enumerable.Range(0, Steps + 1).Select(i => i / (float)Steps).ToArray();
+        static readonly SKShader grain = Grain();
+        public Rect Bounds => Area;
+        public bool HitTest(Point p) => false;
+        public bool Equals(ICustomDrawOperation? other) => other is Room room && room == this;
+        public void Dispose() { }
+        // A tile of faint light and dark specks, the same every run.
+        static SKShader Grain()
+        {
+            const int size = 128;
+            using var tile = new SKBitmap(new SKImageInfo(size, size, SKColorType.Rgba8888, SKAlphaType.Premul));
+            var random = new Random(11);
+            for (int y = 0; y < size; y++) for (int x = 0; x < size; x++)
+            {
+                byte tone = random.Next(2) == 0 ? (byte)0 : (byte)255;
+                tile.SetPixel(x, y, new SKColor(tone, tone, tone, (byte)random.Next(0, 9)));
+            }
+            return SKShader.CreateBitmap(tile, SKShaderTileMode.Repeat, SKShaderTileMode.Repeat);
+        }
+        void Pool(SKCanvas canvas, SKRect area, Color tone, float x, float y, float radius)
+        {
+            // Full at the centre, flat again at the rim: no edge where the pool ends.
+            var colors = stops.Select(p => new SKColor(tone.R, tone.G, tone.B, (byte)Math.Round(tone.A * (1 - p * p * (3 - 2 * p))))).ToArray();
+            using var shader = SKShader.CreateRadialGradient(new SKPoint(x, y), radius, colors, stops, SKShaderTileMode.Clamp, SKMatrix.CreateScale(area.Width, area.Height));
+            using var paint = new SKPaint { Shader = shader, IsDither = true };
+            canvas.DrawRect(area, paint);
+        }
+        public void Render(ImmediateDrawingContext context)
+        {
+            if (context.TryGetFeature<ISkiaSharpApiLeaseFeature>() is not { } feature) return;
+            using var lease = feature.Lease();
+            var canvas = lease.SkCanvas; var area = new SKRect(0, 0, (float)Area.Width, (float)Area.Height);
+            var ground = Tones.Blend(0xFF111111, 0xFFF4F3EE, Mix);
+            using (var fill = new SKPaint { Color = new SKColor(ground.R, ground.G, ground.B) }) canvas.DrawRect(area, fill);
+            // Yellow light from the top corner where the eyedropper lives; a neutral pool opposite it.
+            Pool(canvas, area, Tones.Blend(0x3DFFF000, 0x6BFFF000, Mix), .12f, -.05f, .72f);
+            Pool(canvas, area, Tones.Blend(0x1FFFFFFF, 0x1A111111, Mix), .95f, 1.05f, .8f);
+            Pool(canvas, area, Tones.Blend(0x17FFF000, 0x38FFF000, Mix), .62f, .6f, .42f);
+            using var speck = new SKPaint { Shader = grain };
+            canvas.DrawRect(area, speck);
+        }
     }
 }

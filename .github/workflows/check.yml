@@ -21,17 +21,30 @@ jobs:
       - if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libx11-dev xvfb x11-utils x11-xserver-utils libxtst6
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev xvfb x11-utils x11-xserver-utils libxtst6 dbus-x11 python3-dbus python3-gi python3-pil gir1.2-gstreamer-1.0 pipewire wireplumber gstreamer1.0-pipewire gstreamer1.0-plugins-base
       - run: rustup update stable
       - run: rustup default stable
       - run: cargo test --locked
       - run: python scripts/build.py --packages --rid ${{ matrix.rid }}
       - if: runner.os == 'Linux'
         run: xvfb-run -a -s '-screen 0 1400x900x24 -noreset' python tests/native_x11.py
+      - if: runner.os == 'Linux'
+        run: |
+          dist/native/linux-x64/PickerHub/PickerHub --self-test
+          python tests/release_checks.py
+          xvfb-run -a python tests/hotkey_x11.py
+          xvfb-run -a -s '-screen 0 1400x900x24 -noreset' /usr/bin/python3 tests/ui_visual.py
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24 -noreset' /usr/bin/python3 tests/shortcut_portal.py
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24 -noreset' sh tests/run_portal_test.sh
       - if: runner.os == 'macOS'
-        run: dist/native/${{ matrix.rid }}/PickerHub.app/Contents/MacOS/PickerHub --check-core
+        run: dist/native/${{ matrix.rid }}/PickerHub.app/Contents/MacOS/PickerHub --self-test
       - if: runner.os == 'Windows'
-        run: dist/native/win-x64/PickerHub/PickerHub.exe --check-core
+        run: dist/native/win-x64/PickerHub/PickerHub.exe --self-test
+      - if: runner.os == 'Linux' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-previews
+          path: dist/qa/*.png
       - uses: actions/upload-artifact@v4
         with:
           name: pickerhub-${{ matrix.rid }}
@@ -40,13 +53,19 @@ jobs:
             dist/native/*.tar.gz
             dist/native/*.deb
             dist/native/*.sha256
+            dist/native/*.manifest.json
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
     permissions: {contents: write}
     steps:
       - uses: actions/download-artifact@v4
         with: {pattern: 'pickerhub-*', merge-multiple: true, path: dist}
-      - run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes
+      - uses: actions/checkout@v4
+      - name: Publish unsigned preview after every platform passes
+        shell: bash
+        run: |
+          version=$(python3 -c "import xml.etree.ElementTree as E; print(E.parse('desktop/PickerHub.csproj').findtext('PropertyGroup/Version'))")
+          gh release create "v$version" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "PickerHub $version — unsigned preview" --notes-file docs/release-notes.md --prerelease
         env: {GH_TOKEN: '${{ github.token }}'}

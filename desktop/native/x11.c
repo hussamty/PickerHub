@@ -6,6 +6,19 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+// Avalonia 11 looks up existing clipboard atoms during startup. Minimal X11
+// desktops may not have a clipboard manager to create them first.
+void pickerhub_clipboard_prepare(void) {
+    XInitThreads();
+    Display *d = XOpenDisplay(NULL);
+    if (!d) return;
+    const char *names[] = {"CLIPBOARD", "CLIPBOARD_MANAGER", "SAVE_TARGETS",
+        "MULTIPLE", "TARGETS", "UTF8_STRING", "UTF16_STRING", "OEMTEXT", "ATOM_PAIR", "INCR"};
+    for (unsigned i = 0; i < sizeof(names)/sizeof(names[0]); i++) XInternAtom(d, names[i], False);
+    XSync(d, False);
+    XCloseDisplay(d);
+}
+
 static unsigned channel(unsigned long pixel, unsigned long mask) {
     if (!mask) return 0;
     while (!(mask & 1)) { mask >>= 1; pixel >>= 1; }
@@ -128,3 +141,23 @@ void pickerhub_focus_window(unsigned long window) {
     XDestroyWindow(d,probe);
     XCloseDisplay(d);
 }
+
+// A separate connection owns only the user's configured shortcut, never other input.
+void *pickerhub_hotkey_open(int choice) {
+    Display *d = XOpenDisplay(NULL); if (!d) return NULL;
+    XSync(d, False); grab_error = 0;
+    XErrorHandler previous = XSetErrorHandler(on_grab_error);
+    KeyCode code = XKeysymToKeycode(d, choice == 2 ? XK_c : XK_p);
+    unsigned base = ControlMask | (choice == 1 ? Mod1Mask : ShiftMask);
+    unsigned locks[] = {0, LockMask, Mod2Mask, LockMask | Mod2Mask};
+    for (unsigned i = 0; i < 4; i++) XGrabKey(d, code, base | locks[i], DefaultRootWindow(d), False, GrabModeAsync, GrabModeAsync);
+    XSync(d, False); XSetErrorHandler(previous);
+    if (grab_error) { XCloseDisplay(d); return NULL; }
+    return d;
+}
+int pickerhub_hotkey_poll(Display *d) {
+    int hit = 0;
+    while (XPending(d)) { XEvent e; XNextEvent(d, &e); if (e.type == KeyPress) hit = 1; }
+    return hit;
+}
+void pickerhub_hotkey_close(Display *d) { if (d) XCloseDisplay(d); }

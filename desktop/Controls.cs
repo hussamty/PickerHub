@@ -48,18 +48,18 @@ internal sealed class Spine : Glass
 {
     public const double Closed = 58, Open = 236;
     const double Lip = 18;
-    readonly StackPanel items = new() { Spacing = 3, FlowDirection = FlowDirection.RightToLeft, ClipToBounds = true };
+    readonly StackPanel items = new() { Spacing = 3, FlowDirection = L.Flow, ClipToBounds = true };
     readonly Border hover = new() { Classes = { "pill", "hover" }, Opacity = 0 }, current = new() { Classes = { "pill", "active" }, Opacity = 0 };
     readonly List<Button> tools = [];
     readonly List<TextBlock> labels = [];
-    bool keyboard, pinned, motion = true;
+    bool keyboard, pinned, motion = true, motionInitialized, expanded;
     int active = -1;
     public Spine()
     {
         Radius = 26; Blur = 22; Shoulder = Lip; Width = Closed; Padding = new Thickness(7, Lip + 7, 7, Lip + 7);
         HorizontalAlignment = HorizontalAlignment.Right; VerticalAlignment = VerticalAlignment.Center;
         var layers = new Panel(); layers.Children.AddRange([current, hover, items]); Child = layers;
-        Add("dots", "القائمة", () => { pinned = !pinned; Expand(pinned || IsPointerOver); }, false);
+        Add("dots", L.T("القائمة"), () => { pinned = !pinned; Expand(pinned || IsPointerOver); }, false);
         Divide();
         PointerEntered += (_, _) => Expand(true);
         PointerExited += (_, _) => { hover.Opacity = 0; if (!keyboard && !pinned) Expand(false); };
@@ -67,18 +67,27 @@ internal sealed class Spine : Glass
         AddHandler(PointerReleasedEvent, (_, _) => hover.RenderTransform = TransformOperations.Parse("scale(1,1)"), Avalonia.Interactivity.RoutingStrategies.Tunnel);
         AddHandler(GotFocusEvent, (_, e) =>
         {
-            if (e.NavigationMethod == NavigationMethod.Pointer) return;
+            // Showing a hidden window restores focus with Unspecified navigation.
+            // Only intentional keyboard navigation should expand the rail.
+            if (e.NavigationMethod is not (NavigationMethod.Tab or NavigationMethod.Directional)) return;
             keyboard = true; Expand(true); if (e.Source is Button row) Follow(row);
         }, handledEventsToo: true);
         AddHandler(LostFocusEvent, (_, _) => { keyboard = false; if (!IsPointerOver && !pinned) { hover.Opacity = 0; Expand(false); } }, handledEventsToo: true);
         KeyDown += (_, e) => { if (e.Key == Key.Escape && pinned) { e.Handled = true; Release(); } };
         items.LayoutUpdated += (_, _) => Mark();
     }
+    public void Fit(double availableHeight)
+    {
+        double height = availableHeight < 540 ? 36 : 44;
+        foreach (var row in items.Children.OfType<Button>()) { row.Height = height; row.MinHeight = height; }
+        current.Height = hover.Height = height;
+    }
     public bool Motion
     {
         set
         {
-            motion = value;
+            if (motionInitialized && motion == value) return;
+            motionInitialized = true; motion = value;
             for (int i = 0; i < labels.Count; i++) labels[i].Transitions = Fade(i);
             foreach (var pill in new[] { hover, current }) pill.Transitions = value ? Travel() : null;
         }
@@ -93,11 +102,14 @@ internal sealed class Spine : Glass
     // Opening overshoots like a drop let go; closing settles without a bounce so the icons are never clipped.
     void Expand(bool open)
     {
+        if (expanded == open) return;
+        expanded = open;
         Transitions = motion ? [new DoubleTransition { Property = WidthProperty, Duration = TimeSpan.FromMilliseconds(open ? 280 : 190), Easing = open ? new BackEaseOut() : new CubicEaseOut() }] : null;
         Width = open ? Open : Closed; foreach (var label in labels) label.Opacity = open ? 1 : 0;
     }
     // Unpin after a click outside the spine.
     public void Release() { pinned = false; if (!IsPointerOver && !keyboard) Expand(false); }
+    public void Collapse() { pinned = keyboard = false; hover.Opacity = 0; Expand(false); }
     // A pill that is not showing appears in place; one that is showing travels.
     void Slide(Border pill, double y)
     {
@@ -114,6 +126,14 @@ internal sealed class Spine : Glass
         button.PointerEntered += (_, _) => Follow(button);
         if (tool) tools.Add(button);
         items.Children.Add(button); return button;
+    }
+    public void Relabel((string Symbol, string Title)[] titles)
+    {
+        items.FlowDirection = L.Flow;
+        var rows = items.Children.OfType<Button>().ToArray();
+        Label(rows[0], "dots", L.T("القائمة"));
+        for (int i = 0; i < tools.Count; i++) Label(tools[i], titles[i].Symbol, titles[i].Title);
+        Label(rows[^1], "settings", L.T("الإعدادات"));
     }
     public void Divide() => items.Children.Add(new Border { Classes = { "hairline" }, Margin = new Thickness(12, 5) });
     public void Label(Button button, string symbol, string label)
@@ -150,7 +170,7 @@ internal sealed class Deck : Panel
         // The pile opens a little under the pointer, so the cards beneath can be read through the glass.
         PointerEntered += (_, _) => Fan(1.35); PointerExited += (_, _) => Fan(1);
         Focusable = true; Cursor = new Cursor(StandardCursorType.Hand);
-        AutomationProperties.SetName(this, "بطاقات الألوان");
+        AutomationProperties.SetName(this, L.T("بطاقات الألوان"));
         KeyDown += (_, e) =>
         {
             switch (e.Key) { case Key.Left: Next(); break; case Key.Right: Previous(); break; case Key.Space: case Key.Enter: Flip(); break; default: return; }

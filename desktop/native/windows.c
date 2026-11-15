@@ -118,3 +118,20 @@ __declspec(dllexport) int pickerhub_sample(int x,int y,int radius,unsigned char 
     if (previous) SetThreadDpiAwarenessContext(previous);
     return ok;
 }
+
+static int shortcut_pending;
+static LRESULT CALLBACK shortcut_proc(HWND w, UINT message, WPARAM a, LPARAM b) {
+    if (message == WM_HOTKEY) { shortcut_pending = 1; return 0; }
+    return DefWindowProcW(w, message, a, b);
+}
+__declspec(dllexport) void *pickerhub_hotkey_open(int choice) {
+    HINSTANCE module = GetModuleHandleW(NULL);
+    WNDCLASSW wc = {0}; wc.lpfnWndProc = shortcut_proc; wc.hInstance = module; wc.lpszClassName = L"PickerHubShortcut";
+    RegisterClassW(&wc);
+    HWND w = CreateWindowW(wc.lpszClassName, L"", 0, 0,0,0,0, HWND_MESSAGE, NULL, module, NULL);
+    if (!w) return NULL;
+    if (!RegisterHotKey(w, 1, MOD_NOREPEAT | MOD_CONTROL | (choice == 1 ? MOD_ALT : MOD_SHIFT), choice == 2 ? 'C' : 'P')) { DestroyWindow(w); return NULL; }
+    shortcut_pending = 0; return w;
+}
+__declspec(dllexport) int pickerhub_hotkey_poll(void *handle) { (void)handle; int hit = shortcut_pending; shortcut_pending = 0; return hit; }
+__declspec(dllexport) void pickerhub_hotkey_close(void *handle) { if (handle) { UnregisterHotKey(handle, 1); DestroyWindow(handle); } }

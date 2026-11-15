@@ -6,12 +6,35 @@ namespace PickerHub;
 
 internal class App : Application
 {
+    internal static SingleInstance? Instance;
+    internal static string Version => typeof(App).Assembly.GetName().Version!.ToString(3);
     [STAThread]
     public static int Main(string[] args)
     {
-        if (args.Contains("--version")) { Console.WriteLine("PickerHub 0.3.5"); return 0; }
+        if (args.Length == 2 && args[0] == "--instance-probe")
+        {
+            Workspace.RootOverride = args[1];
+            using var probe = SingleInstance.Open(); return probe == null ? 0 : 3;
+        }
+        if (args.Contains("--self-test")) return SelfTests.Run();
+        if (args.Contains("--version")) { Console.WriteLine("PickerHub " + Version); return 0; }
         if (args.Contains("--check-core")) { Console.WriteLine(Core.Describe("#87CEEB").Text("hex")); return 0; }
-        return AppBuilder.Configure<App>().With(new X11PlatformOptions{WmClass="pickerhub"}).UsePlatformDetect().StartWithClassicDesktopLifetime(args);
+        string? testRoot = null;
+        if (args.Contains("--ui-test"))
+        {
+            testRoot = Path.Combine(Path.GetTempPath(), "pickerhub-ui-" + Guid.NewGuid().ToString("N")); Workspace.RootOverride = testRoot;
+            new Workspace { Language = args.Contains("--english") ? "en" : "ar" }.Save();
+        }
+        try { Instance = SingleInstance.Open(); if (Instance == null) return 0; }
+        catch (Exception e) { Console.Error.WriteLine(e.Message); return 2; }
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => SupportLog.Record("unhandled", e.ExceptionObject as Exception);
+        if (OperatingSystem.IsLinux()) NativePicker.pickerhub_clipboard_prepare();
+        try
+        {
+            int code = AppBuilder.Configure<App>().With(new X11PlatformOptions{WmClass="pickerhub"}).UsePlatformDetect().StartWithClassicDesktopLifetime(args);
+            return code != 0 ? code : Environment.ExitCode;
+        }
+        finally { Instance?.Dispose(); if (testRoot != null && Directory.Exists(testRoot)) Directory.Delete(testRoot, true); }
     }
     public override void Initialize()
     {
@@ -33,7 +56,13 @@ internal class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        { desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnMainWindowClose; desktop.MainWindow = new MainWindow(); }
+        { desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnMainWindowClose; desktop.MainWindow = new MainWindow();
+            Instance?.OnActivate(() => Avalonia.Threading.Dispatcher.UIThread.Post(() => ((MainWindow)desktop.MainWindow).BringForward()));
+            if (desktop.Args?.Contains("--ui-test") == true)
+            {
+                bool started = false;
+                desktop.MainWindow.Opened += (_, _) => { if (started) return; started = true; _ = ((MainWindow)desktop.MainWindow).Smoke(); };
+            } }
         base.OnFrameworkInitializationCompleted();
     }
 }

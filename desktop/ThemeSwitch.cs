@@ -32,7 +32,7 @@ internal sealed class ThemeSwitch : Control
     public ThemeSwitch()
     {
         Width = W; Height = H; Focusable = true; FlowDirection = FlowDirection.LeftToRight; Cursor = new Cursor(StandardCursorType.Hand);
-        AutomationProperties.SetName(this, "تبديل المظهر بين الفاتح والداكن");
+        AutomationProperties.SetName(this, L.T("تبديل المظهر بين الفاتح والداكن"));
         PointerPressed += (_, e) => { e.Pointer.Capture(this); running = false; dragging = true; moved = false; pressX = e.GetPosition(this).X; pressT = t; e.Handled = true; };
         PointerMoved += (_, e) =>
         {
@@ -92,12 +92,7 @@ internal sealed class ThemeSwitch : Control
     // If the theme could not be saved, the knob returns to the theme that is really showing.
     void Settle() { if (t != (light ? 1 : 0)) { t = light ? 1 : 0; Scrubbed?.Invoke(t); InvalidateVisual(); } Settled?.Invoke(); }
 
-    static Color Blend(uint dark, uint lightColor, double k)
-    {
-        Color a = Color.FromUInt32(dark), b = Color.FromUInt32(lightColor);
-        byte Channel(byte x, byte y) => (byte)Math.Round(x + (y - x) * Math.Clamp(k, 0, 1));
-        return Color.FromArgb(Channel(a.A, b.A), Channel(a.R, b.R), Channel(a.G, b.G), Channel(a.B, b.B));
-    }
+    static Color Blend(uint dark, uint lightColor, double k) => Tones.Blend(dark, lightColor, k);
     static LinearGradientBrush Fall(Color top, Color bottom) => new()
     {
         StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),

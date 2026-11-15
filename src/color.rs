@@ -63,6 +63,18 @@ impl Color {
         });
         0.2126 * r + 0.7152 * g + 0.0722 * b
     }
+    /// OKLab coordinates: equal distances look about equally different, which RGB distances do not.
+    pub fn oklab(self) -> [f64; 3] {
+        let [r, g, b] = self.channels().map(|v| if v <= 0.04045 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) });
+        let l = (0.412_221_470_8 * r + 0.536_332_536_3 * g + 0.051_445_992_9 * b).cbrt();
+        let m = (0.211_903_498_2 * r + 0.680_699_545_1 * g + 0.107_396_956_6 * b).cbrt();
+        let s = (0.088_302_461_9 * r + 0.281_718_837_6 * g + 0.629_978_700_5 * b).cbrt();
+        [
+            0.210_454_255_3 * l + 0.793_617_785 * m - 0.004_072_046_8 * s,
+            1.977_998_495_1 * l - 2.428_592_205 * m + 0.450_593_709_9 * s,
+            0.025_904_037_1 * l + 0.782_771_766_2 * m - 0.808_675_766 * s,
+        ]
+    }
     pub fn ratio(self, other: Self) -> f64 {
         let a = self.luminance();
         let b = other.luminance();
@@ -118,10 +130,14 @@ impl Color {
         } else {
             "متوسط السطوع"
         };
+        let [ok_l, ok_a, ok_b] = self.oklab();
+        let chroma = ok_a.hypot(ok_b);
+        let hue = if chroma < 1e-7 { 0. } else { ok_b.atan2(ok_a).to_degrees().rem_euclid(360.) };
+        let oklch = format!("oklch({:.2}% {:.5} {:.2})", ok_l * 100., chroma, hue);
         json!({"hex":self.hex(),"name":name.1,"english":name.2,"reference":Color::unpack(name.0).hex(),"base":base,"shade":shade,"hue":h,
         "ink":self.ink().hex(),"formats":{"HEX":self.hex(),"RGB":format!("rgb({}, {}, {})",self.0,self.1,self.2),
         "RGBA":format!("rgba({}, {}, {}, 1)",self.0,self.1,self.2),"HSL":format!("hsl({h}, {}%, {}%)",pct(s),pct(l)),
-        "HSV":hsv,"HSB":hsv,"CMYK":format!("{}%, {}%, {}%, {}%",cmy(r),cmy(g),cmy(b),pct(1.-v))}})
+        "HSV":hsv,"HSB":hsv,"OKLCH":oklch,"CMYK":format!("{}%, {}%, {}%, {}%",cmy(r),cmy(g),cmy(b),pct(1.-v))}})
     }
     pub fn harmonies(self, kind: u32) -> Vec<String> {
         let (h, s, l, _, _) = self.hs();

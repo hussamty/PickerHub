@@ -5,16 +5,19 @@ import json
 import os
 import platform
 import plistlib
+import xml.etree.ElementTree as ET
 import shutil
 import subprocess
 import tarfile
 import tempfile
 import zipfile
+from sign import sign
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist" / "native"
-VERSION = "0.3.5"
+VERSION = ET.parse(ROOT / "desktop/PickerHub.csproj").findtext("PropertyGroup/Version")
+assert VERSION, "Desktop version must be set"
 HOST = {"Linux": "linux", "Windows": "win", "Darwin": "osx"}[platform.system()]
 ARCH = "arm64" if platform.machine().lower() in ("aarch64", "arm64") else "x64"
 
@@ -55,7 +58,10 @@ def main():
     ap.add_argument("--core", type=Path, help="Prebuilt Rust dynamic library matching the target")
     ap.add_argument("--capture", type=Path, help="Prebuilt X11 or Win32 capture library")
     ap.add_argument("--packages", action="store_true", help="Also create distribution archives")
+    ap.add_argument("--release", action="store_true", help="Require verified platform signing before packaging")
     args = ap.parse_args()
+    if args.release and args.rid.split("-")[0] != HOST:
+        raise SystemExit("Release signing must run on the target OS.")
     rid = args.rid
     osname = rid.split("-")[0]
     DIST.mkdir(parents=True, exist_ok=True)
@@ -97,7 +103,7 @@ def main():
         if osname == "osx":
             (bundle / "Contents/Info.plist").write_bytes(plistlib.dumps({
                 "CFBundleExecutable": "PickerHub", "CFBundleName": "PickerHub", "CFBundleIdentifier": "org.pickerhub.app",
-                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "8",
+                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "9",
                 "NSHighResolutionCapable": True, "LSMinimumSystemVersion": "14.0"}))
             (runtime / "PickerHub").chmod(0o755)
             if HOST == "osx":
@@ -106,6 +112,12 @@ def main():
                 run("rcodesign", "sign", bundle)
             else:
                 raise SystemExit("Cross-packaging a macOS app requires rcodesign for ad hoc signing.")
+        if args.release:
+            sign(bundle, osname)
+        manifest = {"version": VERSION, "rid": rid, "signed": args.release and osname != "linux",
+                    "files": {str(f.relative_to(runtime)): hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted(runtime.rglob("*")) if f.is_file()}}
+        # Keep the manifest outside the signed app, whose contents must remain sealed.
+        (DIST / f"PickerHub-{VERSION}-{rid}.manifest.json").write_text(json.dumps(manifest, indent=2))
         dest = DIST / rid / bundle.name
         dest.parent.mkdir(exist_ok=True)
         if dest.exists():
@@ -127,7 +139,8 @@ def main():
                 (deb / "usr/bin/pickerhub").symlink_to("/opt/pickerhub/PickerHub")
                 (deb / "usr/share/applications/pickerhub.desktop").write_text(
                     "[Desktop Entry]\nType=Application\nName=PickerHub\nExec=/opt/pickerhub/PickerHub\n"
-                    "Icon=applications-graphics\nTerminal=false\nCategories=Graphics;Utility;\nStartupWMClass=pickerhub\n")
+                    "TryExec=/opt/pickerhub/PickerHub\nIcon=applications-graphics\nTerminal=false\nCategories=Graphics;Utility;\nStartupWMClass=pickerhub\n"
+                    f"X-PickerHub-Version={VERSION}\n")
                 (deb / "DEBIAN/control").write_text(
                     f"Package: pickerhub\nVersion: {VERSION}\nArchitecture: amd64\nMaintainer: PickerHub contributors\nSection: graphics\n"
                     "Priority: optional\nDepends: libc6, libgcc-s1, libstdc++6, libx11-6, libgstreamer1.0-0, libgstreamer-plugins-base1.0-0, libice6, libsm6, libfontconfig1, libicu78 | libicu76 | libicu74 | libicu72 | libicu70, libssl3t64 | libssl3\n"

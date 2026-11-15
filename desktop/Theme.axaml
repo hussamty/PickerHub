@@ -48,20 +48,6 @@
           <SolidColorBrush x:Key="TextControlBorderBrush">#2EFFFFFF</SolidColorBrush>
           <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#57FFFFFF</SolidColorBrush>
           <SolidColorBrush x:Key="TextControlBorderBrushFocused">#FFF000</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBackground">#12FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver">#1CFFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBackgroundPressed">#26FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBorderBrush">#2EFFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver">#57FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBorderBrushPressed">#57FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxDropDownBackground">#1C1C1A</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush">#33FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver">#14FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxItemBackgroundPressed">#26FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected">#1FFFF000</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver">#33FFF000</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed">#33FFF000</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedUnfocused">#1FFFF000</SolidColorBrush>
           <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked">#111111</SolidColorBrush>
           <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver">#111111</SolidColorBrush>
           <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPressed">#111111</SolidColorBrush>
@@ -104,20 +90,6 @@
           <SolidColorBrush x:Key="TextControlBorderBrush">#2E111111</SolidColorBrush>
           <SolidColorBrush x:Key="TextControlBorderBrushPointerOver">#66111111</SolidColorBrush>
           <SolidColorBrush x:Key="TextControlBorderBrushFocused">#111111</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBackground">#B3FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver">#D9FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBackgroundPressed">#FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBorderBrush">#2E111111</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver">#66111111</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxBorderBrushPressed">#66111111</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxDropDownBackground">#FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush">#2E111111</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver">#0F111111</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxItemBackgroundPressed">#1F111111</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected">#FFF000</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver">#F5E600</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed">#F5E600</SolidColorBrush>
-          <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedUnfocused">#FFF000</SolidColorBrush>
           <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundChecked">#FFFFFF</SolidColorBrush>
           <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver">#FFFFFF</SolidColorBrush>
           <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPressed">#FFFFFF</SolidColorBrush>
@@ -127,7 +99,6 @@
       <CornerRadius x:Key="OverlayCornerRadius">16</CornerRadius>
       <Thickness x:Key="TextControlBorderThemeThickness">1</Thickness>
       <Thickness x:Key="TextControlBorderThemeThicknessFocused">1.5</Thickness>
-      <Thickness x:Key="ComboBoxBorderThemeThickness">1</Thickness>
     </ResourceDictionary>
   </Styles.Resources>
 
@@ -184,7 +155,7 @@
     <Setter Property="Background" Value="{DynamicResource Accent}"/>
     <Setter Property="Foreground" Value="{DynamicResource AccentInk}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource AccentRim}"/>
-    <Setter Property="CornerRadius" Value="20"/>
+    <Setter Property="CornerRadius" Value="999"/>
     <Setter Property="FontWeight" Value="SemiBold"/>
   </Style>
   <Style Selector="Button.ph.primary /template/ Border#body"><Setter Property="BoxShadow" Value="{DynamicResource Glow}"/></Style>
@@ -201,14 +172,12 @@
     <Setter Property="Transitions">
       <Transitions>
         <BrushTransition Property="Background" Duration="0:0:0.12"/>
-        <DoubleTransition Property="Width" Duration="0:0:0.26" Easing="BackEaseOut"/>
-        <ThicknessTransition Property="Margin" Duration="0:0:0.26" Easing="BackEaseOut"/>
         <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.24" Easing="BackEaseOut"/>
       </Transitions>
     </Setter>
   </Style>
   <Style Selector="Button.ph.liquid:pointerover">
-    <Setter Property="Width" Value="56"/>
+    <Setter Property="Width" Value="40"/>
     <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
     <Setter Property="RenderTransform" Value="scale(1,1)"/>
   </Style>
@@ -224,8 +193,8 @@
   </Style>
   <Style Selector="Button.ph.liquid.goo:pointerover">
     <Setter Property="Background" Value="Transparent"/>
-    <Setter Property="Width" Value="60"/>
-    <Setter Property="Margin" Value="-4,0"/>
+    <Setter Property="Width" Value="40"/>
+    <Setter Property="RenderTransform" Value="scale(1.08,1.08)"/>
   </Style>
 
   <!-- Spine rows. The moving pills behind them are drawn by the spine. -->
@@ -339,6 +308,11 @@
 
   <Style Selector="TextBox"><Setter Property="CornerRadius" Value="14"/></Style>
   <Style Selector="NumericUpDown"><Setter Property="CornerRadius" Value="14"/></Style>
+  <!-- Fluent's spinner paints rectangular repeat buttons inside a rounded border.
+       Clip the owning border, including hover/disabled fills, to the input's curve. -->
+  <Style Selector="NumericUpDown /template/ ButtonSpinner /template/ Border">
+    <Setter Property="ClipToBounds" Value="True"/>
+  </Style>
   <Style Selector="CheckBox"><Setter Property="Foreground" Value="{DynamicResource Ink}"/></Style>
   <Style Selector="Slider Thumb">
     <Setter Property="RenderTransform" Value="scale(1,1)"/>
@@ -357,7 +331,7 @@
     <Setter Property="CornerRadius" Value="999"/>
     <Setter Property="Padding" Value="12,6"/>
     <Setter Property="FontSize" Value="12"/>
-    <Setter Property="FontFamily" Value="avares://PickerHub/Fonts#Noto Sans Arabic, Segoe UI, sans-serif"/>
+    <Setter Property="FontFamily" Value="avares://PickerHub/Fonts#IBM Plex Sans Arabic, Segoe UI, sans-serif"/>
   </Style>
   <Style Selector="ToolTip:open">
     <Style.Animations>

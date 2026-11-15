@@ -120,6 +120,7 @@ internal sealed class PortalInput : IDisposable
 
 internal static class NativePicker
 {
+    [DllImport("picker_capture")] internal static extern void pickerhub_clipboard_prepare();
     [DllImport("picker_capture")] internal static extern void pickerhub_focus_window(nuint window);
     [DllImport("picker_capture")] internal static extern nint pickerhub_input_open();
     [DllImport("picker_capture")] internal static extern void pickerhub_input_close(nint input);
