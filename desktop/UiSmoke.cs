@@ -63,6 +63,14 @@ internal sealed partial class MainWindow
             Edit(() => state.AutoCopy = true, false);
             Console.WriteLine("SINGLEPICK"); await PickDesktop();
             SelfTests.Check(await Clipboard!.TryGetTextAsync() == PickValue(state, state.Color), "Enabled Quick Copy uses RGB on the next pick without restart");
+            var clipboardRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            pickClipboard = async value => { await clipboardRelease.Task; await Copy(value); };
+            var returnTime = System.Diagnostics.Stopwatch.StartNew();
+            Console.WriteLine("SINGLEPICK"); await PickDesktop();
+            SelfTests.Check(copyingPick && !clipboardRelease.Task.IsCompleted && IsVisible && !picking,
+                "Slow clipboard ownership never delays restoring the workbench");
+            SelfTests.Check(returnTime.ElapsedMilliseconds < 1500, "Picker returns before clipboard acknowledgement timeout");
+            clipboardRelease.SetResult(); await pickCopies; pickClipboard = null;
             await writer.FlushAsync();
             var time = System.Diagnostics.Stopwatch.StartNew();
             for (int i = 0; i < 12; i++) { Travel(false); Travel(true); }

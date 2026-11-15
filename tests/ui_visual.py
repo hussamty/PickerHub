@@ -60,6 +60,10 @@ for language in ('ar','en'):
                     xt.XTestFakeButtonEvent(d, 1, 1, 0); xt.XTestFakeButtonEvent(d, 1, 0, 0); x.XFlush(d)
                     time.sleep(.15)
                     assert lens() == old, 'Multi-pick must not recreate the lens'
+                frame = x.XGetImage(d, x.XDefaultRootWindow(d), 0,0,1400,900,C.c_ulong(-1),2)
+                im = frame.contents
+                Image.frombytes('RGB',(im.width,im.height),C.string_at(im.data,im.stride*im.height),'raw','BGRX',im.stride).save(OUT/(language+'-multipick.png'))
+                x.XDestroyImage(frame)
                 escape = x.XKeysymToKeycode(d, x.XStringToKeysym(b'Escape'))
                 xt.XTestFakeKeyEvent(d, escape, 1, 0); xt.XTestFakeKeyEvent(d, escape, 0, 0); x.XFlush(d)
             elif line.startswith('TIMING '):

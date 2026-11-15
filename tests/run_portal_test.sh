@@ -2,7 +2,7 @@
 # Run under dbus-run-session and Xvfb. All generated video stays on this server.
 set -eu
 runtime=$(mktemp -d)
-export XDG_RUNTIME_DIR="$runtime" XDG_CONFIG_HOME="$runtime/config" PIPEWIRE_REMOTE=pipewire-0-manager
+export XDG_RUNTIME_DIR="$runtime" XDG_CONFIG_HOME="$runtime/config" PIPEWIRE_REMOTE=pipewire-0
 mkdir -p "$XDG_CONFIG_HOME/wireplumber/wireplumber.conf.d"
 cat > "$XDG_CONFIG_HOME/wireplumber/wireplumber.conf.d/50-test.conf" <<'CONF'
 wireplumber.profiles = { main = {
@@ -21,7 +21,28 @@ cleanup() {
     python3 -c 'import shutil, sys; shutil.rmtree(sys.argv[1])' "$runtime"
 }
 trap cleanup EXIT
-pipewire > "$runtime/pipewire.log" 2>&1 &
+# A private server with no device monitors or host portal access. Explicit
+# modules work with both Ubuntu 22.04 PipeWire and recent developer systems.
+# Access is restricted by the private runtime directory, not host policy.
+cat > "$runtime/pipewire-test.conf" <<'CONF'
+context.properties = { core.daemon = true core.name = pipewire-0 }
+context.spa-libs = {
+    support.* = support/libspa-support
+    audio.convert.* = audioconvert/libspa-audioconvert
+    video.convert.* = videoconvert/libspa-videoconvert
+}
+context.modules = [
+    { name = libpipewire-module-protocol-native }
+    { name = libpipewire-module-client-node }
+    { name = libpipewire-module-client-device }
+    { name = libpipewire-module-adapter }
+    { name = libpipewire-module-link-factory }
+    { name = libpipewire-module-metadata }
+    { name = libpipewire-module-access args = { access.socket = { pipewire-0 = unrestricted } } }
+    { name = libpipewire-module-session-manager }
+]
+CONF
+pipewire -c "$runtime/pipewire-test.conf" > "$runtime/pipewire.log" 2>&1 &
 jobs="$!"
 sleep .3
 wireplumber > "$runtime/wireplumber.log" 2>&1 &

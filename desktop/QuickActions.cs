@@ -31,6 +31,7 @@ internal sealed partial class MainWindow
         AutomationProperties.SetLiveSetting(errorText, AutomationLiveSetting.Assertive);
     }
     Task pickCopies = Task.CompletedTask;
+    Func<string, Task>? pickClipboard; // Injectable only by the in-process regression harness.
     string? pendingCopy;
     bool copyingPick;
     void QueuePickCopy(string value)
@@ -48,7 +49,7 @@ internal sealed partial class MainWindow
             while (pendingCopy is { } value)
             {
                 pendingCopy = null;
-                await Guard(() => Copy(value).WaitAsync(TimeSpan.FromSeconds(2)));
+                await Guard(() => (pickClipboard != null ? pickClipboard(value) : Copy(value)).WaitAsync(TimeSpan.FromSeconds(2)));
             }
         }
         finally { copyingPick = false; }
@@ -58,7 +59,7 @@ internal sealed partial class MainWindow
         if (damaged) throw new InvalidOperationException(L.T("استعد المكتبة أولاً."));
         bool oldGlobal = state.GlobalShortcut; string oldShortcut = state.Shortcut;
         lastSaved = edits.Travel(lastSaved, forward, writer.Enqueue);
-        state = Workspace.Parse(lastSaved); if (L.Language != state.Language) ApplyLanguage(); QueueRender();
+        state = Workspace.Parse(lastSaved); SupportLog.Enabled = state.DiagnosticsEnabled; if (L.Language != state.Language) ApplyLanguage(); QueueRender();
         if (oldGlobal != state.GlobalShortcut || oldShortcut != state.Shortcut) _ = Guard(ConfigureShortcut);
         if (Picker.UsesPortal && !state.UseWaylandScreenSharing) WaylandCapture.Stop();
         status.Text = forward ? L.T("أُعيد التعديل") : L.T("تُراجع عن التعديل");

@@ -53,6 +53,15 @@ internal sealed partial class MainWindow : Window
         eyedropper = Btn("color-picker", L.T("القطّارة"), () => PickDesktop(), true);
         var startupError = damaged ? status.Text : Workspace.RecoveryNotice;
         BuildShell(); SetupQuickActions(); ApplyLanguage();
+        bool fitted = false;
+        Opened += (_, _) =>
+        {
+            if (fitted) return; fitted = true;
+            var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+            if (screen == null) return;
+            Width = Math.Max(MinWidth, Math.Min(Width, screen.WorkingArea.Width / screen.Scaling - 32));
+            Height = Math.Max(MinHeight, Math.Min(Height, screen.WorkingArea.Height / screen.Scaling - 48));
+        };
         writer.Failed += ex => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             if (!closed) ShowError(L.T("تعذّر حفظ التغييرات. ما زالت مفتوحة؛ أعد محاولة الحفظ."), async () => { writer.Retry(); await writer.FlushAsync(); });
