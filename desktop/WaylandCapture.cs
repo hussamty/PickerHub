@@ -182,30 +182,23 @@ internal sealed class GstCapture : IDisposable
         var queued = gst_app_sink_try_pull_sample(sink, 0);
         if (queued != 0) gst_sample_unref(queued);
     }
-    int probes;
     public bool Sample(PixelRect screen, PixelPoint point, int radius, byte[] pixels)
     {
-        bool trace = probes++ < 3 && Environment.GetEnvironmentVariable("PICKERHUB_CAPTURE_TRACE") == "1";
-        if (trace) Console.Error.WriteLine("capture: pull begin");
         // Compositors can stop sending buffers when the desktop is still.
         // Keep the newest sample so a moving pointer can read another region.
         var next = gst_app_sink_try_pull_sample(sink, 0);
-        if (trace) Console.Error.WriteLine("capture: pull returned " + next);
         if (next != 0)
         {
             if (latest != 0) gst_sample_unref(latest);
             latest = next;
         }
-        if (trace) Console.Error.WriteLine("capture: release done");
         if (gst_app_sink_is_eos(sink) != 0) throw new IOException(L.T("توقفت مشاركة الشاشة. أعد فتح القطّارة."));
         if (latest == 0) return false;
         var caps = gst_caps_get_structure(gst_sample_get_caps(latest), 0);
         if (gst_structure_get_int(caps, "width", out int w) == 0 || gst_structure_get_int(caps, "height", out int h) == 0
             || w <= 0 || h <= 0 || (long)w*h > 150_000_000) throw new IOException(L.T("أبعاد تدفق الشاشة غير صالحة."));
-        if (trace) Console.Error.WriteLine("capture: caps ready");
         var buffer = gst_sample_get_buffer(latest);
         if (gst_buffer_map(buffer, out var map, 1) == 0) throw new IOException(L.T("تعذّرت قراءة بكسلات الشاشة."));
-        if (trace) Console.Error.WriteLine("capture: mapped");
         try
         {
             int stride = checked(w * 4);
@@ -224,7 +217,7 @@ internal sealed class GstCapture : IDisposable
             }
             return true;
         }
-        finally { gst_buffer_unmap(buffer, ref map); if (trace) Console.Error.WriteLine("capture: complete"); }
+        finally { gst_buffer_unmap(buffer, ref map); }
     }
     public void Dispose()
     {

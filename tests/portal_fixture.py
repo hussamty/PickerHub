@@ -16,7 +16,8 @@ DBusGMainLoop(set_as_default=True)
 Gst.init(None)
 bus=dbus.SessionBus()
 name=dbus.service.BusName("org.freedesktop.portal.Desktop",bus)
-pipeline=Gst.parse_launch('videotestsrc name=generator is-live=true pattern=solid-color foreground-color=0xff336699 ! video/x-raw,format=RGBA,width=1400,height=900,framerate=10/1 ! pipewiresink mode=provide stream-properties="props,media.class=Video/Source,node.name=PickerHubFixture"')
+pipeline=Gst.parse_launch('videotestsrc name=generator is-live=true pattern=solid-color foreground-color=0xff336699 ! video/x-raw,format=RGBA,width=1400,height=900,framerate=10/1 ! pipewiresink mode=provide sync=false stream-properties="props,media.class=Video/Source,node.name=PickerHubFixture"')
+pipeline.use_clock(Gst.SystemClock.obtain())
 pipeline.set_state(Gst.State.PLAYING)
 node_id=None
 def find_node():

@@ -23,6 +23,7 @@ internal sealed class MagnifierSession
     bool hasPoint, hasSample, finished;
     bool selecting;
     long settleUntil;
+    readonly long startedAt = Environment.TickCount64;
     nint input;
     PortalInput? portalInput;
     readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(16) };
@@ -81,6 +82,8 @@ internal sealed class MagnifierSession
     }
     void Tick()
     {
+        if (!painted && Environment.TickCount64 - startedAt > 5000)
+            throw new IOException(L.T("لم يصل إطار من الشاشة. أعد فتح القطّارة أو استخدم منتقي النظام."));
         if (!portal)
         {
             int action;
