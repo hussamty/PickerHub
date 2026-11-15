@@ -134,6 +134,8 @@ def main():
                     until(first_swatch)
                 except AssertionError:
                     print(windows(), flush=True)
+                    trace = subprocess.run(["sudo", "gdb", "-batch", "-ex", "set pagination off", "-ex", "thread apply all bt", "-p", str(process.pid)], capture_output=True, text=True, timeout=20)
+                    print(trace.stdout + trace.stderr, flush=True)
                     print(subprocess.check_output(["pw-dump"], text=True) if portal else "X11", flush=True)
                     from PIL import Image
                     class ImageInfo(ctypes.Structure):

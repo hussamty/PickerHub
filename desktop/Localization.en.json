@@ -348,5 +348,6 @@
   "عرض السجل": "View history",
   "تسجيل أخطاء محلي اختياري": "Optional local error log",
   "يبقى السجل على جهازك؛ لا تُرسل أي بيانات تلقائياً.": "Logs stay on this device. Nothing is sent automatically.",
-  "المزيد من الصيغ": "More formats"
+  "المزيد من الصيغ": "More formats",
+  "لم يصل إطار من الشاشة. أعد فتح القطّارة أو استخدم منتقي النظام.": "No screen frame arrived. Reopen the eyedropper or use the system picker."
 }

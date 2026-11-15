@@ -5,6 +5,7 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - {os: ubuntu-22.04, rid: linux-x64}
@@ -21,7 +22,7 @@ jobs:
       - if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libx11-dev xvfb x11-utils x11-xserver-utils libxtst6 dbus-x11 python3-dbus python3-gi python3-pil gir1.2-gstreamer-1.0 pipewire wireplumber gstreamer1.0-pipewire gstreamer1.0-plugins-base
+        run: sudo apt-get update && sudo apt-get install -y gdb libx11-dev xvfb x11-utils x11-xserver-utils libxtst6 dbus-x11 python3-dbus python3-gi python3-pil gir1.2-gstreamer-1.0 pipewire wireplumber gstreamer1.0-pipewire gstreamer1.0-plugins-base
       - run: rustup update stable
       - run: rustup default stable
       - run: cargo test --locked
