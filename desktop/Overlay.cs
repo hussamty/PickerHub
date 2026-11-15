@@ -162,9 +162,12 @@ internal sealed partial class MainWindow
             e.Handled = true;
         };
         var spot = Locate(anchor);
-        double left = spot.X, top = spot.Y, bottom = spot.Bottom, width = Math.Max(spot.Width, 180);
+        double left = spot.X, top = spot.Y, bottom = spot.Bottom, width = Math.Min(Math.Max(spot.Width, 180), Math.Max(160, overlay.Bounds.Width - 16));
         double height = Math.Min(304, items.Length * 42) + 12;
-        bool above = bottom + 6 + height > overlay.Bounds.Height - 8 && top - 6 - height > 8;
+        double belowRoom = Math.Max(40, overlay.Bounds.Height - bottom - 14), aboveRoom = Math.Max(40, top - 14);
+        bool above = height > belowRoom && aboveRoom > belowRoom;
+        height = Math.Min(height, above ? aboveRoom : belowRoom);
+        ((ScrollViewer)pane.Child!).MaxHeight = Math.Max(28, height - 12);
         pane.Width = width;
         pane.Margin = new Thickness(Math.Clamp(left, 8, Math.Max(8, overlay.Bounds.Width - width - 8)), above ? top - 6 - height : bottom + 6, 0, 0);
         layer.Children.Add(catcher); layer.Children.Add(pane); overlay.Children.Add(layer);

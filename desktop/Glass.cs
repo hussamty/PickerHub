@@ -24,7 +24,8 @@ internal class Glass : Decorator, ICustomHitTest
     public static readonly StyledProperty<double> ShoulderProperty = AvaloniaProperty.Register<Glass, double>(nameof(Shoulder));
     static Glass() => AffectsRender<Glass>(TintProperty, RimProperty, ShadeProperty, WashProperty, RadiusProperty, BlurProperty, ShoulderProperty);
 
-    public Glass(string tint = "GlassTint")
+    public Glass() : this("GlassTint") { }
+    public Glass(string tint)
     {
         this[!TintProperty] = new DynamicResourceExtension(tint);
         this[!RimProperty] = new DynamicResourceExtension("GlassRim");
@@ -236,8 +237,8 @@ internal class Glass : Decorator, ICustomHitTest
     }
 }
 
-// A run of liquid buttons that share one body. Each button's outline is drawn into a blurred
-// layer and cut back to a hard edge, so shapes that come close flow into each other.
+// One connected glass silhouette for neighbouring actions. Explicit curved necks keep
+// their thickness at every scale; alpha-threshold blur used to erase them almost entirely.
 internal sealed class Goo : Panel
 {
     readonly StackPanel row = new() { Orientation = Avalonia.Layout.Orientation.Horizontal };
@@ -249,54 +250,86 @@ internal sealed class Goo : Panel
     }
     public void Add(Control drop)
     {
-        drop.PropertyChanged += (_, change) => { if (change.Property == RenderTransformProperty || change.Property == BoundsProperty) pool.InvalidateVisual(); };
+        drop.PropertyChanged += (_, change) =>
+        {
+            if (change.Property == RenderTransformProperty || change.Property == BoundsProperty ||
+                change.Property == IsPointerOverProperty || change.Property == IsKeyboardFocusWithinProperty ||
+                change.Property == IsVisibleProperty || change.Property == IsEnabledProperty) pool.InvalidateVisual();
+        };
         row.Children.Add(drop);
     }
     sealed class Pool : Control
     {
         public static readonly StyledProperty<Color> BodyProperty = AvaloniaProperty.Register<Pool, Color>("Body");
-        static Pool() => AffectsRender<Pool>(BodyProperty);
+        public static readonly StyledProperty<Color> RimProperty = AvaloniaProperty.Register<Pool, Color>("Rim");
+        static Pool() => AffectsRender<Pool>(BodyProperty, RimProperty);
         readonly StackPanel row;
-        public Pool(StackPanel row) { this.row = row; IsHitTestVisible = false; this[!BodyProperty] = new DynamicResourceExtension("GooBody"); }
+        public Pool(StackPanel row)
+        {
+            this.row = row; IsHitTestVisible = false;
+            this[!BodyProperty] = new DynamicResourceExtension("GooBody");
+            this[!RimProperty] = new DynamicResourceExtension("GlassRim");
+        }
         public override void Render(DrawingContext context)
         {
-            var drops = new List<Rect>();
+            var drops = new List<Drop>();
             foreach (var child in row.Children)
             {
                 if (!child.IsVisible) continue;
                 var b = child.Bounds; var m = child.RenderTransform?.Value ?? Matrix.Identity;
                 double w = b.Width * Math.Abs(m.M11), h = b.Height * Math.Abs(m.M22);
-                drops.Add(new Rect(b.Center.X - w / 2, b.Center.Y - h / 2, w, h));
+                drops.Add(new(new Rect(b.Center.X - w / 2, b.Center.Y - h / 2, w, h),
+                    child.IsEffectivelyEnabled && (child.IsPointerOver || child.IsKeyboardFocusWithin)));
             }
-            if (drops.Count > 0) context.Custom(new Blob(new Rect(Bounds.Size).Inflate(12), drops.ToArray(), GetValue(BodyProperty)));
+            if (drops.Count > 0) context.Custom(new Blob(new Rect(Bounds.Size).Inflate(8), drops.ToArray(), GetValue(BodyProperty), GetValue(RimProperty)));
         }
     }
-    sealed class Blob(Rect bounds, Rect[] drops, Color color) : ICustomDrawOperation
+    readonly record struct Drop(Rect Area, bool Active);
+    sealed class Blob(Rect bounds, Drop[] drops, Color color, Color rim) : ICustomDrawOperation
     {
-        // Alpha below the midpoint is dropped and above it is filled: the blur becomes a crisp, merged outline.
-        static readonly byte[] Edge = Enumerable.Range(0, 256).Select(a => (byte)Math.Clamp((a - 112) * 8, 0, 255)).ToArray();
         public Rect Bounds => bounds;
         public bool HitTest(Point p) => false;
-        public bool Equals(ICustomDrawOperation? other) => other is Blob b && b.Tone == color && b.Drops.AsSpan().SequenceEqual(drops);
-        Color Tone => color; Rect[] Drops => drops;
+        public bool Equals(ICustomDrawOperation? other) => other is Blob b && b.Tone == color && b.Rim == rim && b.Drops.AsSpan().SequenceEqual(drops);
+        Color Tone => color; Color Rim => rim; Drop[] Drops => drops;
         public void Dispose() { }
         public void Render(ImmediateDrawingContext context)
         {
             if (context.TryGetFeature<ISkiaSharpApiLeaseFeature>() is not { } feature) return;
             using var lease = feature.Lease();
             var canvas = lease.SkCanvas;
-            using var blur = SKImageFilter.CreateBlur(4.5f, 4.5f);
-            using var table = SKColorFilter.CreateTable(Edge, null, null, null);
-            using var merge = SKImageFilter.CreateColorFilter(table, blur);
-            using var layer = new SKPaint { ImageFilter = merge, Color = new SKColor(255, 255, 255, color.A) };
-            using var fill = new SKPaint { Color = new SKColor(color.R, color.G, color.B), IsAntialias = true };
-            canvas.SaveLayer(new SKRect((float)bounds.X, (float)bounds.Y, (float)bounds.Right, (float)bounds.Bottom), layer);
-            foreach (var d in drops)
+            using var shape = new SKPath();
+            foreach (var drop in drops)
             {
-                float r = (float)Math.Min(d.Width, d.Height) / 2;
-                canvas.DrawRoundRect(new SKRect((float)d.X, (float)d.Y, (float)d.Right, (float)d.Bottom), r, r, fill);
+                var d = drop.Area; float r = (float)Math.Min(d.Width, d.Height) / 2;
+                shape.AddRoundRect(new SKRect((float)d.X, (float)d.Y, (float)d.Right, (float)d.Bottom), r, r);
             }
-            canvas.Restore();
+            for (int i = 1; i < drops.Length; i++)
+            {
+                var a = drops[i - 1]; var b = drops[i];
+                if (!a.Active && !b.Active) continue;
+                var left = a.Area.X < b.Area.X ? a.Area : b.Area;
+                var right = a.Area.X < b.Area.X ? b.Area : a.Area;
+                if (right.Left - left.Right > 18 || Math.Abs(left.Center.Y - right.Center.Y) > 8) continue;
+                float h = (float)Math.Min(left.Height, right.Height);
+                float x0 = (float)(left.Right - left.Width * .20), x1 = (float)(right.Left + right.Width * .20);
+                float mid = (float)(left.Right + right.Left) / 2, y = (float)(left.Center.Y + right.Center.Y) / 2;
+                float shoulder = h * .36f, neck = h * .15f;
+                using var bridge = new SKPath();
+                bridge.MoveTo(x0, y - shoulder);
+                bridge.CubicTo(mid - 5, y - neck, mid + 5, y - neck, x1, y - shoulder);
+                bridge.LineTo(x1, y + shoulder);
+                bridge.CubicTo(mid + 5, y + neck, mid - 5, y + neck, x0, y + shoulder);
+                bridge.Close();
+                // Union removes interior seams and paints the translucent body once.
+                using var joined = shape.Op(bridge, SKPathOp.Union);
+                if (joined != null) { shape.Reset(); shape.AddPath(joined); }
+            }
+            using var fill = new SKPaint { Color = new SKColor(color.R, color.G, color.B, color.A), IsAntialias = true };
+            canvas.DrawPath(shape, fill);
+            using var light = SKShader.CreateLinearGradient(new SKPoint(0, 0), new SKPoint(0, (float)bounds.Height),
+                [new SKColor(rim.R, rim.G, rim.B, rim.A), new SKColor(rim.R, rim.G, rim.B, (byte)(rim.A / 5))], null, SKShaderTileMode.Clamp);
+            using var edge = new SKPaint { Shader = light, IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1 };
+            canvas.DrawPath(shape, edge);
         }
     }
 }

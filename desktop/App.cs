@@ -31,7 +31,11 @@ internal class App : Application
         if (OperatingSystem.IsLinux()) NativePicker.pickerhub_clipboard_prepare();
         try
         {
-            int code = AppBuilder.Configure<App>().With(new X11PlatformOptions{WmClass="pickerhub"}).UsePlatformDetect().StartWithClassicDesktopLifetime(args);
+            int code = AppBuilder.Configure<App>()
+                .With(new X11PlatformOptions { WmClass = "pickerhub", OverlayPopups = true })
+                .With(new Win32PlatformOptions { OverlayPopups = true })
+                .With(new AvaloniaNativePlatformOptions { OverlayPopups = true })
+                .UsePlatformDetect().StartWithClassicDesktopLifetime(args);
             return code != 0 ? code : Environment.ExitCode;
         }
         finally { Instance?.Dispose(); if (testRoot != null && Directory.Exists(testRoot)) Directory.Delete(testRoot, true); }
@@ -46,7 +50,10 @@ internal class App : Application
     // because yellow marks on a white ground are too faint to read.
     public static void Accent(bool dark)
     {
-        var app = Current!; var tone = Avalonia.Media.Color.Parse(dark ? "#FFF000" : "#111111");
+        var app = Current!;
+        // Separate native popup roots must follow the same theme as the workbench.
+        app.RequestedThemeVariant = dark ? Avalonia.Styling.ThemeVariant.Dark : Avalonia.Styling.ThemeVariant.Light;
+        var tone = Avalonia.Media.Color.Parse(dark ? "#FFF000" : "#111111");
         if (app.Resources.TryGetValue("SystemAccentColor", out var now) && now is Avalonia.Media.Color c && c == tone) return;
         app.Resources["SystemAccentColor"] = tone;
         string[] steps = dark ? ["#FFF233", "#FFF566", "#FFF899", "#E6D800", "#CCC000", "#B3A800"] : ["#2B2B2B", "#444444", "#5E5E5E", "#000000", "#000000", "#000000"];

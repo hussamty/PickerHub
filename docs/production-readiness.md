@@ -67,7 +67,7 @@ The magnifier redraws only when pixels or zoom change. Hover effects no longer a
 
 Release 0.4.1 displays its version in Settings; the package name and desktop-entry metadata derive from the desktop project version. The installed launcher must resolve to `/opt/pickerhub/PickerHub`, matching `/usr/bin/pickerhub`. Legacy per-user launchers can override system entries and should be backed up before removing an identified stale override.
 
-Remaining release work: signed Windows/macOS distribution; real mixed-DPI/multi-monitor hardware coverage on GNOME/KDE, Windows and macOS; long-session memory/frame-time profiling on real GPUs; an opt-in diagnostic log with redacted error details; and a signed update mechanism with rollback.
+Remaining release work: signed Windows/macOS distribution; real mixed-DPI/multi-monitor hardware coverage on GNOME/KDE, Windows and macOS; long-session memory/frame-time profiling on real GPUs; and a signed update mechanism with rollback. The opt-in diagnostic log was delivered in 0.5.0 as detailed below.
 
 
 ## 0.5.0 preview delivery
@@ -79,3 +79,10 @@ A per-workspace single-instance activation pipe now owns the file lock before op
 Diagnostics are opt-in, local, bounded (64 in-memory events; two 256 KiB disk segments), and written on a background worker. Exception types and operation names are recorded without messages, paths, colors or screen images. Manual support exports include this session's events. Abrupt termination may lose pending diagnostic records.
 
 Still not shipped: publisher-signed automatic installation with authenticated update metadata and binary rollback. Until a Windows certificate and Apple signing/notarization credentials exist, use the documented backup plus side-by-side manual upgrade/rollback. The repository build workflow and signing script are prepared; a hash alone is not treated as a signature. Wide-gamut/HDR fidelity, full English editorial translations and a screen-reader audit remain separate product improvements.
+
+
+## 0.5.1 visual consistency
+
+Liquid action groups use one unioned path with explicit curved bridges instead of a blur threshold. Connections remain visible with the pointer or keyboard focus, in both themes, without an offscreen blur pass per group. Glass menus and sheets share theme tokens; fields, selected menu rows and tooltip surfaces follow the same material family. Native popup overlays stay inside the app to avoid rectangular transparency artifacts. Color swatches retain their exact color fill.
+
+Automated Arabic and English UI runs now move a real pointer onto action groups, capture both themes, and check menu bounds. The full capture, settings, multi-pick and delayed-clipboard regressions still run before release.
