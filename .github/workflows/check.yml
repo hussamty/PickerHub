@@ -22,7 +22,7 @@ jobs:
       - if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y gdb libx11-dev xvfb x11-utils x11-xserver-utils libxtst6 dbus-x11 python3-dbus python3-gi python3-pil gir1.2-gstreamer-1.0 pipewire wireplumber gstreamer1.0-pipewire gstreamer1.0-plugins-base
+        run: sudo apt-get update && sudo apt-get install -y gdb libx11-dev xvfb openbox x11-utils x11-xserver-utils libxtst6 dbus-x11 python3-dbus python3-gi python3-pil gir1.2-gstreamer-1.0 pipewire wireplumber gstreamer1.0-pipewire gstreamer1.0-plugins-base
       - run: rustup update stable
       - run: rustup default stable
       - run: cargo test --locked
@@ -34,7 +34,7 @@ jobs:
           dist/native/linux-x64/PickerHub/PickerHub --self-test
           python tests/release_checks.py
           xvfb-run -a python tests/hotkey_x11.py
-          xvfb-run -a -s '-screen 0 1400x900x24 -noreset' /usr/bin/python3 tests/ui_visual.py
+          xvfb-run -a -s '-screen 0 1920x1200x24 -noreset' sh tests/run_ui_test.sh
           dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24 -noreset' /usr/bin/python3 tests/shortcut_portal.py
           dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24 -noreset' sh tests/run_portal_test.sh
       - if: runner.os == 'macOS'

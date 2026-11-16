@@ -1,4 +1,4 @@
-<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="using:PickerHub">
   <!--
     PickerHub design tokens and control styles.
     Palette: TrineHub black #111111, yellow #FFF000, white #FFFFFF. Dark is the home theme.
@@ -101,6 +101,31 @@
           <SolidColorBrush x:Key="CheckBoxCheckGlyphForegroundCheckedPressed">#FFFFFF</SolidColorBrush>
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
+  <ControlTheme x:Key="PickerScrollBar" TargetType="ScrollBar">
+    <Setter Property="AllowAutoHide" Value="False"/>
+    <Setter Property="MinWidth" Value="14"/>
+    <Setter Property="MinHeight" Value="14"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" Padding="3" CornerRadius="7">
+          <Track Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                 Value="{TemplateBinding Value, Mode=TwoWay}" ViewportSize="{TemplateBinding ViewportSize}"
+                 Orientation="{TemplateBinding Orientation}">
+            <Track.DecreaseButton>
+              <RepeatButton Name="PART_PageUpButton" Focusable="False" Theme="{StaticResource FluentScrollBarPageButton}"/>
+            </Track.DecreaseButton>
+            <Track.IncreaseButton>
+              <RepeatButton Name="PART_PageDownButton" Focusable="False" Theme="{StaticResource FluentScrollBarPageButton}"/>
+            </Track.IncreaseButton>
+            <Thumb Name="scrollThumb" Background="{DynamicResource Muted}" CornerRadius="8">
+              <Thumb.Template><ControlTemplate><Border Background="{TemplateBinding Background}" CornerRadius="8"/></ControlTemplate></Thumb.Template>
+            </Thumb>
+          </Track>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
       <CornerRadius x:Key="ControlCornerRadius">12</CornerRadius>
       <CornerRadius x:Key="OverlayCornerRadius">16</CornerRadius>
       <Thickness x:Key="TextControlBorderThemeThickness">1</Thickness>
@@ -328,6 +353,18 @@
   <Style Selector="NumericUpDown /template/ ButtonSpinner /template/ Border">
     <Setter Property="ClipToBounds" Value="True"/>
   </Style>
+  <Style Selector="Expander">
+    <Setter Property="Background" Value="{DynamicResource Tint}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Rim}"/>
+    <Setter Property="CornerRadius" Value="16"/>
+  </Style>
+  <Style Selector="Expander /template/ ToggleButton#ExpanderHeader">
+    <Setter Property="Background" Value="{DynamicResource Tint}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Rim}"/>
+  </Style>
+  <Style Selector="Expander /template/ ToggleButton#ExpanderHeader:pointerover /template/ Border#ToggleButtonBackground">
+    <Setter Property="Background" Value="{DynamicResource TintStrong}"/>
+  </Style>
   <Style Selector="CheckBox"><Setter Property="Foreground" Value="{DynamicResource Ink}"/></Style>
   <Style Selector="Slider Thumb">
     <Setter Property="RenderTransform" Value="scale(1,1)"/>
@@ -342,10 +379,9 @@
     <Setter Property="Background" Value="{DynamicResource Raised}"/>
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Background="{DynamicResource PopupFill}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
-                CornerRadius="16" Padding="{TemplateBinding Padding}">
+        <local:Glass Tint="{DynamicResource SheetTint}" Radius="16" Blur="12" Padding="{TemplateBinding Padding}">
           <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"/>
-        </Border>
+        </local:Glass>
       </ControlTemplate>
     </Setter>
     <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
@@ -363,6 +399,36 @@
         <KeyFrame Cue="100%"><Setter Property="Opacity" Value="1"/><Setter Property="ScaleTransform.ScaleX" Value="1"/><Setter Property="ScaleTransform.ScaleY" Value="1"/></KeyFrame>
       </Animation>
     </Style.Animations>
+  </Style>
+
+  <!-- Always available, fixed hit targets. Scroll values are never animated or blurred. -->
+  <Style Selector="ScrollViewer">
+    <Setter Property="AllowAutoHide" Value="False"/>
+    <Setter Property="IsScrollChainingEnabled" Value="True"/>
+  </Style>
+  <Style Selector="ScrollBar"><Setter Property="Theme" Value="{StaticResource PickerScrollBar}"/></Style>
+  <Style Selector="ScrollBar:vertical">
+    <Setter Property="Width" Value="14"/>
+  </Style>
+  <Style Selector="ScrollBar:horizontal">
+    <Setter Property="Height" Value="14"/>
+  </Style>
+  <Style Selector="ScrollBar:vertical /template/ Track"><Setter Property="IsDirectionReversed" Value="True"/></Style>
+  <Style Selector="ScrollBar:vertical /template/ Thumb"><Setter Property="MinHeight" Value="32"/></Style>
+  <Style Selector="ScrollBar:horizontal /template/ Thumb"><Setter Property="MinWidth" Value="32"/></Style>
+  <Style Selector="ScrollBar:pointerover"><Setter Property="Background" Value="{DynamicResource Tint}"/></Style>
+  <Style Selector="ScrollBar /template/ Thumb:pointerover"><Setter Property="Background" Value="{DynamicResource AccentText}"/></Style>
+  <Style Selector="ScrollBar /template/ Thumb:pressed"><Setter Property="Background" Value="{DynamicResource AccentText}"/></Style>
+
+  <Style Selector="Button.ph.window-control">
+    <Setter Property="Width" Value="40"/><Setter Property="Height" Value="30"/><Setter Property="MinHeight" Value="30"/>
+    <Setter Property="Padding" Value="0"/><Setter Property="CornerRadius" Value="12"/>
+    <Setter Property="RenderTransform" Value="none"/>
+  </Style>
+  <Style Selector="Button.ph.window-control:pointerover"><Setter Property="RenderTransform" Value="none"/></Style>
+  <Style Selector="Button.ph.window-control:pressed"><Setter Property="RenderTransform" Value="none"/></Style>
+  <Style Selector="Button.ph.window-control.close:pointerover">
+    <Setter Property="Background" Value="#C42B1C"/><Setter Property="Foreground" Value="White"/>
   </Style>
 
   <!-- Reduced motion: state changes still happen, without travel. -->

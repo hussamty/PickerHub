@@ -349,5 +349,16 @@
   "تسجيل أخطاء محلي اختياري": "Optional local error log",
   "يبقى السجل على جهازك؛ لا تُرسل أي بيانات تلقائياً.": "Logs stay on this device. Nothing is sent automatically.",
   "المزيد من الصيغ": "More formats",
-  "لم يصل إطار من الشاشة. أعد فتح القطّارة أو استخدم منتقي النظام.": "No screen frame arrived. Reopen the eyedropper or use the system picker."
+  "لم يصل إطار من الشاشة. أعد فتح القطّارة أو استخدم منتقي النظام.": "No screen frame arrived. Reopen the eyedropper or use the system picker.",
+  "لصق صورة": "Paste image",
+  "اسحب صورة هنا أو الصقها باستخدام ": "Drop an image here or paste with ",
+  "الصورة تبقى على جهازك. تُستخرج الألوان محلياً.": "Your image stays on this device. Colors are extracted locally.",
+  "صورة ملصقة": "Pasted image",
+  "اختر صورة واحدة بصيغة PNG أو JPG أو WEBP.": "Choose one PNG, JPG or WEBP image.",
+  "لا توجد صورة في الحافظة. انسخ صورة أو ملف صورة أولاً.": "No image on the clipboard. Copy an image or image file first.",
+  "استُخرجت ألوان الصورة": "Image colors extracted",
+  "تصغير النافذة": "Minimize window",
+  "استعادة حجم النافذة": "Restore window",
+  "تكبير النافذة": "Maximize window",
+  "إغلاق التطبيق": "Close app"
 }

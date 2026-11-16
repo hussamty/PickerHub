@@ -74,7 +74,7 @@ internal sealed partial class MainWindow
     {
         KeyDown += (_, e) =>
         {
-            if (e.Source is TextBox || overlay.Children.Count > 0 || picking) return;
+            if (e.Source is TextBox || OverlayOpen || picking) return;
             bool command = e.KeyModifiers.HasFlag(OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control);
             if (command && (e.Key == Key.Z || e.Key == Key.Y))
             { e.Handled = true; _ = Guard(() => { Travel(e.Key == Key.Y || e.KeyModifiers.HasFlag(KeyModifiers.Shift)); return Task.CompletedTask; }); }

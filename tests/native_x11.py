@@ -89,7 +89,7 @@ def main():
                     x11.XStoreName(display, target, b"External color reference")
                     x11.XMapRaised(display, target)
                     x11.XSync(display, False)
-                click(left+78, top+36)  # The main «القطّارة» button.
+                click(left+78, top+78)  # The main «القطّارة» button.
                 if single_color:
                     def is_visible():
                         return "Map State: IsViewable" in subprocess.check_output(["xwininfo","-id",window], text=True)

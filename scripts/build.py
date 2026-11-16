@@ -103,7 +103,7 @@ def main():
         if osname == "osx":
             (bundle / "Contents/Info.plist").write_bytes(plistlib.dumps({
                 "CFBundleExecutable": "PickerHub", "CFBundleName": "PickerHub", "CFBundleIdentifier": "org.pickerhub.app",
-                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "9",
+                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "10",
                 "NSHighResolutionCapable": True, "LSMinimumSystemVersion": "14.0"}))
             (runtime / "PickerHub").chmod(0o755)
             if HOST == "osx":

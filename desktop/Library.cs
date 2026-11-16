@@ -13,22 +13,21 @@ internal sealed partial class MainWindow
 {
     internal sealed record Specimen(string Hex, string Name);
 
-    // Card front: a pane of glass holding the color as one flat, unmodified disc. Card back: its measurements.
+    // A color specimen is the color itself. Chrome and measurements use the
+    // contrast engine's ink; no translucent material changes the sampled fill.
     Control CardFront(Specimen item, int number)
     {
-        var color = Color.Parse(item.Hex);
-        var serial = Tone(Mono("no. " + (number + 1).ToString("00"), 11), "Muted"); serial.HorizontalAlignment = HorizontalAlignment.Left; serial.VerticalAlignment = VerticalAlignment.Top;
-        var code = Mono(item.Hex, 11); code.HorizontalAlignment = HorizontalAlignment.Right; code.VerticalAlignment = VerticalAlignment.Top;
-        var disc = new Border
-        {
-            Width = 156, Height = 156, CornerRadius = new CornerRadius(78), Background = Paint(item.Hex), BorderThickness = new Thickness(1), BorderBrush = Paint("#FFFFFF", .28),
-            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 0, 26),
-            BoxShadow = new BoxShadows(new BoxShadow { OffsetY = 18, Blur = 38, Color = Color.FromArgb(120, color.R, color.G, color.B) })
-        };
-        var name = Text(item.Name, 20, true); name.TextWrapping = TextWrapping.NoWrap; name.TextTrimming = TextTrimming.CharacterEllipsis;
-        var caption = Col(name, Label(Core.Describe(item.Hex).Text("base"))); caption.Spacing = 0; caption.VerticalAlignment = VerticalAlignment.Bottom; caption.FlowDirection = L.Flow;
-        var face = new Panel(); face.Children.AddRange([disc, serial, code, caption]);
-        return Tone(new Glass("CardTint") { Radius = 26, Blur = 18, Padding = new Thickness(20), Wash = Color.FromArgb(30, color.R, color.G, color.B), Child = face }, "Ink");
+        var info = Core.Describe(item.Hex); var ink = Paint(info.Text("ink"));
+        var serial = Mono((number + 1).ToString("00"), 12); serial.HorizontalAlignment = HorizontalAlignment.Left;
+        var code = Mono(item.Hex, 14, true); code.HorizontalAlignment = HorizontalAlignment.Right;
+        var head = new Grid(); head.Children.Add(serial); head.Children.Add(code); head.VerticalAlignment = VerticalAlignment.Top;
+        var name = Text(item.Name, 25, true); name.MaxLines = 3; name.TextTrimming = TextTrimming.CharacterEllipsis;
+        var family = Text(info.Text("base"), 13);
+        var caption = Col(name, family); caption.Spacing = 4; caption.VerticalAlignment = VerticalAlignment.Bottom; caption.FlowDirection = L.Flow;
+        var face = new Panel(); face.Children.Add(head); face.Children.Add(caption);
+        foreach (var label in new[] { serial, code, name, family }) label.Foreground = ink;
+        return new Border { Background = Paint(item.Hex), BorderBrush = Paint(info.Text("ink"), .18), BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(26), Padding = new Thickness(22), Child = face };
     }
     Control CardBack(Specimen item, int number)
     {
