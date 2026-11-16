@@ -421,11 +421,14 @@
   <Style Selector="ScrollBar /template/ Thumb:pressed"><Setter Property="Background" Value="{DynamicResource AccentText}"/></Style>
 
   <Style Selector="Button.ph.window-control">
-    <Setter Property="Width" Value="40"/><Setter Property="Height" Value="30"/><Setter Property="MinHeight" Value="30"/>
-    <Setter Property="Padding" Value="0"/><Setter Property="CornerRadius" Value="12"/>
+    <Setter Property="Width" Value="36"/><Setter Property="Height" Value="32"/><Setter Property="MinHeight" Value="32"/>
+    <Setter Property="Padding" Value="0"/><Setter Property="CornerRadius" Value="10"/>
+    <Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/>
     <Setter Property="RenderTransform" Value="none"/>
   </Style>
-  <Style Selector="Button.ph.window-control:pointerover"><Setter Property="RenderTransform" Value="none"/></Style>
+  <Style Selector="Button.ph.window-control:pointerover">
+    <Setter Property="RenderTransform" Value="none"/><Setter Property="Background" Value="{DynamicResource Tint}"/>
+  </Style>
   <Style Selector="Button.ph.window-control:pressed"><Setter Property="RenderTransform" Value="none"/></Style>
   <Style Selector="Button.ph.window-control.close:pointerover">
     <Setter Property="Background" Value="#C42B1C"/><Setter Property="Foreground" Value="White"/>

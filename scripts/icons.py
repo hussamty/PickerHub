@@ -10,10 +10,11 @@ from PIL import Image
 
 ASSETS = Path(__file__).resolve().parents[1] / "desktop" / "Assets"
 SOURCE = (ASSETS / "icon.svg").read_text(encoding="utf-8")
-# At small sizes the mascot is drawn larger inside the tile, so its eyes stay readable.
-TIGHT = SOURCE.replace('<g clip-path="url(#tile)">', '<g clip-path="url(#tile)"><g transform="translate(512 540) scale(1.24) translate(-512 -540)">', 1) \
-              .replace('  </g>\n  <rect x="3"', '  </g></g>\n  <rect x="3"', 1) \
-              .replace('<rect width="1024" height="1024" fill="url(#ground)"/>', '<rect x="-200" y="-200" width="1424" height="1424" fill="url(#ground)"/>', 1)
+# At small sizes the neighbouring pixels in the lens would blur into noise: the mark is drawn
+# larger, with the picked pixel alone in the lens.
+SMALL = SOURCE.replace('<g id="detail"', '<g id="detail" display="none"', 1) \
+              .replace(' fill="#FFFFFF" display="none"/>', ' fill="#FFFFFF"/>', 1) \
+              .replace('transform="translate(-30 -12)"', 'transform="translate(512 512) scale(1.1) translate(-542 -522)"', 1)
 
 
 def render(svg, size):
@@ -25,11 +26,11 @@ def render(svg, size):
 
 
 def main():
-    assert TIGHT != SOURCE and TIGHT.count("</g></g>") == 1, "the tight variant no longer matches the SVG structure"
-    images = {size: render(TIGHT if size <= 48 else SOURCE, size) for size in (16, 24, 32, 48, 64, 128, 256, 512, 1024)}
+    assert SMALL.count('display="none"') == 1 and "scale(1.1)" in SMALL, "the small variant no longer matches the SVG structure"
+    images = {size: render(SMALL if size <= 64 else SOURCE, size) for size in (16, 24, 32, 48, 64, 128, 256, 512, 1024)}
     for size in (16, 24, 32, 48, 64, 128, 256, 512):
         images[size].save(ASSETS / f"icon-{size}.png", optimize=True)
-    render(TIGHT, 128).save(ASSETS / "icon-small-128.png", optimize=True)
+    render(SMALL, 128).save(ASSETS / "icon-small-128.png", optimize=True)
     images[256].save(ASSETS / "app.ico", sizes=[(s, s) for s in (16, 24, 32, 48, 64, 128, 256)], append_images=[images[s] for s in (16, 24, 32, 48, 64, 128)])
     images[1024].save(ASSETS / "app.icns", append_images=[images[s] for s in (16, 32, 64, 128, 256, 512)])
     for path in sorted(ASSETS.iterdir()):

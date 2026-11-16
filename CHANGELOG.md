@@ -1,3 +1,10 @@
+# Unreleased
+
+- Replace the mascot with an original PickerHub mark: the letter P built from the eyedropper lens, with the picked pixel in its bowl and the dropper's tip as its stem. All PNG, ICO and ICNS sizes are regenerated.
+- Arrange the top bar as one row: identity, eyedropper and status on the leading side; undo, redo, theme and window actions on the trailing side. This returns 40 pixels of height to the page.
+- Give undo and redo curved-arrow icons that mirror with the language, and make the window actions borderless.
+- Drop the status, then the wordmark, as the window narrows; actions always remain.
+
 # 0.6.1 — header, navigation and application identity
 
 - Hide the maximize/resize button while maximized; restore by double-clicking the titlebar. Native macOS controls remain unchanged.

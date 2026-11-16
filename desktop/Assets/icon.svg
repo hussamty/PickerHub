@@ -1,64 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- PickerHub mascot: a drop of color with eyes, in TrineHub black, yellow and white. -->
+  <!-- PickerHub mark: the letter P built from the eyedropper lens. The bowl is the lens well,
+       the square inside it is the picked pixel, and the stem tapers into the dropper's tip. -->
   <defs>
     <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#262624"/>
+      <stop offset="0" stop-color="#232321"/>
       <stop offset="1" stop-color="#0C0C0C"/>
     </linearGradient>
     <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".30"/>
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".28"/>
       <stop offset=".5" stop-color="#FFFFFF" stop-opacity=".05"/>
-      <stop offset="1" stop-color="#FFF000" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity=".10"/>
     </linearGradient>
-    <radialGradient id="pool" cx=".5" cy=".5" r=".5">
-      <stop offset="0" stop-color="#FFF000" stop-opacity=".42"/>
-      <stop offset="1" stop-color="#FFF000" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="body" cx=".36" cy=".24" r=".9">
-      <stop offset="0" stop-color="#FFFCB0"/>
-      <stop offset=".3" stop-color="#FFF53D"/>
-      <stop offset=".62" stop-color="#FFF000"/>
-      <stop offset="1" stop-color="#FFC400"/>
-    </radialGradient>
-    <linearGradient id="belly" x1=".35" y1=".35" x2=".62" y2="1">
-      <stop offset="0" stop-color="#FF9A00" stop-opacity="0"/>
-      <stop offset=".6" stop-color="#FF9A00" stop-opacity=".28"/>
-      <stop offset="1" stop-color="#F06A00" stop-opacity=".72"/>
-    </linearGradient>
-    <linearGradient id="eye" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#EFEEE6"/>
-    </linearGradient>
-    <radialGradient id="pupil" cx=".4" cy=".34" r=".8">
-      <stop offset="0" stop-color="#3A3A36"/>
-      <stop offset=".6" stop-color="#111111"/>
-    </radialGradient>
-    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="26"/></filter>
-    <filter id="softer" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="46"/></filter>
-    <filter id="lid" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="7"/></filter>
     <clipPath id="tile"><rect width="1024" height="1024" rx="232"/></clipPath>
-    <path id="drop" d="M356 214 C412 262 500 250 596 274 C746 312 846 436 836 592 C826 746 692 832 520 832 C346 832 204 740 196 588 C189 458 256 368 344 314 C386 288 388 250 356 214 Z"/>
-    <clipPath id="inside"><use href="#drop"/></clipPath>
+    <clipPath id="well"><rect x="388" y="272" width="308" height="308" rx="74"/></clipPath>
   </defs>
   <g clip-path="url(#tile)">
     <rect width="1024" height="1024" fill="url(#ground)"/>
-    <ellipse cx="516" cy="850" rx="430" ry="150" fill="url(#pool)"/>
-    <ellipse cx="524" cy="842" rx="250" ry="34" fill="#000000" opacity=".5" filter="url(#soft)"/>
-    <use href="#drop" fill="url(#body)"/>
-    <g clip-path="url(#inside)">
-      <use href="#drop" fill="url(#belly)"/>
-      <ellipse cx="392" cy="372" rx="150" ry="92" fill="#FFFFFF" opacity=".5" filter="url(#softer)" transform="rotate(-28 392 372)"/>
-      <path d="M196 588 C204 740 346 832 520 832 C692 832 826 746 836 592" fill="none" stroke="#FFF6A0" stroke-width="16" opacity=".5" filter="url(#lid)"/>
-    </g>
-    <g transform="rotate(-9 580 500)">
-      <ellipse cx="497" cy="520" rx="74" ry="84" fill="#B86A00" opacity=".45" filter="url(#lid)"/>
-      <ellipse cx="655" cy="494" rx="64" ry="74" fill="#B86A00" opacity=".45" filter="url(#lid)"/>
-      <ellipse cx="497" cy="508" rx="72" ry="82" fill="url(#eye)"/>
-      <ellipse cx="655" cy="484" rx="62" ry="72" fill="url(#eye)"/>
-      <circle cx="517" cy="496" r="41" fill="url(#pupil)"/>
-      <circle cx="672" cy="474" r="36" fill="url(#pupil)"/>
-      <circle cx="530" cy="481" r="12" fill="#FFFFFF"/>
-      <circle cx="683" cy="461" r="10.5" fill="#FFFFFF"/>
+    <g id="mark" transform="translate(-30 -12)">
+      <!-- Neighbouring pixels seen through the lens; dropped at small sizes. -->
+      <g id="detail" clip-path="url(#well)">
+        <rect x="388" y="272" width="308" height="308" fill="#161615"/>
+        <g>
+          <rect x="402" y="286" width="84" height="84" rx="14" fill="#2B2B28"/>
+          <rect x="500" y="286" width="84" height="84" rx="14" fill="#3A3A36"/>
+          <rect x="598" y="286" width="84" height="84" rx="14" fill="#2B2B28"/>
+          <rect x="402" y="384" width="84" height="84" rx="14" fill="#3A3A36"/>
+          <rect x="598" y="384" width="84" height="84" rx="14" fill="#4A4A45"/>
+          <rect x="402" y="482" width="84" height="84" rx="14" fill="#2B2B28"/>
+          <rect x="500" y="482" width="84" height="84" rx="14" fill="#4A4A45"/>
+          <rect x="598" y="482" width="84" height="84" rx="14" fill="#3A3A36"/>
+        </g>
+        <rect x="500" y="384" width="84" height="84" rx="14" fill="#FFFFFF"/>
+      </g>
+      <rect id="pixel" x="472" y="356" width="140" height="140" rx="30" fill="#FFFFFF" display="none"/>
+      <path fill="#FFF000" fill-rule="evenodd" d="M462 176 H622 A170 170 0 0 1 792 346 V506 A170 170 0 0 1 622 676 H388 V752 L366 846 Q361 868 340 868 Q319 868 314 846 L292 752 V346 A170 170 0 0 1 462 176 Z M462 272 A74 74 0 0 0 388 346 V580 H622 A74 74 0 0 0 696 506 V346 A74 74 0 0 0 622 272 Z"/>
     </g>
   </g>
   <rect x="3" y="3" width="1018" height="1018" rx="229" fill="none" stroke="url(#rim)" stroke-width="6"/>

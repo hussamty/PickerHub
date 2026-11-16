@@ -18,6 +18,7 @@ internal sealed partial class MainWindow
     readonly Border currentDot = new() { Width = 14, Height = 14, CornerRadius = new CornerRadius(7), VerticalAlignment = VerticalAlignment.Center };
     readonly ThemeSwitch themeSwitch = new() { VerticalAlignment = VerticalAlignment.Center };
     readonly Backdrop backdrop = new();
+    StackPanel history = new();
     // Every tool in one place: its name, icon, one-line purpose and the method that builds its page.
     readonly record struct Tool(string Title, string Symbol, string About, Action Build);
     Tool[] tools = [];
@@ -56,8 +57,8 @@ internal sealed partial class MainWindow
         AddHandler(PointerPressedEvent, (_, e) => { if (e.Source is Visual hit && hit != spine && !spine.IsVisualAncestorOf(hit)) spine.Release(); }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         this[!ForegroundProperty] = new DynamicResourceExtension("Ink");
 
-        // The eyedropper keeps its top-left position: it is the one global action.
-        eyedropper.Height = 44; eyedropper.CornerRadius = new CornerRadius(22); eyedropper.HorizontalAlignment = HorizontalAlignment.Left; eyedropper.VerticalAlignment = VerticalAlignment.Center;
+        // The eyedropper is the one global action: it leads the bar, straight after the identity.
+        eyedropper.Height = 40; eyedropper.CornerRadius = new CornerRadius(20); eyedropper.HorizontalAlignment = HorizontalAlignment.Left; eyedropper.VerticalAlignment = VerticalAlignment.Center;
         eyedropper.Content = Line(9, new Icon("color-picker", 19), new TextBlock { Text = L.T("القطّارة"), VerticalAlignment = VerticalAlignment.Center },
             Of(new Border { VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = "F8", FontSize = 11, FontFamily = Code } }, "keycap"));
         eyedropper.FlowDirection = L.Flow;
@@ -70,33 +71,38 @@ internal sealed partial class MainWindow
         status.PropertyChanged += (_, change) => { if (change.Property == TextBlock.TextProperty) { settle.Stop(); if (status.Text != Idle) settle.Start(); } }; status.TextWrapping = TextWrapping.NoWrap; status.TextTrimming = TextTrimming.CharacterEllipsis;
         Tone(status, "Muted"); status.FlowDirection = L.Flow;
         AutomationProperties.SetLiveSetting(status, AutomationLiveSetting.Polite);
-        var notice = Of(new Border { Child = status, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(14, 0) }, "status");
+        var notice = Of(new Border { Child = status, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(12, 0) }, "status");
 
         // The wordmark follows the TrineHub rule: only the capital H takes the signal color.
-        var wordmark = new TextBlock { FontSize = 19, FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center };
+        var wordmark = new TextBlock { FontSize = 17, FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center };
         var signal = new Avalonia.Controls.Documents.Run("H"); signal[!Avalonia.Controls.Documents.TextElement.ForegroundProperty] = new DynamicResourceExtension("AccentText");
         wordmark.Inlines = [new Avalonia.Controls.Documents.Run("Picker"), signal, new Avalonia.Controls.Documents.Run("ub")];
-        undoButton = Liquid("chevron-right", L.T("تراجع · Ctrl+Z"), () => Travel(false));
-        redoButton = Liquid("chevron-left", L.T("إعادة · Ctrl+Shift+Z"), () => Travel(true));
-        var brand = Line(8, undoButton, redoButton, themeSwitch);
-        // The mascot, a drop of color, sits beside the name it belongs to.
+        undoButton = Liquid("arrow-back-up", "", () => Travel(false));
+        redoButton = Liquid("arrow-forward-up", "", () => Travel(true));
+        foreach (var step in new[] { undoButton, redoButton }) ToolTip.SetPlacement(step, PlacementMode.Bottom);
+        history = Line(4, undoButton, redoButton); history.VerticalAlignment = VerticalAlignment.Center;
+        DirectHistory();
+        // The mark sits beside the name it belongs to.
         using var portrait = Avalonia.Platform.AssetLoader.Open(new Uri("avares://PickerHub/Assets/icon-small-128.png"));
-        var mascot = new Image { Source = new Avalonia.Media.Imaging.Bitmap(portrait), Width = 28, Height = 28, VerticalAlignment = VerticalAlignment.Center };
-        Avalonia.Media.RenderOptions.SetBitmapInterpolationMode(mascot, Avalonia.Media.Imaging.BitmapInterpolationMode.HighQuality);
+        var mark = new Image { Source = new Avalonia.Media.Imaging.Bitmap(portrait), Width = 26, Height = 26, VerticalAlignment = VerticalAlignment.Center };
+        Avalonia.Media.RenderOptions.SetBitmapInterpolationMode(mark, Avalonia.Media.Imaging.BitmapInterpolationMode.HighQuality);
 
-        brand.VerticalAlignment = VerticalAlignment.Center;
-
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Height = 44, Margin = new Thickness(16, 0, 16, 8), FlowDirection = FlowDirection.LeftToRight };
-        header.Children.Add(eyedropper); Grid.SetColumn(notice, 1); header.Children.Add(notice); Grid.SetColumn(brand, 2); header.Children.Add(brand);
-        // Identity and window controls share one baseline; workbench actions share another.
-        var titlebar = BuildTitlebar(Line(8, mascot, wordmark), header);
+        // One row, read in order: who this is, the one global action and what it last did,
+        // then the quieter controls for history and theme, then the window itself.
+        var lead = Line(16, Line(9, mark, wordmark), eyedropper); lead.VerticalAlignment = VerticalAlignment.Center;
+        var trail = Line(12, history, themeSwitch); trail.VerticalAlignment = VerticalAlignment.Center;
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto"), Height = 56, Background = Brushes.Transparent, FlowDirection = FlowDirection.LeftToRight };
+        lead.Margin = new Thickness(14, 0, 0, 0); header.Children.Add(lead);
+        Grid.SetColumn(notice, 1); header.Children.Add(notice); Grid.SetColumn(trail, 2); header.Children.Add(trail);
+        var titlebar = BuildTitlebar(header, 3);
         notice.Child = null;
         var statusRow = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), FlowDirection = L.Flow };
         currentDot.Margin = new Thickness(0, 0, 8, 0); statusRow.Children.Add(currentDot);
         Grid.SetColumn(status, 1); statusRow.Children.Add(status); notice.Child = statusRow;
         notice.HorizontalAlignment = HorizontalAlignment.Left; notice.MaxWidth = 360;
-        header.SizeChanged += (_, _) => notice.IsVisible = header.Bounds.Width >= 620;
-        Closed += (_, _) => (mascot.Source as IDisposable)?.Dispose();
+        // A narrow window drops the status first, then the name; the actions always stay.
+        header.SizeChanged += (_, _) => { notice.IsVisible = header.Bounds.Width >= 820; wordmark.IsVisible = header.Bounds.Width >= 640; };
+        Closed += (_, _) => (mark.Source as IDisposable)?.Dispose();
 
         for (int i = 0; i < tools.Length; i++)
         {
@@ -149,8 +155,20 @@ internal sealed partial class MainWindow
         AutomationProperties.SetName(eyedropper, L.T("القطّارة"));
         modes = [L.T("متجاورة"), L.T("متكاملة"), L.T("ثلاثية"), L.T("متكاملة منقسمة"), L.T("أحادية اللون"), L.T("عالية التباين")];
         status.FlowDirection = L.Flow; status.Text = Idle;
+        DirectHistory(); ToolTip.SetTip(themeSwitch, L.T("المظهر"));
         if (content.Parent is ScrollViewer scroll && scroll.Parent is Grid work) work.FlowDirection = L.Flow;
         SetTrayMenu();
+    }
+    // Undo points back along the reading direction, so the pair mirrors with the language.
+    void DirectHistory()
+    {
+        bool mirrored = L.Flow == FlowDirection.RightToLeft;
+        history.FlowDirection = L.Flow;
+        foreach (var (button, back, label) in new[] { (undoButton!, true, L.T("تراجع · Ctrl+Z")), (redoButton!, false, L.T("إعادة · Ctrl+Shift+Z")) })
+        {
+            button.Content = new Icon(back != mirrored ? "arrow-back-up" : "arrow-forward-up", 18) { HorizontalAlignment = HorizontalAlignment.Center };
+            ToolTip.SetTip(button, label); AutomationProperties.SetName(button, label);
+        }
     }
     void StyleShell()
     {

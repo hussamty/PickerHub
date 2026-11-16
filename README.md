@@ -1,6 +1,6 @@
 # PickerHub
 
-<img src="desktop/Assets/icon-256.png" width="112" alt="أيقونة PickerHub: قطرة لون صفراء بعينين على خلفية سوداء">
+<img src="desktop/Assets/icon-256.png" width="112" alt="أيقونة PickerHub: حرف P أصفر على خلفية سوداء، تجويفه عدسة القطّارة وبداخلها البكسل الملتقط">
 
 مختبر ألوان عربي لسطح المكتب على Windows وLinux وmacOS. يعرض التطبيق نافذته الخاصة ويشغّل محرك Rust محلياً، مع واجهة Avalonia، وخطوط عربية مضمّنة ومكتبة محفوظة على الجهاز.
 
