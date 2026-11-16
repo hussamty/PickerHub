@@ -37,7 +37,9 @@ internal sealed partial class MainWindow : Window
 
     public MainWindow()
     {
-        Title = "PickerHub"; Width = 1120; Height = 820; MinWidth = 560; MinHeight = 400;
+        Title = "PickerHub";
+        using (var mascot = Avalonia.Platform.AssetLoader.Open(new Uri("avares://PickerHub/Assets/icon-256.png"))) Icon = new WindowIcon(mascot);
+        Width = 1120; Height = 820; MinWidth = 560; MinHeight = 400;
         FlowDirection = L.Flow;
         FontFamily = new FontFamily("avares://PickerHub/Fonts#IBM Plex Sans Arabic, Segoe UI, sans-serif");
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
