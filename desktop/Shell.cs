@@ -79,7 +79,11 @@ internal sealed partial class MainWindow
         undoButton = Liquid("chevron-right", L.T("تراجع · Ctrl+Z"), () => Travel(false));
         redoButton = Liquid("chevron-left", L.T("إعادة · Ctrl+Shift+Z"), () => Travel(true));
         var brand = Line(8, undoButton, redoButton, themeSwitch);
-        var titlebar = BuildTitlebar(Line(8, currentDot, wordmark));
+        // The mascot, a drop of color, sits beside the name it belongs to.
+        using var portrait = Avalonia.Platform.AssetLoader.Open(new Uri("avares://PickerHub/Assets/icon-64.png"));
+        var mascot = new Image { Source = new Avalonia.Media.Imaging.Bitmap(portrait), Width = 22, Height = 22, VerticalAlignment = VerticalAlignment.Center };
+        Avalonia.Media.RenderOptions.SetBitmapInterpolationMode(mascot, Avalonia.Media.Imaging.BitmapInterpolationMode.HighQuality);
+        var titlebar = BuildTitlebar(Line(8, mascot, wordmark, currentDot));
         brand.VerticalAlignment = VerticalAlignment.Center;
 
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Height = 60, Margin = new Thickness(20, 0), FlowDirection = FlowDirection.LeftToRight };
