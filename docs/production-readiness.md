@@ -99,3 +99,10 @@ Color fronts and library cards use exact color fills. Deck animation revisions p
 The clipping regression was a ScrollViewer padding/viewport mismatch: the reported scroll end could still leave the footer below the client area. The bounded shell and bottom content margin fix this. UI regressions send real mouse-wheel events and drag the custom scrollbar, then check the actual last button's bounds at 680×600, 1120×700, 1360×860 and 1800×1040 in Arabic and English. The scrollbar does not interpolate offsets or allocate blur surfaces.
 
 Linux/Windows use default custom chrome with native move/resize operations and window state actions. CI's isolated Openbox session checks minimize, maximize, restore, titlebar drag and corner resize. These checks do not prove Windows Snap, real mixed-DPI behavior or macOS clipboard integration; those remain explicit cases in the hardware test guide. macOS retains its native window controls.
+
+
+## 0.6.1 compatibility and chrome review
+
+The icon-only update is included in this release. The tray previously used a generated yellow disc while other surfaces used the mascot; the tray and titlebar now use the small-size mascot. CI checks ICO source sizes and the actual Windows executable icon resources, ICNS bundle metadata/content, and all eight Debian hicolor assets plus the desktop entry. The application window and tray icons are checked in the native UI run. OS icon caches and dock integration still need observation on real desktops.
+
+The titlebar hides the maximize button in maximized/fullscreen states and restores it in the normal state. Double-click remains available to restore. Native move begins after a four-pixel drag threshold so the first click cannot consume the double-click gesture. The isolated window-manager suite checks the real double-click, drag, corner resize, minimize and restore. The sidebar suite checks intermediate opening width, settled width, closing grace and re-entry, as well as reduced motion. Window-state and pointer behavior on real Windows 11/macOS remains in the manual guide; successful builds are not hardware interaction coverage.

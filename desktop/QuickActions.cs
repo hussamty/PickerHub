@@ -5,7 +5,6 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
-using SkiaSharp;
 
 namespace PickerHub;
 
@@ -79,17 +78,10 @@ internal sealed partial class MainWindow
             if (command && (e.Key == Key.Z || e.Key == Key.Y))
             { e.Handled = true; _ = Guard(() => { Travel(e.Key == Key.Y || e.KeyModifiers.HasFlag(KeyModifiers.Shift)); return Task.CompletedTask; }); }
         };
-        // A small opaque icon stays readable in either system theme.
-        using var pixels = new SKBitmap(32, 32);
-        using (var canvas = new SKCanvas(pixels))
-        {
-            canvas.Clear(new SKColor(17, 17, 17)); using var paint = new SKPaint { Color = new SKColor(255, 240, 0), IsAntialias = true };
-            canvas.DrawCircle(16, 16, 10, paint);
-        }
-        using var png = pixels.Encode(SKEncodedImageFormat.Png, 100); using var stream = png.AsStream();
+        using var stream = Avalonia.Platform.AssetLoader.Open(new Uri("avares://PickerHub/Assets/icon-small-128.png"));
         tray = new TrayIcon { Icon = new WindowIcon(stream), ToolTipText = "PickerHub", IsVisible = true };
         SetTrayMenu();
-        tray.Clicked += (_, _) => { Show(); Activate(); };
+        tray.Clicked += (_, _) => BringForward();
         TrayIcon.SetIcons(Application.Current!, new TrayIcons { tray });
         if (Application.Current?.PlatformSettings is { } platform)
         {

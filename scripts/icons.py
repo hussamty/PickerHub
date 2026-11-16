@@ -27,8 +27,9 @@ def render(svg, size):
 def main():
     assert TIGHT != SOURCE and TIGHT.count("</g></g>") == 1, "the tight variant no longer matches the SVG structure"
     images = {size: render(TIGHT if size <= 48 else SOURCE, size) for size in (16, 24, 32, 48, 64, 128, 256, 512, 1024)}
-    for size in (64, 256, 512):
+    for size in (16, 24, 32, 48, 64, 128, 256, 512):
         images[size].save(ASSETS / f"icon-{size}.png", optimize=True)
+    render(TIGHT, 128).save(ASSETS / "icon-small-128.png", optimize=True)
     images[256].save(ASSETS / "app.ico", sizes=[(s, s) for s in (16, 24, 32, 48, 64, 128, 256)], append_images=[images[s] for s in (16, 24, 32, 48, 64, 128)])
     images[1024].save(ASSETS / "app.icns", append_images=[images[s] for s in (16, 32, 64, 128, 256, 512)])
     for path in sorted(ASSETS.iterdir()):

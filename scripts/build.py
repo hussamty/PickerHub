@@ -106,7 +106,7 @@ def main():
         if osname == "osx":
             (bundle / "Contents/Info.plist").write_bytes(plistlib.dumps({
                 "CFBundleExecutable": "PickerHub", "CFBundleName": "PickerHub", "CFBundleIdentifier": "org.pickerhub.app",
-                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "10",
+                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "11",
                 "CFBundleIconFile": "app.icns", "NSHighResolutionCapable": True, "LSMinimumSystemVersion": "14.0"}))
             shutil.copy2(ROOT / "desktop/Assets/app.icns", bundle / "Contents/Resources/app.icns")
             (runtime / "PickerHub").chmod(0o755)
@@ -140,7 +140,7 @@ def main():
                 shutil.copytree(dest, deb / "opt/pickerhub")
                 for path in ["usr/bin", "usr/share/applications", "DEBIAN"]:
                     (deb / path).mkdir(parents=True)
-                for size in (64, 256, 512):
+                for size in (16, 24, 32, 48, 64, 128, 256, 512):
                     icons = deb / f"usr/share/icons/hicolor/{size}x{size}/apps"
                     icons.mkdir(parents=True)
                     shutil.copy2(ROOT / f"desktop/Assets/icon-{size}.png", icons / "pickerhub.png")

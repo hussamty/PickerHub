@@ -1,3 +1,10 @@
+# 0.6.1 — header, navigation and application identity
+
+- Hide the maximize/resize button while maximized; restore by double-clicking the titlebar. Native macOS controls remain unchanged.
+- Group the titlebar and toolbar in one aligned glass surface; reserve the upper row for window movement and controls, and simplify status at compact widths.
+- Use a continuous 460 ms sidebar transition with a 160 ms pointer-exit grace period, reversible without restarting the animation. Reduced motion remains immediate.
+- Use the new mascot consistently in the titlebar, window, tray, executable and app bundles. Add Linux panel-size icons and verify Windows PE icon resources, macOS bundle icons and Debian launcher assets in CI.
+
 # Unreleased
 
 - Add the PickerHub mascot as the app icon: a glossy drop of color with eyes, brand yellow on a brand-black tile. It is the window and taskbar icon, the Windows executable icon, the macOS bundle icon and the Linux launcher icon, and it sits beside the wordmark in the title bar.

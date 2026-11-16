@@ -77,6 +77,12 @@ for language in ('ar','en'):
                 xt.XTestFakeKeyEvent(d, ctrl, 1, 0); xt.XTestFakeKeyEvent(d, key, 1, 0)
                 xt.XTestFakeKeyEvent(d, key, 0, 0); xt.XTestFakeKeyEvent(d, ctrl, 0, 0); x.XFlush(d)
                 time.sleep(.3); process.stdin.write('\n'); process.stdin.flush()
+            elif line.startswith('DOUBLECLICK '):
+                _, px, py = line.split()
+                xt.XTestFakeMotionEvent(d, 0, int(px), int(py), 0); x.XFlush(d)
+                for _ in range(2):
+                    xt.XTestFakeButtonEvent(d, 1, 1, 0); xt.XTestFakeButtonEvent(d, 1, 0, 0); x.XFlush(d); time.sleep(.08)
+                process.stdin.write('\n'); process.stdin.flush()
             elif line.startswith('DRAG '):
                 _, x0, y0, x1, y1 = line.split(); x0,y0,x1,y1 = map(int,(x0,y0,x1,y1))
                 xt.XTestFakeMotionEvent(d, 0, x0, y0, 0); x.XFlush(d); time.sleep(.1)

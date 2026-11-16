@@ -13,14 +13,16 @@ namespace PickerHub;
 internal sealed partial class MainWindow
 {
     Button? minimizeWindow, maximizeWindow, closeWindow;
-    bool? lastMaximized;
+    Glass? titlebarSurface;
+    Control? titlebarDragArea;
     readonly Dictionary<WindowEdge, Cursor> resizeCursors = [];
     bool CustomChrome => !OperatingSystem.IsMacOS();
 
-    Control BuildTitlebar(Control identity)
+    Control BuildTitlebar(Control identity, Control toolbar)
     {
-        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Height = 38, Background = Brushes.Transparent, FlowDirection = FlowDirection.LeftToRight };
-        identity.Margin = new Thickness(10, 0); identity.VerticalAlignment = VerticalAlignment.Center; row.Children.Add(identity);
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Height = 44, Background = Brushes.Transparent, FlowDirection = FlowDirection.LeftToRight };
+        titlebarDragArea = row;
+        identity.Margin = new Thickness(16, 0); identity.VerticalAlignment = VerticalAlignment.Center; row.Children.Add(identity);
         if (CustomChrome)
         {
             SystemDecorations = SystemDecorations.None;
@@ -35,14 +37,30 @@ internal sealed partial class MainWindow
             maximizeWindow = WindowAction("square", ToggleMaximize, "window-maximize");
             closeWindow = WindowAction("x", Close, "window-close"); closeWindow.Classes.Add("close");
             var buttons = Line(6, minimizeWindow, maximizeWindow, closeWindow); buttons.VerticalAlignment = VerticalAlignment.Center;
-            buttons.Margin = new Thickness(8, 0); Grid.SetColumn(buttons, 2); row.Children.Add(buttons);
+            buttons.Margin = new Thickness(12, 0); Grid.SetColumn(buttons, 2); row.Children.Add(buttons);
+            PointerPressedEventArgs? pendingMove = null;
+            Point moveOrigin = default;
             row.PointerPressed += (_, e) =>
             {
                 if (!e.GetCurrentPoint(row).Properties.IsLeftButtonPressed) return;
                 if (e.Source is Visual hit && (hit is Button || hit.GetVisualAncestors().Any(v => v is Button))) return;
-                if (e.ClickCount == 2) ToggleMaximize(); else BeginMoveDrag(e);
+                pendingMove = null;
+                if (e.ClickCount == 2) ToggleMaximize();
+                else { pendingMove = e; moveOrigin = e.GetPosition(this); }
                 e.Handled = true;
             };
+            // Start a native move only after movement. Starting it on the first
+            // press lets some window managers consume the subsequent double-click.
+            PointerMoved += (_, e) =>
+            {
+                if (pendingMove is not { } press) return;
+                if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) { pendingMove = null; return; }
+                var delta = e.GetPosition(this) - moveOrigin;
+                if (Math.Abs(delta.X) < 4 && Math.Abs(delta.Y) < 4) return;
+                pendingMove = null; BeginMoveDrag(press);
+            };
+            PointerReleased += (_, _) => pendingMove = null;
+            Deactivated += (_, _) => pendingMove = null;
             AddHandler(PointerPressedEvent, (_, e) =>
             {
                 if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && ResizeEdge(e.GetPosition(this)) is { } edge)
@@ -69,7 +87,9 @@ internal sealed partial class MainWindow
             PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) UpdateWindowChrome(); };
             Closed += (_, _) => { foreach (var cursor in resizeCursors.Values) cursor.Dispose(); resizeCursors.Clear(); };
         }
-        return new Glass("GlassTint") { Child = row, Margin = new Thickness(8, 8, 8, 2), Radius = 18, Shade = Colors.Transparent };
+        var layout = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto"), FlowDirection = FlowDirection.LeftToRight };
+        layout.Children.Add(row); Grid.SetRow(toolbar, 1); layout.Children.Add(toolbar);
+        return titlebarSurface = new Glass("GlassTint") { Child = layout, Margin = new Thickness(12, 8, 12, 8), Radius = 20, Shade = Colors.Transparent };
     }
 
     WindowEdge? ResizeEdge(Point p)
@@ -81,13 +101,15 @@ internal sealed partial class MainWindow
         if (bottom) return left ? WindowEdge.SouthWest : right ? WindowEdge.SouthEast : WindowEdge.South;
         return left ? WindowEdge.West : right ? WindowEdge.East : null;
     }
-    void ToggleMaximize() => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    void ToggleMaximize() => WindowState = WindowState is WindowState.Maximized or WindowState.FullScreen ? WindowState.Normal : WindowState.Maximized;
     void UpdateWindowChrome()
     {
         if (maximizeWindow == null) return;
-        bool maximized = WindowState == WindowState.Maximized;
-        if (lastMaximized != maximized) { maximizeWindow.Content = new Icon(maximized ? "copy" : "square", 16); lastMaximized = maximized; }
-        foreach (var (button, label) in new[] { (minimizeWindow!, L.T("تصغير النافذة")), (maximizeWindow, L.T(maximized ? "استعادة حجم النافذة" : "تكبير النافذة")), (closeWindow!, L.T("إغلاق التطبيق")) })
+        bool maximized = WindowState is WindowState.Maximized or WindowState.FullScreen;
+        maximizeWindow.IsVisible = !maximized && CanResize;
+        Cursor = Cursor.Default;
+        if (titlebarDragArea != null) ToolTip.SetTip(titlebarDragArea, maximized ? L.T("انقر مرتين على شريط العنوان لاستعادة حجم النافذة") : null);
+        foreach (var (button, label) in new[] { (minimizeWindow!, L.T("تصغير النافذة")), (maximizeWindow, L.T("تكبير النافذة")), (closeWindow!, L.T("إغلاق التطبيق")) })
         { AutomationProperties.SetName(button, label); ToolTip.SetTip(button, label); }
     }
 }
