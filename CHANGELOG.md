@@ -1,3 +1,9 @@
+# Unreleased
+
+- Add the PickerHub mascot as the app icon: a glossy drop of color with eyes, brand yellow on a brand-black tile. It is the window and taskbar icon, the Windows executable icon, the macOS bundle icon and the Linux launcher icon, and it sits beside the wordmark in the title bar.
+- Install the launcher icon into the hicolor theme from the Debian package and ship `pickerhub.png` in the Linux archive.
+- Add `scripts/icons.py`, which renders `desktop/Assets/icon.svg` into the PNG, ICO and ICNS files.
+
 # 0.6.0 — native workbench and image input
 
 - Paste image pixels or a single image file with Ctrl+V / Cmd+V, or drag a PNG, JPEG or WebP onto Image Analysis. Shared cancellable analysis preserves the previous result on failure.
