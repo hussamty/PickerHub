@@ -18,11 +18,10 @@ internal sealed partial class MainWindow
     readonly Dictionary<WindowEdge, Cursor> resizeCursors = [];
     bool CustomChrome => !OperatingSystem.IsMacOS();
 
-    Control BuildTitlebar(Control identity, Control toolbar)
+    // The bar is the titlebar: its empty space moves the window, and the window actions close the row.
+    Control BuildTitlebar(Grid row, int column)
     {
-        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Height = 44, Background = Brushes.Transparent, FlowDirection = FlowDirection.LeftToRight };
         titlebarDragArea = row;
-        identity.Margin = new Thickness(16, 0); identity.VerticalAlignment = VerticalAlignment.Center; row.Children.Add(identity);
         if (CustomChrome)
         {
             SystemDecorations = SystemDecorations.None;
@@ -36,8 +35,10 @@ internal sealed partial class MainWindow
             minimizeWindow = WindowAction("minus", () => WindowState = WindowState.Minimized, "window-minimize");
             maximizeWindow = WindowAction("square", ToggleMaximize, "window-maximize");
             closeWindow = WindowAction("x", Close, "window-close"); closeWindow.Classes.Add("close");
-            var buttons = Line(6, minimizeWindow, maximizeWindow, closeWindow); buttons.VerticalAlignment = VerticalAlignment.Center;
-            buttons.Margin = new Thickness(12, 0); Grid.SetColumn(buttons, 2); row.Children.Add(buttons);
+            var divider = new Border { Width = 1, Height = 20, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 8, 0) };
+            divider[!Border.BackgroundProperty] = new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("Line");
+            var buttons = Line(2, divider, minimizeWindow, maximizeWindow, closeWindow); buttons.VerticalAlignment = VerticalAlignment.Center;
+            buttons.Margin = new Thickness(0, 0, 10, 0); Grid.SetColumn(buttons, column); row.Children.Add(buttons);
             PointerPressedEventArgs? pendingMove = null;
             Point moveOrigin = default;
             row.PointerPressed += (_, e) =>
@@ -87,9 +88,8 @@ internal sealed partial class MainWindow
             PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) UpdateWindowChrome(); };
             Closed += (_, _) => { foreach (var cursor in resizeCursors.Values) cursor.Dispose(); resizeCursors.Clear(); };
         }
-        var layout = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto"), FlowDirection = FlowDirection.LeftToRight };
-        layout.Children.Add(row); Grid.SetRow(toolbar, 1); layout.Children.Add(toolbar);
-        return titlebarSurface = new Glass("GlassTint") { Child = layout, Margin = new Thickness(12, 8, 12, 8), Radius = 20, Shade = Colors.Transparent };
+        else row.ColumnDefinitions[column].Width = new GridLength(14);
+        return titlebarSurface = new Glass("GlassTint") { Child = row, Margin = new Thickness(12, 8, 12, 8), Radius = 20, Shade = Colors.Transparent };
     }
 
     WindowEdge? ResizeEdge(Point p)
