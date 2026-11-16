@@ -78,10 +78,11 @@ internal sealed partial class MainWindow
         wordmark.Inlines = [new Avalonia.Controls.Documents.Run("Picker"), signal, new Avalonia.Controls.Documents.Run("ub")];
         undoButton = Liquid("chevron-right", L.T("تراجع · Ctrl+Z"), () => Travel(false));
         redoButton = Liquid("chevron-left", L.T("إعادة · Ctrl+Shift+Z"), () => Travel(true));
-        var brand = Line(10, undoButton, redoButton, themeSwitch, currentDot, wordmark);
+        var brand = Line(8, undoButton, redoButton, themeSwitch);
+        var titlebar = BuildTitlebar(Line(8, currentDot, wordmark));
         brand.VerticalAlignment = VerticalAlignment.Center;
 
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Height = 68, Margin = new Thickness(24, 0), FlowDirection = FlowDirection.LeftToRight };
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Height = 60, Margin = new Thickness(20, 0), FlowDirection = FlowDirection.LeftToRight };
         header.Children.Add(eyedropper); Grid.SetColumn(notice, 1); header.Children.Add(notice); Grid.SetColumn(brand, 2); header.Children.Add(brand);
 
         for (int i = 0; i < tools.Length; i++)
@@ -96,14 +97,20 @@ internal sealed partial class MainWindow
         // Title and its one-line purpose share a row, so the page keeps the height for its tools.
         pageDescription.VerticalAlignment = VerticalAlignment.Bottom; pageDescription.Margin = new Thickness(0, 0, 0, 9); pageDescription.TextWrapping = TextWrapping.Wrap;
         var heading = new WrapPanel { Orientation = Orientation.Horizontal, FlowDirection = L.Flow }; heading.Children.Add(pageTitle); pageDescription.Margin = new Thickness(14, 8, 0, 4); heading.Children.Add(pageDescription); heading.Margin = new Thickness(18, 0, 18, 6);
-        var work = new DockPanel { FlowDirection = L.Flow, Margin = new Thickness(10, 0, Spine.Closed + 4, 0), MaxWidth = 1336 };
-        DockPanel.SetDock(heading, Dock.Top); work.Children.Add(heading);
-        work.Children.Add(new ScrollViewer { Content = content, Padding = new Thickness(0, 8, 0, 32), HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled });
+        var work = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), FlowDirection = L.Flow,
+            Margin = new Thickness(10, 0, Spine.Closed + 4, 0), MaxWidth = 1336 };
+        work.Children.Add(heading);
+        // Bottom breathing room belongs to the content extent, not presenter padding.
+        var scroll = new ScrollViewer { Content = content, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        Grid.SetRow(scroll, 1); work.Children.Add(scroll);
 
         var body = new Panel(); body.Children.Add(work); body.Children.Add(spine); body.SizeChanged += (_, _) => spine.Fit(body.Bounds.Height);
         var shell = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*"), FlowDirection = FlowDirection.LeftToRight };
         shell.Children.Add(header); Grid.SetRow(errorBanner, 1); shell.Children.Add(errorBanner); Grid.SetRow(body, 2); shell.Children.Add(body);
-        var room = new Panel(); room.Children.Add(backdrop); room.Children.Add(shell); room.Children.Add(overlay);
+        // Dialogs cover the workbench while native window actions remain reachable.
+        var room = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), FlowDirection = FlowDirection.LeftToRight };
+        Grid.SetRowSpan(backdrop, 2); room.Children.Add(backdrop); room.Children.Add(titlebar);
+        Grid.SetRow(shell, 1); room.Children.Add(shell); Grid.SetRow(overlay, 1); room.Children.Add(overlay);
         Content = room;
     }
     // Changing tool answers at once: the marker moves on this frame and the page is built on the next.
@@ -129,12 +136,13 @@ internal sealed partial class MainWindow
         AutomationProperties.SetName(eyedropper, L.T("القطّارة"));
         modes = [L.T("متجاورة"), L.T("متكاملة"), L.T("ثلاثية"), L.T("متكاملة منقسمة"), L.T("أحادية اللون"), L.T("عالية التباين")];
         status.FlowDirection = L.Flow; status.Text = Idle;
-        if (content.Parent is ScrollViewer scroll && scroll.Parent is DockPanel work) work.FlowDirection = L.Flow;
+        if (content.Parent is ScrollViewer scroll && scroll.Parent is Grid work) work.FlowDirection = L.Flow;
         SetTrayMenu();
     }
     void StyleShell()
     {
         pageTitle.Text = tools[page].Title; pageDescription.Text = tools[page].About;
+        UpdateWindowChrome();
         currentDot.Background = Paint(state.Color); ToolTip.SetTip(currentDot, state.Color);
         spine.Motion = Motion; spine.Activate(page);
         themeSwitch.Motion = Motion; themeSwitch.Sync(!dark);

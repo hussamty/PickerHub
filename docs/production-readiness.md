@@ -27,6 +27,8 @@ python3 scripts/build.py --packages
 python3 tests/release_checks.py
 xvfb-run -a -s '-screen 0 1400x900x24 -noreset' python3 tests/native_x11.py
 xvfb-run -a python3 tests/hotkey_x11.py
+# Requires openbox; the window manager runs only inside this Xvfb session.
+xvfb-run -a -s '-screen 0 1920x1200x24 -noreset' sh tests/run_ui_test.sh
 dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24 -noreset' sh tests/run_portal_test.sh
 ```
 
@@ -86,3 +88,14 @@ Still not shipped: publisher-signed automatic installation with authenticated up
 Liquid action groups use one unioned path with explicit curved bridges instead of a blur threshold. Connections remain visible with the pointer or keyboard focus, in both themes, without an offscreen blur pass per group. Glass menus and sheets share theme tokens; fields, selected menu rows and tooltip surfaces follow the same material family. Native popup overlays stay inside the app to avoid rectangular transparency artifacts. Color swatches retain their exact color fill.
 
 Automated Arabic and English UI runs now move a real pointer onto action groups, capture both themes, and check menu bounds. The full capture, settings, multi-pick and delayed-clipboard regressions still run before release.
+
+
+## 0.6.0 workbench and image input
+
+Image Analysis accepts clipboard pixels, copied image files and drag/drop through the same bounded, cancellable import pipeline. The previous result survives cancellation and invalid input. In-process clipboard bitmaps are borrowed, so repeated paste does not dispose the clipboard owner's data. Text fields retain their normal paste behavior.
+
+Color fronts and library cards use exact color fills. Deck animation revisions prevent delayed callbacks from replacing a newly selected card; navigation can interrupt a flip. Tooltip glass uses the existing in-window popup layer. Sheets and menus recompute bounds when the window changes size.
+
+The clipping regression was a ScrollViewer padding/viewport mismatch: the reported scroll end could still leave the footer below the client area. The bounded shell and bottom content margin fix this. UI regressions send real mouse-wheel events and drag the custom scrollbar, then check the actual last button's bounds at 680×600, 1120×700, 1360×860 and 1800×1040 in Arabic and English. The scrollbar does not interpolate offsets or allocate blur surfaces.
+
+Linux/Windows use default custom chrome with native move/resize operations and window state actions. CI's isolated Openbox session checks minimize, maximize, restore, titlebar drag and corner resize. These checks do not prove Windows Snap, real mixed-DPI behavior or macOS clipboard integration; those remain explicit cases in the hardware test guide. macOS retains its native window controls.

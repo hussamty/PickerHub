@@ -78,8 +78,25 @@ internal sealed partial class MainWindow
                     var line = new DockPanel(); DockPanel.SetDock(actions, Dock.Right); line.Children.Add(actions); DockPanel.SetDock(chip, Dock.Left); line.Children.Add(chip);
                     check.Margin = new Thickness(10, 0); line.Children.Add(check); tile = line;
                 }
-                else { tile = Col(chip, check, actions); tile.Width = 210; tile.Margin = new Thickness(0, 0, 12, 12); }
-                if (state.LibraryView == "list") lines.Children.Add(tile); else tiles.Children.Add(tile);
+                else { tile = Col(chip, check, actions); }
+                var ink = Core.Describe(color.Hex).Text("ink"); check.Foreground = Paint(ink);
+                // Selection and hover must remain readable on the swatch, even
+                // when its contrast differs from the surrounding app theme.
+                foreach (var selected in new[] { "Unchecked", "Checked" })
+                    foreach (var interaction in new[] { "", "PointerOver", "Pressed", "Disabled" })
+                    {
+                        string suffix = selected + interaction;
+                        check.Resources["CheckBoxForeground" + suffix] = Paint(ink);
+                        check.Resources["CheckBoxCheckBackgroundStroke" + suffix] = Paint(ink, .8);
+                        check.Resources["CheckBoxCheckBackgroundFill" + suffix] = selected == "Checked" ? Paint(ink) : Brushes.Transparent;
+                        check.Resources["CheckBoxCheckGlyphForeground" + suffix] = Paint(color.Hex);
+                    }
+                foreach (var action in actions.Children.OfType<Button>())
+                { action.Foreground = Paint(ink); action.Background = Paint(ink, .10); action.BorderBrush = Paint(ink, .22); }
+                var card = new Border { Background = Paint(color.Hex), CornerRadius = new CornerRadius(18), Padding = new Thickness(12),
+                    BorderBrush = Paint(ink, .18), BorderThickness = new Thickness(1), Child = tile };
+                if (state.LibraryView == "list") lines.Children.Add(card);
+                else { card.Width = 230; card.Margin = new Thickness(0, 0, 12, 12); tiles.Children.Add(card); }
             }
             if (matches.Length == 0) results.Children.Add(Label(L.T("لا توجد ألوان مطابقة. جرّب بحثاً آخر.")));
             else results.Children.Add(state.LibraryView == "list" ? lines : tiles);

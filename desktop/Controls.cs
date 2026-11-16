@@ -161,6 +161,7 @@ internal sealed class Deck : Panel
     int index;
     double spread = 1;
     bool flipped, busy;
+    int animation;
     Border? top;
     public event Action<int>? Changed;
     public Deck(int count, int index, bool motion, Func<int, bool, Control> face)
@@ -187,13 +188,14 @@ internal sealed class Deck : Panel
         Width = CardWidth, Height = CardHeight, Child = face(item, back),
         HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Opacity = opacity,
         RenderTransformOrigin = new RelativePoint(.5, 1, RelativeUnit.Relative), RenderTransform = start,
-        Transitions = motion ? [new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(300), Easing = new CubicEaseOut() },
+        Transitions = motion ? [new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(210), Easing = new CubicEaseOut() },
             new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(180) }] : null
     };
     void Fan(double amount) { spread = amount; if (busy) return; foreach (var (card, depth) in pile) card.RenderTransform = Pose(depth); }
     // step: +1 after moving forward, -1 after moving back, 0 for a plain layout.
     void Deal(int step, int previous = -1)
     {
+        int revision = ++animation; busy = false;
         Children.Clear(); pile.Clear();
         int shown = Math.Min(Depth, count);
         var settle = new List<Action>();
@@ -202,39 +204,40 @@ internal sealed class Deck : Panel
             int d = depth;
             bool entering = step < 0 && d == 0;
             var card = Card((index + d) % count, false, !motion || step == 0 ? Pose(d) : entering ? Away : Pose(d + step), entering && motion ? 0 : 1);
-            if (d == 0) { top = card; card.PointerPressed += (_, e) => { e.Handled = true; Focus(); Flip(); }; }
+            if (d == 0) { top = card; card.PointerPressed += (_, e) => { if (!e.GetCurrentPoint(card).Properties.IsLeftButtonPressed) return; e.Handled = true; Focus(); Flip(); }; }
             Children.Add(card); pile.Add((card, d)); settle.Add(() => { card.RenderTransform = Pose(d); card.Opacity = 1; });
         }
         if (motion && step > 0 && previous >= 0)
         {
             var leaving = Card(previous, false, Pose(0)); leaving.IsHitTestVisible = false; Children.Add(leaving);
             settle.Add(() => { leaving.RenderTransform = Away; leaving.Opacity = 0; });
-            DispatcherTimer.RunOnce(() => Children.Remove(leaving), TimeSpan.FromMilliseconds(320));
+            DispatcherTimer.RunOnce(() => Children.Remove(leaving), TimeSpan.FromMilliseconds(230));
         }
-        if (motion && step != 0) Dispatcher.UIThread.Post(() => { foreach (var move in settle) move(); }, DispatcherPriority.Background);
+        if (motion && step != 0) Dispatcher.UIThread.Post(() => { if (revision == animation) foreach (var move in settle) move(); }, DispatcherPriority.Render);
     }
     void Go(int step)
     {
-        if (count < 2 || busy) return;
+        if (count < 2) return;
         int previous = index; index = (index + step + count) % count; flipped = false;
         Deal(step, previous); Changed?.Invoke(index);
     }
     public void Next() => Go(1);
     public void Previous() => Go(-1);
-    public void Show(int item) { if (item == index || busy) return; int previous = index; flipped = false; index = item; Deal(1, previous); Changed?.Invoke(index); }
+    public void Show(int item) { if (item == index || item < 0 || item >= count) return; int previous = index; flipped = false; index = item; Deal(1, previous); Changed?.Invoke(index); }
     public async void Flip()
     {
         if (busy || top == null) return;
         var card = top; flipped = !flipped;
         if (!motion) { card.Child = face(index, flipped); return; }
-        busy = true;
+        busy = true; int revision = ++animation;
         try
         {
             Transitions Turn(Easing easing) => [new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(120), Easing = easing }];
             card.Transitions = Turn(new CubicEaseIn()); card.RenderTransform = Pose(0, 0.02); await Task.Delay(125);
+            if (revision != animation || top != card) return;
             card.Child = face(index, flipped);
             card.Transitions = Turn(new CubicEaseOut()); card.RenderTransform = Pose(0); await Task.Delay(125);
         }
-        finally { busy = false; }
+        finally { if (revision == animation) busy = false; }
     }
 }

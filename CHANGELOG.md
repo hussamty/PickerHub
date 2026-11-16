@@ -1,3 +1,13 @@
+# 0.6.0 — native workbench and image input
+
+- Paste image pixels or a single image file with Ctrl+V / Cmd+V, or drag a PNG, JPEG or WebP onto Image Analysis. Shared cancellable analysis preserves the previous result on failure.
+- Fill palette grid/list cards and history deck fronts with the exact swatch color and contrast-aware text.
+- Keep card navigation responsive during a flip; invalidate stale animation callbacks and bound the visible card stack.
+- Use the shared glass material for in-window tooltips, menus and sheets; refit open overlays when resizing.
+- Fix clipped bottom actions by bounding the viewport and keeping bottom spacing inside the scrollable content. Add rounded custom scrollbars with stable drag targets.
+- Default branded Linux/Windows titlebar with drag, double-click maximize/restore, minimize, close and edge/corner resizing. Keep native macOS window controls.
+- Add image clipboard/drop/cancellation, rapid card navigation, real wheel/thumb scrolling and window-manager interaction regressions in Arabic and English.
+
 # 0.5.1 — glass and liquid consistency
 
 - Replace fragile blur-threshold button links with curved, outlined bridges that remain visible in dark and light themes and respond to keyboard focus.

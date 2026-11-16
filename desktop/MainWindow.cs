@@ -14,7 +14,7 @@ internal sealed partial class MainWindow : Window
 {
     Workspace state = new();
     // The margin keeps pane rims and shadows clear of the scroll area's edges.
-    readonly StackPanel content = new() { Spacing = 18, Margin = new Thickness(18, 6, 18, 0) };
+    readonly StackPanel content = new() { Spacing = 18, Margin = new Thickness(18, 12, 18, 32) };
     readonly TextBlock status = new() { TextWrapping = TextWrapping.Wrap };
     readonly Button eyedropper;
     readonly WorkspaceWriter writer = new();
@@ -37,7 +37,7 @@ internal sealed partial class MainWindow : Window
 
     public MainWindow()
     {
-        Title = "PickerHub"; Width = 1120; Height = 820; MinWidth = 640; MinHeight = 560;
+        Title = "PickerHub"; Width = 1120; Height = 820; MinWidth = 560; MinHeight = 400;
         FlowDirection = L.Flow;
         FontFamily = new FontFamily("avares://PickerHub/Fonts#IBM Plex Sans Arabic, Segoe UI, sans-serif");
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -52,15 +52,18 @@ internal sealed partial class MainWindow : Window
         lastSaved = Serialize(state);
         eyedropper = Btn("color-picker", L.T("القطّارة"), () => PickDesktop(), true);
         var startupError = damaged ? status.Text : Workspace.RecoveryNotice;
-        BuildShell(); SetupQuickActions(); ApplyLanguage();
+        BuildShell(); SetupQuickActions(); SetupImageInput(); ApplyLanguage();
         bool fitted = false;
         Opened += (_, _) =>
         {
             if (fitted) return; fitted = true;
             var screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
             if (screen == null) return;
-            Width = Math.Max(MinWidth, Math.Min(Width, screen.WorkingArea.Width / screen.Scaling - 32));
-            Height = Math.Max(MinHeight, Math.Min(Height, screen.WorkingArea.Height / screen.Scaling - 48));
+            double availableWidth = Math.Max(320, screen.WorkingArea.Width / screen.Scaling - 32);
+            double availableHeight = Math.Max(280, screen.WorkingArea.Height / screen.Scaling - 32);
+            MinWidth = Math.Min(MinWidth, availableWidth); MinHeight = Math.Min(MinHeight, availableHeight);
+            Width = Math.Clamp(Width, MinWidth, availableWidth);
+            Height = Math.Clamp(Height, MinHeight, availableHeight);
         };
         writer.Failed += ex => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
@@ -78,7 +81,7 @@ internal sealed partial class MainWindow : Window
             finally { flushing = false; }
         };
         if (startupError != null) ShowError(startupError);
-        Closed += (_, _) => { if(Picker.UsesPortal)WaylandCapture.Stop();preview?.Dispose();  };
+        Closed += (_, _) => { analysisCancellation?.Cancel(); if(Picker.UsesPortal)WaylandCapture.Stop();preview?.Dispose();  };
         KeyDown += (_, ev) => { if (ev.Key == Avalonia.Input.Key.F8 && !picking) { ev.Handled = true; _ = Guard(() => PickDesktop()); } };
         Render();
     }

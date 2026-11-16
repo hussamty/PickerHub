@@ -18,6 +18,7 @@ namespace PickerHub;
 // them be real glass over the page, open with the same liquid motion as the rest, and follow the theme.
 internal sealed partial class MainWindow
 {
+    bool OverlayOpen => overlay.Children.Any(c => c.IsVisible && c.IsHitTestVisible);
     readonly Panel overlay = new() { FlowDirection = FlowDirection.LeftToRight };
 
     // Grow a pane out of a point: it starts small and clear, then springs to size.
@@ -52,7 +53,14 @@ internal sealed partial class MainWindow
         public void Close(object? result = null)
         {
             if (layer == null || pane == null || done.Task.IsCompleted) return;
+            window.SizeChanged -= FitPane;
             window.Dismiss(layer, pane); before?.Focus(); done.TrySetResult(result);
+        }
+        void FitPane(object? sender = null, SizeChangedEventArgs? args = null)
+        {
+            if (pane == null) return;
+            pane.Width = Math.Min(Width, Math.Max(240, window.overlay.Bounds.Width - 32));
+            pane.MaxHeight = Math.Max(160, window.overlay.Bounds.Height - 32);
         }
         public async Task<T?> Show<T>()
         {
@@ -69,7 +77,7 @@ internal sealed partial class MainWindow
             layer = new Panel(); layer.Children.Add(dim); layer.Children.Add(pane);
             KeyboardNavigation.SetTabNavigation(layer, KeyboardNavigationMode.Cycle);
             layer.KeyDown += (_, e) => { if (e.Key == Key.Escape) { e.Handled = true; Close(); } };
-            window.overlay.Children.Add(layer);
+            window.overlay.Children.Add(layer); FitPane(); window.SizeChanged += FitPane;
             if (window.Motion) { dim.Opacity = 0; dim.Transitions = [new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(160) }]; Dispatcher.UIThread.Post(() => dim.Opacity = 1, DispatcherPriority.Render); }
             window.Emerge(pane, "translateY(14px) scale(0.94,0.94)", new RelativePoint(.5, .5, RelativeUnit.Relative), 280);
             Dispatcher.UIThread.Post(() =>
@@ -119,7 +127,7 @@ internal sealed partial class MainWindow
         }
         // That is the position in the overlay's parent; the overlay is itself mirrored inside it.
         if (overlay.GetVisualParent() is { } room && overlay.FlowDirection != room.FlowDirection) (x0, x1) = (overlay.Bounds.Width - x1, overlay.Bounds.Width - x0);
-        return new Rect(x0, y, x1 - x0, anchor.Bounds.Height);
+        return new Rect(x0 - overlay.Bounds.X, y - overlay.Bounds.Y, x1 - x0, anchor.Bounds.Height);
     }
     void Drop(Control anchor, string[] items, int selected, Action<int> pick, Action closed)
     {
@@ -134,6 +142,7 @@ internal sealed partial class MainWindow
         void Close(bool refocus)
         {
             if (!layer.IsHitTestVisible) return;
+            SizeChanged -= Reposition;
             Dismiss(layer, pane); closed(); if (refocus) anchor.Focus();
         }
         var rows = new List<Button>();
@@ -161,15 +170,21 @@ internal sealed partial class MainWindow
             }
             e.Handled = true;
         };
-        var spot = Locate(anchor);
-        double left = spot.X, top = spot.Y, bottom = spot.Bottom, width = Math.Min(Math.Max(spot.Width, 180), Math.Max(160, overlay.Bounds.Width - 16));
-        double height = Math.Min(304, items.Length * 42) + 12;
-        double belowRoom = Math.Max(40, overlay.Bounds.Height - bottom - 14), aboveRoom = Math.Max(40, top - 14);
-        bool above = height > belowRoom && aboveRoom > belowRoom;
-        height = Math.Min(height, above ? aboveRoom : belowRoom);
-        ((ScrollViewer)pane.Child!).MaxHeight = Math.Max(28, height - 12);
-        pane.Width = width;
-        pane.Margin = new Thickness(Math.Clamp(left, 8, Math.Max(8, overlay.Bounds.Width - width - 8)), above ? top - 6 - height : bottom + 6, 0, 0);
+        bool above = false;
+        void Reposition(object? sender = null, SizeChangedEventArgs? args = null)
+        {
+            var spot = Locate(anchor);
+            double width = Math.Min(Math.Max(spot.Width, 180), Math.Max(160, overlay.Bounds.Width - 16));
+            double height = Math.Min(304, items.Length * 42) + 12;
+            double belowRoom = Math.Max(40, overlay.Bounds.Height - spot.Bottom - 14), aboveRoom = Math.Max(40, spot.Top - 14);
+            above = height > belowRoom && aboveRoom > belowRoom;
+            height = Math.Min(height, above ? aboveRoom : belowRoom);
+            ((ScrollViewer)pane.Child!).MaxHeight = Math.Max(28, height - 12);
+            pane.Width = width;
+            pane.Margin = new Thickness(Math.Clamp(spot.X, 8, Math.Max(8, overlay.Bounds.Width - width - 8)),
+                Math.Clamp(above ? spot.Top - 6 - height : spot.Bottom + 6, 8, Math.Max(8, overlay.Bounds.Height - height - 8)), 0, 0);
+        }
+        Reposition(); SizeChanged += Reposition;
         layer.Children.Add(catcher); layer.Children.Add(pane); overlay.Children.Add(layer);
         Emerge(pane, "scale(0.92,0.55)", new RelativePoint(.5, above ? 1 : 0, RelativeUnit.Relative));
         Dispatcher.UIThread.Post(() => { if (rows.Count > 0) rows[Math.Clamp(selected, 0, rows.Count - 1)].Focus(NavigationMethod.Directional); }, DispatcherPriority.Loaded);

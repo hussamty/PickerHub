@@ -14,46 +14,12 @@ namespace PickerHub;
 
 internal sealed partial class MainWindow
 {
-    bool analyzing;
-    CancellationTokenSource? analysisCancellation;
-    async Task Analyze()
-    {
-        if (analyzing) return;
-        analyzing = true; analysisCancellation = new();
-        status.Text = L.T("جارٍ تحليل الصورة…");
-        try { await AnalyzeImage(); }
-        catch (OperationCanceledException) { status.Text = L.T("أُلغي التحليل"); }
-        finally { analysisCancellation.Dispose(); analysisCancellation = null; analyzing = false; if (status.Text == L.T("جارٍ تحليل الصورة…")) status.Text = Idle; }
-    }
-    async Task AnalyzeImage()
-    {
-        var files = await StorageProvider.OpenFilePickerAsync(new() { Title = L.T("اختيار صورة"), FileTypeFilter = [new FilePickerFileType("PNG · JPG · WEBP") { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.webp"] }] }); if (files.Count == 0) return;
-        using var stream = await files[0].OpenReadAsync();
-        if (stream.CanSeek && stream.Length > 32L << 20) throw new InvalidDataException(L.T("اختر صورة أصغر من 32 ميغابايت."));
-        using var dataStream = new MemoryStream();
-        var buffer = new byte[65536]; int read;
-        while ((read = await stream.ReadAsync(buffer, analysisCancellation!.Token)) > 0)
-        {
-            if (dataStream.Length + read > 32L << 20) throw new InvalidDataException(L.T("اختر صورة أصغر من 32 ميغابايت."));
-            dataStream.Write(buffer, 0, read);
-        }
-        dataStream.Position = 0;
-        var progress = Dialog(L.T("تحليل الصورة"));
-        progress.Content = Col(Text(L.T("جارٍ تحليل الصورة…")), new ProgressBar { IsIndeterminate = true }, Btn(L.T("إلغاء"), () => { analysisCancellation!.Cancel(); progress.Close(); }));
-        var cancellation = analysisCancellation!;
-        var visible = progress.Show();
-        _ = visible.ContinueWith(_ => { try { cancellation.Cancel(); } catch (ObjectDisposedException) { } }, TaskScheduler.Default);
-        ImageAnalysis.Result result;
-        try { result = await Task.Run(() => ImageAnalysis.Analyze(dataStream, cancellation.Token)); }
-        finally { progress.Close(); }
-        if (closed) return;
-        recentImage = result.Colors; percentages = result.Percentages;
-        imageName = Path.GetFileNameWithoutExtension(files[0].Name); if (imageName.Length == 0) imageName = L.T("لوحة الصورة"); if (imageName.Length > 100) imageName = imageName[..100];
-        preview?.Dispose(); using var ms = new MemoryStream(result.Preview); preview = new Bitmap(ms); Render();
-    }
     void Images()
     {
-        if (preview == null) { content.Children.Add(Empty(L.T("لوحة جديدة من صورة"), L.T("PNG أو JPG أو WEBP بحجم يصل إلى 32 ميغابايت."), "photo", Btn("upload", L.T("اختيار صورة"), Analyze, true))); return; }
+        var inputActions = Row(Btn("upload", L.T("اختيار صورة"), Analyze, true), Btn("copy", L.T("لصق صورة"), PasteImage));
+        var hint = Label(L.T("اسحب صورة هنا أو الصقها باستخدام ") + (OperatingSystem.IsMacOS() ? "⌘V" : "Ctrl+V") + " · PNG / JPG / WEBP · 32 MB");
+        content.Children.Add(Surface(Col(hint, inputActions)));
+        if (preview == null) { content.Children.Add(Empty(L.T("لوحة جديدة من صورة"), L.T("الصورة تبقى على جهازك. تُستخرج الألوان محلياً."), "photo")); return; }
         Palette Make() => new() { Name = imageName, Colors = recentImage.Select(Swatch.From).ToList() };
         var picture = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = new Image { Source = preview, MaxHeight = 360, Stretch = Stretch.Uniform } };
         var photo = Section(imageName, picture, Of(Liquid("upload", L.T("تغيير الصورة"), Analyze), "still"));
