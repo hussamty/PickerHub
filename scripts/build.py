@@ -77,6 +77,9 @@ def main():
         # The managed UI assembly and Rust library have distinct names on case-insensitive volumes.
         core_name = {"linux": "libpickerhub_core.so", "win": "pickerhub_core.dll", "osx": "libpickerhub_core.dylib"}[osname]
         shutil.copy2(core, runtime / core_name)
+        if osname == "linux":
+            # For installs from the archive: a launcher entry can point its Icon at this file.
+            shutil.copy2(ROOT / "desktop/Assets/icon-256.png", runtime / "pickerhub.png")
         if capture:
             shutil.copy2(capture, runtime / ("picker_capture.dll" if osname == "win" else "libpicker_capture.so"))
         notes = bundle / "Contents/Resources" if osname == "osx" else bundle / "documentation"
@@ -103,8 +106,9 @@ def main():
         if osname == "osx":
             (bundle / "Contents/Info.plist").write_bytes(plistlib.dumps({
                 "CFBundleExecutable": "PickerHub", "CFBundleName": "PickerHub", "CFBundleIdentifier": "org.pickerhub.app",
-                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "10",
-                "NSHighResolutionCapable": True, "LSMinimumSystemVersion": "14.0"}))
+                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "11",
+                "CFBundleIconFile": "app.icns", "NSHighResolutionCapable": True, "LSMinimumSystemVersion": "14.0"}))
+            shutil.copy2(ROOT / "desktop/Assets/app.icns", bundle / "Contents/Resources/app.icns")
             (runtime / "PickerHub").chmod(0o755)
             if HOST == "osx":
                 run("codesign", "--force", "--deep", "--sign", "-", bundle)
@@ -136,10 +140,14 @@ def main():
                 shutil.copytree(dest, deb / "opt/pickerhub")
                 for path in ["usr/bin", "usr/share/applications", "DEBIAN"]:
                     (deb / path).mkdir(parents=True)
+                for size in (16, 24, 32, 48, 64, 128, 256, 512):
+                    icons = deb / f"usr/share/icons/hicolor/{size}x{size}/apps"
+                    icons.mkdir(parents=True)
+                    shutil.copy2(ROOT / f"desktop/Assets/icon-{size}.png", icons / "pickerhub.png")
                 (deb / "usr/bin/pickerhub").symlink_to("/opt/pickerhub/PickerHub")
                 (deb / "usr/share/applications/pickerhub.desktop").write_text(
                     "[Desktop Entry]\nType=Application\nName=PickerHub\nExec=/opt/pickerhub/PickerHub\n"
-                    "TryExec=/opt/pickerhub/PickerHub\nIcon=applications-graphics\nTerminal=false\nCategories=Graphics;Utility;\nStartupWMClass=pickerhub\n"
+                    "TryExec=/opt/pickerhub/PickerHub\nIcon=pickerhub\nTerminal=false\nCategories=Graphics;Utility;\nStartupWMClass=pickerhub\n"
                     f"X-PickerHub-Version={VERSION}\n")
                 (deb / "DEBIAN/control").write_text(
                     f"Package: pickerhub\nVersion: {VERSION}\nArchitecture: amd64\nMaintainer: PickerHub contributors\nSection: graphics\n"

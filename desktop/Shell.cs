@@ -79,11 +79,24 @@ internal sealed partial class MainWindow
         undoButton = Liquid("chevron-right", L.T("تراجع · Ctrl+Z"), () => Travel(false));
         redoButton = Liquid("chevron-left", L.T("إعادة · Ctrl+Shift+Z"), () => Travel(true));
         var brand = Line(8, undoButton, redoButton, themeSwitch);
-        var titlebar = BuildTitlebar(Line(8, currentDot, wordmark));
+        // The mascot, a drop of color, sits beside the name it belongs to.
+        using var portrait = Avalonia.Platform.AssetLoader.Open(new Uri("avares://PickerHub/Assets/icon-small-128.png"));
+        var mascot = new Image { Source = new Avalonia.Media.Imaging.Bitmap(portrait), Width = 28, Height = 28, VerticalAlignment = VerticalAlignment.Center };
+        Avalonia.Media.RenderOptions.SetBitmapInterpolationMode(mascot, Avalonia.Media.Imaging.BitmapInterpolationMode.HighQuality);
+
         brand.VerticalAlignment = VerticalAlignment.Center;
 
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Height = 60, Margin = new Thickness(20, 0), FlowDirection = FlowDirection.LeftToRight };
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Height = 44, Margin = new Thickness(16, 0, 16, 8), FlowDirection = FlowDirection.LeftToRight };
         header.Children.Add(eyedropper); Grid.SetColumn(notice, 1); header.Children.Add(notice); Grid.SetColumn(brand, 2); header.Children.Add(brand);
+        // Identity and window controls share one baseline; workbench actions share another.
+        var titlebar = BuildTitlebar(Line(8, mascot, wordmark), header);
+        notice.Child = null;
+        var statusRow = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), FlowDirection = L.Flow };
+        currentDot.Margin = new Thickness(0, 0, 8, 0); statusRow.Children.Add(currentDot);
+        Grid.SetColumn(status, 1); statusRow.Children.Add(status); notice.Child = statusRow;
+        notice.HorizontalAlignment = HorizontalAlignment.Left; notice.MaxWidth = 360;
+        header.SizeChanged += (_, _) => notice.IsVisible = header.Bounds.Width >= 620;
+        Closed += (_, _) => (mascot.Source as IDisposable)?.Dispose();
 
         for (int i = 0; i < tools.Length; i++)
         {
@@ -105,8 +118,8 @@ internal sealed partial class MainWindow
         Grid.SetRow(scroll, 1); work.Children.Add(scroll);
 
         var body = new Panel(); body.Children.Add(work); body.Children.Add(spine); body.SizeChanged += (_, _) => spine.Fit(body.Bounds.Height);
-        var shell = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*"), FlowDirection = FlowDirection.LeftToRight };
-        shell.Children.Add(header); Grid.SetRow(errorBanner, 1); shell.Children.Add(errorBanner); Grid.SetRow(body, 2); shell.Children.Add(body);
+        var shell = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), FlowDirection = FlowDirection.LeftToRight };
+        shell.Children.Add(errorBanner); Grid.SetRow(body, 1); shell.Children.Add(body);
         // Dialogs cover the workbench while native window actions remain reachable.
         var room = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), FlowDirection = FlowDirection.LeftToRight };
         Grid.SetRowSpan(backdrop, 2); room.Children.Add(backdrop); room.Children.Add(titlebar);

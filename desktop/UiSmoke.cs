@@ -65,9 +65,11 @@ internal sealed partial class MainWindow
                 if (Environment.GetEnvironmentVariable("PICKERHUB_TEST_WM") == "1")
                 {
                     maximizeWindow!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); await Task.Delay(300);
-                    SelfTests.Check(WindowState == WindowState.Maximized, "Maximize works with a window manager");
-                    maximizeWindow.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); await Task.Delay(300);
-                    SelfTests.Check(WindowState == WindowState.Normal, "Restore returns the normal window");
+                    SelfTests.Check(WindowState == WindowState.Maximized && !maximizeWindow.IsVisible && ResizeEdge(new Point(2, 2)) == null, "Maximized chrome hides the resize action and disables resize grips");
+                    await Capture(L.Language + "-maximized");
+                    var titlePoint = this.PointToScreen(new Point(Bounds.Width / 2, 28));
+                    Console.WriteLine($"DOUBLECLICK {titlePoint.X} {titlePoint.Y}"); await Task.Run(Console.ReadLine); await Task.Delay(300);
+                    SelfTests.Check(WindowState == WindowState.Normal && maximizeWindow.IsVisible, "Titlebar double-click restores the window and the resize button");
                     minimizeWindow!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); await Task.Delay(200);
                     SelfTests.Check(WindowState == WindowState.Minimized, "Minimize works with a window manager");
                     BringForward(); await Task.Delay(200);
@@ -82,6 +84,24 @@ internal sealed partial class MainWindow
                     Width = 1120; Height = 820; Position = new PixelPoint(100, 40); await Task.Delay(150);
                 }
             }
+            SelfTests.Check(Icon != null && tray?.Icon != null, "Window and tray have application icons");
+            state.ReduceMotion = false; Render(); spine.Collapse(); await Task.Delay(550);
+            var rail = Locate(spine); var enter = overlay.PointToScreen(new Point(rail.Right - 25, rail.Top + 40));
+            Console.WriteLine($"HOVER {enter.X} {enter.Y}"); await Task.Run(Console.ReadLine);
+            SelfTests.Check(spine.IsExpanded && spine.Bounds.Width > Spine.Closed && spine.Bounds.Width < Spine.Open, "Sidebar expands progressively rather than snapping");
+            await Task.Delay(500);
+            SelfTests.Check(Math.Abs(spine.Bounds.Width - Spine.Open) < 1, "Sidebar settles at its open width");
+            await Capture(L.Language + "-sidebar");
+            var leave = this.PointToScreen(new Point(Width / 2, 28));
+            Console.WriteLine($"HOVER {leave.X} {leave.Y}"); await Task.Run(Console.ReadLine);
+            SelfTests.Check(spine.Bounds.Width > Spine.Closed + 40, "Sidebar does not snap closed on pointer exit");
+            // Re-enter during the close delay, then leave again.
+            Console.WriteLine($"HOVER {enter.X} {enter.Y}"); await Task.Run(Console.ReadLine); await Task.Delay(250);
+            SelfTests.Check(spine.IsExpanded, "Re-entry cancels a pending close");
+            Console.WriteLine($"HOVER {leave.X} {leave.Y}"); await Task.Run(Console.ReadLine); await Task.Delay(700);
+            SelfTests.Check(Math.Abs(spine.Bounds.Width - Spine.Closed) < 1, "Sidebar finishes closing");
+            spine.Motion = false; spine.Collapse(); await Task.Delay(30);
+            SelfTests.Check(spine.Width == Spine.Closed, "Reduced motion settles immediately");
             ShowError("First error"); ShowError("Second error");
             SelfTests.Check(errorBanner.Child!.GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "Second error"), "Repeated error banners replace safely");
             errorBanner.IsVisible = false;
@@ -201,7 +221,7 @@ internal sealed partial class MainWindow
             Console.WriteLine("MULTIPICK"); await PickDesktop(true, true);
             SelfTests.Check(target.Colors.Count == 8 && !picking && IsVisible, "Eight stationary multi picks and Escape return the window");
             SelfTests.Check(target.Colors.Select(c => c.Hex).SequenceEqual(new[] { "#112233", "#223344", "#334455", "#445566", "#556677", "#667788", "#778899", "#8899AA" }), "Each stationary click samples the latest source frame");
-            await Task.Delay(250);
+            await Task.Delay(700);
             SelfTests.Check(spine.Width == Spine.Closed, "Picker return leaves navigation collapsed");
             var copied = await Clipboard!.TryGetTextAsync();
             SelfTests.Check(copied == PickValue(state, target.Colors[^1].Hex), $"Multi pick uses the current copy format: {copied ?? "null"} expected {PickValue(state, target.Colors[^1].Hex)}");

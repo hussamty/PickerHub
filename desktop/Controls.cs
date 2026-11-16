@@ -54,6 +54,8 @@ internal sealed class Spine : Glass
     readonly List<TextBlock> labels = [];
     bool keyboard, pinned, motion = true, motionInitialized, expanded;
     int active = -1;
+    IDisposable? pendingClose;
+    internal bool IsExpanded => expanded;
     public Spine()
     {
         Radius = 26; Blur = 22; Shoulder = Lip; Width = Closed; Padding = new Thickness(7, Lip + 7, 7, Lip + 7);
@@ -61,8 +63,14 @@ internal sealed class Spine : Glass
         var layers = new Panel(); layers.Children.AddRange([current, hover, items]); Child = layers;
         Add("dots", L.T("القائمة"), () => { pinned = !pinned; Expand(pinned || IsPointerOver); }, false);
         Divide();
-        PointerEntered += (_, _) => Expand(true);
-        PointerExited += (_, _) => { hover.Opacity = 0; if (!keyboard && !pinned) Expand(false); };
+        PointerEntered += (_, _) => { pendingClose?.Dispose(); pendingClose = null; Expand(true); };
+        PointerExited += (_, _) =>
+        {
+            hover.Opacity = 0; pendingClose?.Dispose();
+            if (!keyboard && !pinned) pendingClose = DispatcherTimer.RunOnce(() =>
+            { pendingClose = null; if (!IsPointerOver && !keyboard && !pinned) Expand(false); }, TimeSpan.FromMilliseconds(motion ? 160 : 0));
+        };
+        DetachedFromVisualTree += (_, _) => { pendingClose?.Dispose(); pendingClose = null; };
         AddHandler(PointerPressedEvent, (_, _) => hover.RenderTransform = TransformOperations.Parse("scale(0.97,0.86)"), Avalonia.Interactivity.RoutingStrategies.Tunnel);
         AddHandler(PointerReleasedEvent, (_, _) => hover.RenderTransform = TransformOperations.Parse("scale(1,1)"), Avalonia.Interactivity.RoutingStrategies.Tunnel);
         AddHandler(GotFocusEvent, (_, e) =>
@@ -88,28 +96,30 @@ internal sealed class Spine : Glass
         {
             if (motionInitialized && motion == value) return;
             motionInitialized = true; motion = value;
+            // Keep the same transition while reversing direction to preserve interpolation.
+            Transitions = value ? [new DoubleTransition { Property = WidthProperty, Duration = TimeSpan.FromMilliseconds(460), Easing = new CubicEaseInOut() }] : null;
+            if (!value) { pendingClose?.Dispose(); pendingClose = null; Width = expanded ? Open : Closed; }
             for (int i = 0; i < labels.Count; i++) labels[i].Transitions = Fade(i);
             foreach (var pill in new[] { hover, current }) pill.Transitions = value ? Travel() : null;
         }
     }
-    Transitions? Fade(int row) => motion ? [new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(130), Delay = TimeSpan.FromMilliseconds(row * 8) }] : null;
+    Transitions? Fade(int row) => motion ? [new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(220), Easing = new CubicEaseOut() }] : null;
     static Transitions Travel() =>
     [
         new ThicknessTransition { Property = MarginProperty, Duration = TimeSpan.FromMilliseconds(230), Easing = new BackEaseOut() },
         new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(110) },
         new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(220), Easing = new BackEaseOut() }
     ];
-    // Opening overshoots like a drop let go; closing settles without a bounce so the icons are never clipped.
+    // A continuous eased width transition is reversible; labels fade inside the pane.
     void Expand(bool open)
     {
         if (expanded == open) return;
         expanded = open;
-        Transitions = motion ? [new DoubleTransition { Property = WidthProperty, Duration = TimeSpan.FromMilliseconds(open ? 280 : 190), Easing = open ? new BackEaseOut() : new CubicEaseOut() }] : null;
         Width = open ? Open : Closed; foreach (var label in labels) label.Opacity = open ? 1 : 0;
     }
     // Unpin after a click outside the spine.
     public void Release() { pinned = false; if (!IsPointerOver && !keyboard) Expand(false); }
-    public void Collapse() { pinned = keyboard = false; hover.Opacity = 0; Expand(false); }
+    public void Collapse() { pendingClose?.Dispose(); pendingClose = null; pinned = keyboard = false; hover.Opacity = 0; Expand(false); }
     // A pill that is not showing appears in place; one that is showing travels.
     void Slide(Border pill, double y)
     {
@@ -138,7 +148,7 @@ internal sealed class Spine : Glass
     public void Divide() => items.Children.Add(new Border { Classes = { "hairline" }, Margin = new Thickness(12, 5) });
     public void Label(Button button, string symbol, string label)
     {
-        var text = new TextBlock { Text = label, FontSize = 13, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap, Opacity = Width > Closed ? 1 : 0, Margin = new Thickness(2, 0, 14, 0) };
+        var text = new TextBlock { Text = label, FontSize = 13, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap, Opacity = expanded ? 1 : 0, Margin = new Thickness(2, 0, 14, 0) };
         if (button.Content is Grid old) labels.Remove(old.Children.OfType<TextBlock>().First());
         labels.Add(text); text.Transitions = Fade(labels.Count - 1);
         var icon = new Icon(symbol, 20) { HorizontalAlignment = HorizontalAlignment.Center };

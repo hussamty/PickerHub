@@ -360,5 +360,6 @@
   "تصغير النافذة": "Minimize window",
   "استعادة حجم النافذة": "Restore window",
   "تكبير النافذة": "Maximize window",
-  "إغلاق التطبيق": "Close app"
+  "إغلاق التطبيق": "Close app",
+  "انقر مرتين على شريط العنوان لاستعادة حجم النافذة": "Double-click the titlebar to restore the window"
 }

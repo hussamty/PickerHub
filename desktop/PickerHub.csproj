@@ -7,8 +7,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>PickerHub</AssemblyName>
-    <Version>0.6.0</Version>
+    <Version>0.6.1</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
   <ItemGroup>
@@ -17,6 +18,7 @@
     <PackageReference Include="Tmds.DBus" Version="0.95.2"/>
     <AvaloniaResource Include="Fonts/*.ttf" Link="Fonts/%(Filename)%(Extension)"/>
     <AvaloniaResource Include="Icons/*.svg"/>
+    <AvaloniaResource Include="Assets/icon-small-128.png;Assets/icon-64.png;Assets/icon-256.png"/>
     <EmbeddedResource Include="Localization.en.json" WithCulture="false" LogicalName="PickerHub.Localization.en.json"/>
   </ItemGroup>
 </Project>

@@ -27,6 +27,7 @@ jobs:
       - run: rustup default stable
       - run: cargo test --locked
       - run: python scripts/build.py --packages --rid ${{ matrix.rid }}
+      - run: python tests/icon_checks.py --rid ${{ matrix.rid }}
       - if: runner.os == 'Linux'
         run: xvfb-run -a -s '-screen 0 1400x900x24 -noreset' python tests/native_x11.py
       - if: runner.os == 'Linux'

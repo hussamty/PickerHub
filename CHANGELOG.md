@@ -1,3 +1,16 @@
+# 0.6.1 — header, navigation and application identity
+
+- Hide the maximize/resize button while maximized; restore by double-clicking the titlebar. Native macOS controls remain unchanged.
+- Group the titlebar and toolbar in one aligned glass surface; reserve the upper row for window movement and controls, and simplify status at compact widths.
+- Use a continuous 460 ms sidebar transition with a 160 ms pointer-exit grace period, reversible without restarting the animation. Reduced motion remains immediate.
+- Use the new mascot consistently in the titlebar, window, tray, executable and app bundles. Add Linux panel-size icons and verify Windows PE icon resources, macOS bundle icons and Debian launcher assets in CI.
+
+# Unreleased
+
+- Add the PickerHub mascot as the app icon: a glossy drop of color with eyes, brand yellow on a brand-black tile. It is the window and taskbar icon, the Windows executable icon, the macOS bundle icon and the Linux launcher icon, and it sits beside the wordmark in the title bar.
+- Install the launcher icon into the hicolor theme from the Debian package and ship `pickerhub.png` in the Linux archive.
+- Add `scripts/icons.py`, which renders `desktop/Assets/icon.svg` into the PNG, ICO and ICNS files.
+
 # 0.6.0 — native workbench and image input
 
 - Paste image pixels or a single image file with Ctrl+V / Cmd+V, or drag a PNG, JPEG or WebP onto Image Analysis. Shared cancellable analysis preserves the previous result on failure.
