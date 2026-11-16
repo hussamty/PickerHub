@@ -6,6 +6,7 @@
 - Use the shared glass material for in-window tooltips, menus and sheets; refit open overlays when resizing.
 - Fix clipped bottom actions by bounding the viewport and keeping bottom spacing inside the scrollable content. Add rounded custom scrollbars with stable drag targets.
 - Default branded Linux/Windows titlebar with drag, double-click maximize/restore, minimize, close and edge/corner resizing. Keep native macOS window controls.
+- Honor an explicit X11 session even if a native library populates a Wayland display hint.
 - Add image clipboard/drop/cancellation, rapid card navigation, real wheel/thumb scrolling and window-manager interaction regressions in Arabic and English.
 
 # 0.5.1 — glass and liquid consistency

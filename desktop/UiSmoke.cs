@@ -173,6 +173,7 @@ internal sealed partial class MainWindow
             SelfTests.Check(state.CopyFormat == "RGB" && PickValue(state, "#ABCDEF").StartsWith("rgb("), "Copy format applies from Settings immediately");
             overlay.Children.Last().RaiseEvent(new Avalonia.Input.KeyEventArgs { RoutedEvent = Avalonia.Input.InputElement.KeyDownEvent, Key = Avalonia.Input.Key.Escape });
             await settings;
+            SelfTests.Check(!Picker.UsesPortal, $"X11 UI test keeps its capture backend: session={Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")}, display={Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")}");
             await Copy("keep this clipboard");
             Console.WriteLine("SINGLEPICK"); await PickDesktop();
             SelfTests.Check(await Clipboard!.TryGetTextAsync() == "keep this clipboard", "Disabled Quick Copy preserves the clipboard immediately");

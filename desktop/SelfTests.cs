@@ -17,6 +17,9 @@ internal static class SelfTests
         Workspace.RootOverride = root;
         try
         {
+            Check(!Picker.WaylandSession("x11", "wayland-0"), "Explicit X11 wins over a stale or probed Wayland display");
+            Check(Picker.WaylandSession("wayland", null), "Wayland session requires the portal even without a display hint");
+            Check(Picker.WaylandSession(null, "wayland-0") && !Picker.WaylandSession(null, ""), "Unknown sessions use the display hint");
             InstanceChecks().GetAwaiter().GetResult(); Phase1(); Phase2(); Phase3(); Phase4(); WriterChecks().GetAwaiter().GetResult();
             Console.WriteLine($"PASS: {checks} desktop checks"); return 0;
         }
