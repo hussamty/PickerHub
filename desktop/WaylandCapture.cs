@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Threading;
 using System.Runtime.InteropServices;
 using Tmds.DBus;
 
@@ -46,12 +47,13 @@ internal sealed class WaylandCapture : IDisposable
     public static async Task<bool> Prepare(Window owner)
     {
         if (current?.ended == true) Stop();
+        bool starting = current == null;
         if (current == null)
         {
             var opened = new WaylandCapture();
             try
             {
-                if (!await opened.Open(owner)) { opened.Dispose(); return false; }
+                if (!await opened.Open(owner) || opened.ended || !owner.IsVisible) { opened.Dispose(); return false; }
                 current = opened;
             }
             catch { opened.Dispose(); throw; }
@@ -64,7 +66,7 @@ internal sealed class WaylandCapture : IDisposable
         }
         current.monitors = screens.Select(s => s.Bounds).Zip(current.sources.OrderBy(s => s.x).ThenBy(s => s.y),
             (bounds, source) => (bounds, source.capture)).ToDictionary(pair => pair.bounds, pair => pair.capture);
-        SharingChanged?.Invoke();
+        if (starting) SharingChanged?.Invoke();
         return true;
     }
     Dictionary<PixelRect, GstCapture> monitors = [];
@@ -119,7 +121,7 @@ internal sealed class WaylandCapture : IDisposable
         void SessionEnded()
         {
             ended = true;
-            SharingChanged?.Invoke();
+            Dispatcher.UIThread.Post(() => { if (ReferenceEquals(current, this)) Stop(); });
         }
         closed=await session.WatchClosedAsync(_=>SessionEnded(),_=>SessionEnded());
         var selected=await Request(options=>{options["types"]=1u;options["multiple"]=true;options["cursor_mode"]=1u;return cast.SelectSourcesAsync(path,options);});
@@ -190,6 +192,7 @@ internal sealed class GstCapture : IDisposable
     }
     [DllImport(App)] static extern int gst_app_sink_is_eos(nint sink);
     nint latest;
+    bool receivedFrame;
     public void Drain()
     {
         if (latest != 0) { gst_sample_unref(latest); latest = 0; }
@@ -205,8 +208,10 @@ internal sealed class GstCapture : IDisposable
         {
             if (latest != 0) gst_sample_unref(latest);
             latest = next;
+            receivedFrame = true;
         }
-        if (gst_app_sink_is_eos(sink) != 0) throw new IOException(L.T("توقفت مشاركة الشاشة. أعد فتح القطّارة."));
+        // The appsink also reports EOS until it starts accepting buffers.
+        if (receivedFrame && gst_app_sink_is_eos(sink) != 0) throw new IOException(L.T("توقفت مشاركة الشاشة. أعد فتح القطّارة."));
         if (latest == 0) return false;
         var caps = gst_caps_get_structure(gst_sample_get_caps(latest), 0);
         if (gst_structure_get_int(caps, "width", out int w) == 0 || gst_structure_get_int(caps, "height", out int h) == 0

@@ -4,6 +4,8 @@ using Tmds.DBus;
 
 namespace PickerHub;
 
+internal enum PickAction { Default, Copy, Edit, Quick, Collect }
+
 [DBusInterface("org.freedesktop.host.portal.Registry")]
 public interface IPortalRegistry : IDBusObject
 {
@@ -47,12 +49,7 @@ internal static class Picker
             while (collected != null && selected != null);
             return selected;
         }
-        if (UsesPortal)
-        {
-            if (!useScreenSharing) return await WaylandColorPicker.Pick(owner);
-            if (!await WaylandCapture.Prepare(owner)) return null;
-        }
-        owner.Hide();
+        if (UsesPortal && !useScreenSharing) return await WaylandColorPicker.Pick(owner);
         return await MagnifierSession.Start(owner, collected, firstSample);
     }
 

@@ -117,6 +117,26 @@ int pickerhub_window_transparent(unsigned long window,int transparent) {
     XSync(display,False);XCloseDisplay(display);return 1;
 }
 
+unsigned long pickerhub_active_window(void) {
+    Display *d = XOpenDisplay(NULL);
+    if (!d) return None;
+    Window window = None;
+    Atom type;
+    int format, revert;
+    unsigned long count, remaining;
+    unsigned char *value = NULL;
+    Atom active = XInternAtom(d, "_NET_ACTIVE_WINDOW", True);
+    if (active != None && XGetWindowProperty(d, DefaultRootWindow(d), active, 0, 1, False,
+            XA_WINDOW, &type, &format, &count, &remaining, &value) == Success &&
+            type == XA_WINDOW && format == 32 && count == 1)
+        window = *(unsigned long *)value;
+    if (value) XFree(value);
+    if (window == None) XGetInputFocus(d, &window, &revert);
+    if (window == PointerRoot || window == DefaultRootWindow(d)) window = None;
+    XCloseDisplay(d);
+    return window;
+}
+
 // EWMH activation with a fresh server timestamp. An input surface may have no
 // recent X event timestamp after the compositor handles a window switch.
 void pickerhub_focus_window(unsigned long window) {

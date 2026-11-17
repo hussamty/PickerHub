@@ -122,6 +122,7 @@ internal static class NativePicker
 {
     [DllImport("picker_capture")] internal static extern void pickerhub_clipboard_prepare();
     [DllImport("picker_capture")] internal static extern void pickerhub_focus_window(nuint window);
+    [DllImport("picker_capture")] internal static extern nuint pickerhub_active_window();
     [DllImport("picker_capture")] internal static extern nint pickerhub_input_open();
     [DllImport("picker_capture")] internal static extern void pickerhub_input_close(nint input);
     [DllImport("picker_capture")] internal static extern int pickerhub_input_poll(nint input, out int x, out int y);

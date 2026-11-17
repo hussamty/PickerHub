@@ -217,6 +217,10 @@ def main():
                 until(lambda:not re.search(r'"PickerHub Magnifier"',windows()))
                 until(mapped)
                 assert json.loads(file.read_text())==original
+                if portal:
+                    result = subprocess.check_output([*change, str(0x204060)], text=True)
+                    assert "uint32 1" in result, "A later capture must reuse the active screen-sharing session"
+                    assert "not found" in subprocess.check_output(["xprop", "-id", window, "_NET_WM_WINDOW_OPACITY"], text=True), +                        "A warm capture must leave the workbench opacity untouched"
                 if not portal:
                     x11.XSetInputFocus(display,int(window,16),1,0)
                     ctrl = x11.XKeysymToKeycode(display, x11.XStringToKeysym(b"Control_L"))

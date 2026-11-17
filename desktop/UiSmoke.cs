@@ -255,6 +255,11 @@ internal sealed partial class MainWindow
                             double end = Locate(control).Bottom;
                             SelfTests.Check(end <= overlay.Bounds.Height, $"{id} is visible without scrolling at the minimum size ({end:0}/{overlay.Bounds.Height:0})");
                         }
+                        if (index == 1)
+                        {
+                            var swatch = content.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetAutomationId(b) == "first-palette-swatch");
+                            SelfTests.Check(Locate(swatch).Y + 20 <= overlay.Bounds.Height, "The first palette swatch is visible at the minimum size");
+                        }
                     }
                     if (size.Width is 560 or 1680) await Capture(L.Language + "-fit-" + size.Width + "-" + index);
                 }
@@ -354,6 +359,19 @@ internal sealed partial class MainWindow
             await pickCopies;
             SelfTests.Check(status.Text == string.Format(L.T("نُسخ {0} بصيغة {1}"), Isolate(state.Color), Isolate("RGB")),
                 "Copy confirmation names the saved color and requested clipboard format");
+            page = 2; Render();
+            Edit(() => state.AutoCopy = false, false);
+            await Copy("replace this clipboard");
+            Console.WriteLine("SINGLEPICK"); await PickDesktop(PickAction.Copy);
+            await pickCopies;
+            SelfTests.Check(IsVisible && page == 2 && await Clipboard!.TryGetTextAsync() == PickValue(state, state.Color),
+                "Pick and copy copies even with automatic copying disabled and keeps the current tool");
+            Edit(() => state.AutoCopy = true, false);
+            await Copy("preserve this clipboard");
+            Console.WriteLine("SINGLEPICK"); await PickDesktop(PickAction.Edit);
+            SelfTests.Check(IsVisible && page == 0 && FocusManager?.GetFocusedElement() is TextBox editInput &&
+                AutomationProperties.GetAutomationId(editInput) == "hex-input" && Math.Abs(editInput.SelectionEnd - editInput.SelectionStart) == state.Color.Length &&
+                await Clipboard!.TryGetTextAsync() == "preserve this clipboard", "Pick and edit focuses and selects HEX without copying");
             var clipboardRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             pickClipboard = async value => { await clipboardRelease.Task; await Copy(value); };
             var returnTime = System.Diagnostics.Stopwatch.StartNew();
@@ -362,11 +380,24 @@ internal sealed partial class MainWindow
                 "Slow clipboard ownership never delays restoring the workbench");
             SelfTests.Check(returnTime.ElapsedMilliseconds < 1500, "Picker returns before clipboard acknowledgement timeout");
             clipboardRelease.SetResult(); await pickCopies; pickClipboard = null;
+            page = 2; Render();
             Console.WriteLine("FOCUS_REFERENCE"); await Task.Run(Console.ReadLine); await Task.Delay(100);
-            Console.WriteLine("SINGLEPICK"); await PickDesktop(true, returnToWorkbench: false);
+            Console.WriteLine("SINGLEPICK"); await PickDesktop(PickAction.Quick);
             await pickCopies;
-            SelfTests.Check(await Clipboard!.TryGetTextAsync() == PickValue(state, state.Color), "Quick Pick copies the chosen color");
+            SelfTests.Check(!IsVisible && page == 2 && status.Text == Idle && await Clipboard!.TryGetTextAsync() == PickValue(state, state.Color),
+                "Quick Pick copies silently, preserves the current tool, and leaves PickerHub in the tray");
             Console.WriteLine("CHECK_REFERENCE_FOCUS"); await Task.Run(Console.ReadLine);
+            BringForward();
+            var decision = Confirm("Capture decision");
+            await Task.Delay(130);
+            Hide();
+            await PickDesktop(PickAction.Quick, revealDecision: true);
+            await Task.Delay(100);
+            var decisionLayer = overlay.Children.Last();
+            SelfTests.Check(!picking && IsVisible && FocusManager?.GetFocusedElement() is Visual focusedDecision &&
+                decisionLayer.IsVisualAncestorOf(focusedDecision), "A tray pick brings forward an existing decision and keeps focus inside it");
+            decisionLayer.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Escape });
+            await decision;
             await writer.FlushAsync();
             var time = System.Diagnostics.Stopwatch.StartNew();
             for (int i = 0; i < 12; i++) { Travel(false); Travel(true); }
@@ -377,7 +408,7 @@ internal sealed partial class MainWindow
             // Repeated mounting/unmounting exercises render-thread surface disposal.
             for (int i = 0; i < 35; i++) { page = i % 3; Render(); await Task.Delay(20); }
             var target = new Palette { Name = "Multi pick" }; state.Palettes.Add(target); paletteId = target.Id;
-            Console.WriteLine("MULTIPICK"); await PickDesktop(true, true);
+            Console.WriteLine("MULTIPICK"); await PickDesktop(PickAction.Collect);
             SelfTests.Check(target.Colors.Count == 8 && !picking && IsVisible, "Eight stationary multi picks and Escape return the window");
             SelfTests.Check(target.Colors.Select(c => c.Hex).SequenceEqual(new[] { "#112233", "#223344", "#334455", "#445566", "#556677", "#667788", "#778899", "#8899AA" }), "Each stationary click samples the latest source frame");
             await Task.Delay(700);

@@ -106,7 +106,7 @@ def main():
         if osname == "osx":
             (bundle / "Contents/Info.plist").write_bytes(plistlib.dumps({
                 "CFBundleExecutable": "PickerHub", "CFBundleName": "PickerHub", "CFBundleIdentifier": "org.pickerhub.app",
-                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "12",
+                "CFBundlePackageType": "APPL", "CFBundleShortVersionString": VERSION, "CFBundleVersion": "13",
                 "CFBundleIconFile": "app.icns", "NSHighResolutionCapable": True, "LSMinimumSystemVersion": "14.0"}))
             shutil.copy2(ROOT / "desktop/Assets/app.icns", bundle / "Contents/Resources/app.icns")
             (runtime / "PickerHub").chmod(0o755)

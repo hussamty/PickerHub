@@ -32,15 +32,15 @@ internal sealed partial class MainWindow
     }
     Task pickCopies = Task.CompletedTask;
     Func<string, Task>? pickClipboard; // Injectable only by the in-process regression harness.
-    sealed record PickCopy(long Session, string Hex, string Format, string Value, long Start, int Collected);
+    sealed record PickCopy(long Session, string Hex, string Format, string Value, long Start, int Collected, bool Confirm);
     long pickSession;
     PickCopy? pendingCopy;
     bool copyingPick;
-    void QueuePickCopy(long session, string hex, long start, int collected)
+    void QueuePickCopy(long session, string hex, long start, int collected, bool confirm)
     {
         // Only the latest pending clipboard value matters; every color is already
         // recorded in the library. A slow clipboard manager must not grow a task queue.
-        pendingCopy = new(session, hex, state.CopyFormat, PickValue(state, hex), start, collected);
+        pendingCopy = new(session, hex, state.CopyFormat, PickValue(state, hex), start, collected, confirm);
         if (copyingPick) return;
         copyingPick = true; pickCopies = DrainCopies();
     }
@@ -56,7 +56,7 @@ internal sealed partial class MainWindow
                 {
                     await (pickClipboard != null ? pickClipboard(copy.Value) : WriteClipboard(copy.Value)).WaitAsync(TimeSpan.FromSeconds(2));
                     SupportLog.Measure("pick-to-clipboard", copy.Start);
-                    if (!closed && copy.Session == pickSession && pendingCopy == null)
+                    if (copy.Confirm && !closed && copy.Session == pickSession && pendingCopy == null)
                     {
                         string copied = string.Format(L.T("نُسخ {0} بصيغة {1}"), Isolate(copy.Hex), Isolate(copy.Format));
                         status.Text = copy.Collected == 0 ? copied : L.T("الألوان الملتقطة: ") + copy.Collected + " · " + copied;
@@ -66,7 +66,7 @@ internal sealed partial class MainWindow
                 {
                     SupportLog.Record("pick-clipboard", ex);
                     if (!closed && copy.Session == pickSession && pendingCopy == null)
-                        ShowError(L.T("حُفظ اللون، لكن تعذّر نسخه إلى الحافظة."), () =>
+                        ShowCaptureDecision(L.T("حُفظ اللون، لكن تعذّر نسخه إلى الحافظة."), () =>
                         {
                             pendingCopy = copy with { Session = pickSession, Start = SupportLog.Measure() };
                             if (!copyingPick) { copyingPick = true; pickCopies = DrainCopies(); }
@@ -134,9 +134,18 @@ internal sealed partial class MainWindow
         if (tray == null) return;
         var menu = new NativeMenu();
         void Item(string title, Func<Task> action) { var item = new NativeMenuItem(title); item.Click += (_, _) => _ = Guard(action); menu.Items.Add(item); }
-        Item(L.T("التقاط ونسخ"), () => PickDesktop(true)); Item(L.T("التقاط وتحرير"), () => PickDesktop(false));
-        Item(L.T("التقاط سريع"), () => PickDesktop(true, returnToWorkbench: false));
-        Item(L.T("التقاط متعدد إلى اللوحة الحالية"), () => PickDesktop(null, true));
+        Item(L.T("التقاط ونسخ"), () => PickDesktop(PickAction.Copy, revealDecision: true));
+        Item(L.T("التقاط وتحرير"), () => PickDesktop(PickAction.Edit, revealDecision: true));
+        Item(L.T("التقاط سريع"), () => PickDesktop(PickAction.Quick, revealDecision: true));
+        Item(L.T("التقاط متعدد إلى اللوحة الحالية"), () => PickDesktop(PickAction.Collect, revealDecision: true));
+        if (Picker.UsesPortal)
+        {
+            menu.Items.Add(new NativeMenuItemSeparator());
+            if (WaylandCapture.IsSharing)
+                Item(L.T("إنهاء مشاركة الشاشة"), () => { if (!picking) StopSharing(); return Task.CompletedTask; });
+            else Item(L.T("بدء مشاركة الشاشة"), EnableLiveSharing);
+            menu.Items.Add(new NativeMenuItemSeparator());
+        }
         Item(L.T("فتح PickerHub"), () => { BringForward(); return Task.CompletedTask; });
         Item(L.T("خروج"), () => { Close(); return Task.CompletedTask; }); tray.Menu = menu;
     }
@@ -149,7 +158,7 @@ internal sealed partial class MainWindow
         try
         {
             await next.Start(this, state.Shortcut, () => _ = Guard(() =>
-                PickDesktop(state.QuickPick ? true : null, returnToWorkbench: !state.QuickPick)));
+                PickDesktop(state.QuickPick ? PickAction.Quick : PickAction.Default, revealDecision: true)));
             if (closed || shortcut != next) { next.Dispose(); return; }
             shortcutStatus = next.Description;
         }

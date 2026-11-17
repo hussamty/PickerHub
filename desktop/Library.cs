@@ -99,7 +99,7 @@ internal sealed partial class MainWindow
         var add = Btn("plus", L.T("إضافة اللون المحدد"), () => Edit(() => { p.Colors.Add(Swatch.From(state.Color)); paletteCard = p.Colors.Count - 1; }), true);
         string[] views = ["grid", "list", "deck"];
         var viewChoice = Choose([L.T("شبكة"), L.T("قائمة"), L.T("بطاقات")], Array.IndexOf(views, state.LibraryView), i => Edit(() => state.LibraryView = views[i]));
-        content.Children.Add(Row(Line(6, chooser, create), add, Btn(L.T("التقاط متعدد"), () => PickDesktop(null, true)),
+        content.Children.Add(Row(Line(6, chooser, create), add, Btn(L.T("التقاط متعدد"), () => PickDesktop(PickAction.Collect)),
             viewChoice, Cluster(Liquid("search", L.T("البحث في المشاريع"), FindInProjects),
                 Liquid("dots", L.T("أدوات اللوحة"), () => PaletteTools(p)))));
         if (state.LibraryView != "deck") { content.Children.Add(LibraryBrowser(p)); return; }
@@ -133,6 +133,7 @@ internal sealed partial class MainWindow
             Btn(L.T("تصدير اللوحة"), () => dialog.Close("export")),
             Btn(L.T("أدوار الألوان"), () => dialog.Close("roles")),
             Btn(L.T("مصفوفة التباين"), () => dialog.Close("contrast")),
+            Btn(L.T("إزالة المكرر"), () => dialog.Close("deduplicate")),
             Btn(L.T("استيراد لوحة JSON"), () => dialog.Close("import")),
             delete,
             Choices(Btn(L.T("إغلاق"), () => dialog.Close())));
@@ -146,6 +147,11 @@ internal sealed partial class MainWindow
             case "contrast": await PaletteContrast(palette); break;
             case "import": await ImportPalette(palette); break;
             case "export": await Export(palette); break;
+            case "deduplicate":
+                int removed = 0;
+                Edit(() => removed = LibraryOps.Deduplicate(palette));
+                status.Text = L.T("أزيلت الألوان المكررة: ") + removed;
+                break;
             case "rename":
                 var label = await Prompt(L.T("اسم اللوحة"), palette.Name);
                 if (label != null) Edit(() => palette.Name = label);

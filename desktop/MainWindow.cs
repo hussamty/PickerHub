@@ -1,6 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Automation;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -98,8 +101,27 @@ internal sealed partial class MainWindow : Window
     internal void BringForward()
     {
         if (closed || picking) return;
-        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
-        Show(); Activate(); eyedropper.Focus(); spine.Collapse();
+        if (nativeDialogOpen) return;
+        RaiseWorkbench(WindowState);
+        if (!FocusOverlay() && !FocusErrorAction()) eyedropper.Focus();
+    }
+    void RaiseWorkbench(WindowState windowState)
+    {
+        Show();
+        WindowState = windowState == WindowState.Minimized ? WindowState.Normal : windowState;
+        Activate();
+        if (Picker.UsesPortal && TryGetPlatformHandle() is { HandleDescriptor: "XID" } handle)
+            NativePicker.pickerhub_focus_window((nuint)handle.Handle);
+        spine.Collapse();
+    }
+    bool FocusOverlay()
+    {
+        var layer = overlay.Children.LastOrDefault(c => c.IsVisible && c.IsHitTestVisible);
+        if (layer == null) return false;
+        if (FocusManager?.GetFocusedElement() is Visual focused && layer.IsVisualAncestorOf(focused)) return true;
+        var controls = layer.GetVisualDescendants().OfType<Control>().Where(c => c.Focusable && c.IsEffectivelyVisible && c.IsEffectivelyEnabled);
+        (controls.FirstOrDefault(c => c is Button or TextBox) ?? controls.FirstOrDefault())?.Focus();
+        return true;
     }
     void Edit(Action mutation, bool render = true)
     {
@@ -113,13 +135,21 @@ internal sealed partial class MainWindow : Window
         Edit(() => { state.Color = h.ToUpperInvariant(); state.History.RemoveAll(x => x.Equals(h, StringComparison.OrdinalIgnoreCase)); state.History.Insert(0, state.Color); state.History = state.History.Take(state.Limit).ToList(); }, render);
         if (!render) refreshColor?.Invoke();
     }
-    async Task PickDesktop(bool? copy = null, bool collect = false, bool systemPicker = false, bool returnToWorkbench = true)
+    async Task PickDesktop(PickAction action = PickAction.Default, bool systemPicker = false, bool revealDecision = false)
     {
-        if (picking || OverlayOpen || nativeDialogOpen || closed) return;
+        if (closed || picking) return;
+        if (OverlayOpen || nativeDialogOpen)
+        {
+            if (revealDecision) BringForward();
+            return;
+        }
+        bool collect = action == PickAction.Collect;
+        bool quick = action == PickAction.Quick;
+        bool copy = action is PickAction.Copy or PickAction.Quick || (action != PickAction.Edit && state.AutoCopy);
         bool share = Picker.UsesPortal && state.UseWaylandScreenSharing && !systemPicker;
         if (collect && Picker.UsesPortal && !share)
         {
-            await CaptureOptions(true, copy);
+            await CaptureOptions(collect: true);
             return;
         }
         long session = ++pickSession;
@@ -127,25 +157,31 @@ internal sealed partial class MainWindow : Window
         string lensTiming = share
             ? (WaylandCapture.IsSharing ? "live-warm-first-sample" : "live-fresh-first-sample")
             : "native-first-sample";
-        picking = true; eyedropper.IsEnabled = false; captureMode.IsEnabled = false; spine.Collapse();
-        status.Text = L.T("انقر على البكسل المطلوب · Esc للإلغاء");
+        SetPicking(true);
+        if (quick) { HideToast(); status.Text = Idle; }
+        else status.Text = L.T("انقر على البكسل المطلوب · Esc للإلغاء");
         var previousState = WindowState;
-        var previousOpacity = Opacity;
-        bool restoreWindow = returnToWorkbench;
+        nuint foregroundWindow = quick && Picker.UsesPortal ? NativePicker.pickerhub_active_window() : 0;
+        bool restoreWindow = !quick;
         int pickedCount = 0;
         try
         {
-            // GNOME authorizes only the focused application. Keep its parent window
-            // mapped and focused, but transparent, until the portal has shown consent.
-            if (share) { Picker.SetPortalParentTransparent(this, true); }
-            else Hide();
+            if (share && !await PrepareLiveCapture())
+            {
+                restoreWindow = true;
+                if (!closed)
+                    ShowCaptureError(L.T("لم تبدأ مشاركة الشاشة."), action, systemPicker, allowSystem: true);
+                return;
+            }
+            if (closed) return;
+            Hide();
             await Task.Delay(60);
             void Accept(string h)
             {
-                bool autoCopy = copy ?? state.AutoCopy;
-                long copyStart = autoCopy ? SupportLog.Measure() : 0;
+                long copyStart = copy ? SupportLog.Measure() : 0;
                 // One transaction per selection; no hidden page rebuild or lens restart.
-                page = collect ? 1 : 0;
+                if (collect) page = 1;
+                else if (action is PickAction.Default or PickAction.Edit) page = 0;
                 Edit(() =>
                 {
                     state.Color = h.ToUpperInvariant();
@@ -155,51 +191,43 @@ internal sealed partial class MainWindow : Window
                     if (collect) Current.Colors.Add(Swatch.From(h));
                 }, false);
                 pickedCount++;
-                status.Text = collect ? L.T("الألوان الملتقطة: ") + pickedCount : L.T("تم التقاط ") + Isolate(h);
-                if (autoCopy) QueuePickCopy(session, h, copyStart, collect ? pickedCount : 0);
+                if (!quick)
+                    status.Text = collect ? L.T("الألوان الملتقطة: ") + pickedCount : L.T("تم التقاط ") + Isolate(h);
+                if (copy) QueuePickCopy(session, h, copyStart, collect ? pickedCount : 0, !quick);
             }
             var selected = await Picker.Start(this, share, collect ? Accept : null,
                 captureStart == 0 ? null : () => SupportLog.Measure(lensTiming, captureStart));
             if (selected != null && (Picker.UsesPortal && !share || OperatingSystem.IsMacOS()))
                 SupportLog.Measure("system-picker-selection", captureStart);
             if (!collect && selected != null) Accept(selected);
-            if (selected == null && pickedCount == 0)
-                status.Text = share && !WaylandCapture.IsSharing
-                    ? L.T("لم تبدأ المشاركة. يمكنك اختيار منتقي النظام من وضع الالتقاط.")
-                    : L.T("أُلغي الالتقاط");
-            // Clipboard ownership is independent of capture. Never hold the hidden
-            // main window or the next shortcut hostage to a clipboard manager.
-
+            if (!quick && selected == null && pickedCount == 0) status.Text = L.T("أُلغي الالتقاط");
         }
         catch (Exception ex)
         {
             restoreWindow = true;
             SupportLog.Record(share ? "capture-live" : "capture", ex);
             Console.Error.WriteLine(ex);
-            var fallback = share || collect && Picker.UsesPortal
-                ? Btn(L.T("التقاط لون بمنتقي النظام"), async () =>
-                {
-                    errorBanner.IsVisible = false;
-                    await PickDesktop(copy, systemPicker: true);
-                })
-                : null;
-            ShowError(ex.Message, () => PickDesktop(copy, collect, systemPicker), fallback, share ? L.T("إعادة محاولة العدسة الحية") : null);
+            if (!closed) ShowCaptureError(ex.Message, action, systemPicker, allowSystem: share);
         }
         finally
         {
-            picking = false; eyedropper.IsEnabled = true; captureMode.IsEnabled = true;
-            try { if (share) Picker.SetPortalParentTransparent(this, false); }
-            finally
+            SetPicking(false);
+            if (!closed)
             {
-                if (!closed)
+                Render();
+                if (!FocusCaptureDecision() && restoreWindow)
                 {
-                    Opacity = previousOpacity; if (content.Parent is ScrollViewer scroll) scroll.Offset = default; Render();
-                    bool activateOnShow = ShowActivated;
-                    ShowActivated = restoreWindow;
-                    try { Show(); WindowState = previousState; }
-                    finally { ShowActivated = activateOnShow; }
-                    if (restoreWindow) { Activate(); eyedropper.Focus(); }
-                    spine.Collapse();
+                    RaiseWorkbench(previousState);
+                    if (action == PickAction.Edit && pickedCount > 0 &&
+                        content.GetVisualDescendants().OfType<TextBox>().FirstOrDefault(c => AutomationProperties.GetAutomationId(c) == "hex-input") is { } hex)
+                    {
+                        hex.Focus(); hex.SelectAll();
+                    }
+                    else eyedropper.Focus();
+                }
+                else if (!IsVisible && foregroundWindow != 0 && (nuint)(TryGetPlatformHandle()?.Handle ?? 0) != foregroundWindow)
+                {
+                    NativePicker.pickerhub_focus_window(foregroundWindow);
                 }
             }
         }

@@ -85,15 +85,17 @@ internal sealed partial class MainWindow
         batch.Children.Add(clearSelection);
         void Refresh()
         {
-            results.Children.Clear();
-            visibleChecks.Clear();
             int pages = Math.Max(1, (matches.Length + LibraryOps.PageSize - 1) / LibraryOps.PageSize);
             libraryPage = Math.Clamp(libraryPage, 0, pages - 1);
-            visible = matches.Skip(libraryPage * LibraryOps.PageSize).Take(LibraryOps.PageSize).ToArray();
+            var nextColors = matches.Skip(libraryPage * LibraryOps.PageSize).Take(LibraryOps.PageSize).ToArray();
             count.Text = matches.Length + " / " + p.Colors.Count; Sync();
             position.Text = $"{libraryPage + 1} / {pages}";
             previous.IsEnabled = libraryPage > 0; next.IsEnabled = libraryPage < pages - 1;
-            selectPage.IsEnabled = visible.Length > 0;
+            selectPage.IsEnabled = nextColors.Length > 0;
+            if (results.Children.Count > 0 && visible.SequenceEqual(nextColors)) return;
+            visible = nextColors;
+            results.Children.Clear();
+            visibleChecks.Clear();
             var tiles = new WrapPanel(); var lines = new StackPanel { Spacing = 6 };
             foreach (var color in visible)
             {
@@ -102,6 +104,7 @@ internal sealed partial class MainWindow
                 AutomationProperties.SetName(check, L.T("تحديد ") + color.Name + " " + color.Hex);
                 check.IsCheckedChanged += (_, _) => { if (check.IsChecked == true) selectedSwatches.Add(color.Id); else selectedSwatches.Remove(color.Id); Sync(); };
                 var chip = Chip(color.Hex, () => { page = 0; Select(color.Hex); }, state.LibraryView == "list" ? "" : color.Hex);
+                if (visibleChecks.Count == 1) AutomationProperties.SetAutomationId(chip, "first-palette-swatch");
                 chip.Height = state.LibraryView == "list" ? 40 : 64; chip.CornerRadius = new CornerRadius(12);
                 if (state.LibraryView == "list") chip.Width = 44;
                 var star = Btn(color.Favorite ? "★" : "☆", () => Edit(() => color.Favorite = !color.Favorite));
@@ -163,7 +166,6 @@ internal sealed partial class MainWindow
         Refresh();
         var filters = Col(Row(query, favorites, count), Row(previous, position, next, selectPage));
         filters.Spacing = 4;
-        return Section(L.T("ألوان اللوحة"), Col(filters, selectedCount, batch, results),
-            Btn(L.T("إزالة المكرر"), () => { int removed = 0; Edit(() => removed = LibraryOps.Deduplicate(p)); status.Text = L.T("أزيلت الألوان المكررة: ") + removed; }));
+        return Surface(Col(filters, selectedCount, batch, results));
     }
 }

@@ -1,3 +1,9 @@
+# 0.8.1 — tray actions, Wayland sharing and compact palettes
+
+- Pick and copy returns to the current tool and confirms the copied format. Pick and edit selects HEX in the Color Editor and preserves the clipboard. Quick Pick copies silently and keeps the workbench hidden.
+- Start Wayland screen sharing from the tray or Capture Mode. All pick actions reuse the live session. Permission and recovery decisions bring PickerHub forward and take keyboard focus.
+- Show the first palette swatches in compact windows. Move duplicate removal into Palette Tools and preserve the swatch controls when a search leaves the visible results unchanged.
+
 # 0.8.0 — quicker picking, compact palettes and project search
 
 - Add Quick Pick to the tray and global shortcut settings. It copies the selected color and leaves the foreground window in focus. Copy confirmations show the color and format, and multi-pick confirmations include the count.

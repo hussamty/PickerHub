@@ -380,6 +380,8 @@
   "منتقي النظام": "System picker",
   "نُسخ {0} بصيغة {1}": "Copied {0} as {1}",
   "وضع الالتقاط": "Capture mode",
+  "بدء مشاركة الشاشة": "Start screen sharing",
+  "لم تبدأ مشاركة الشاشة.": "Screen sharing did not start.",
   "أدوات اللوحة": "Palette tools",
   "الدعم والتشخيص": "Support and diagnostics",
   "تسجيل الأخطاء والتوقيتات محلياً": "Log errors and timings locally",
