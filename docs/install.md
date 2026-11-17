@@ -4,19 +4,19 @@
 
 ## Windows
 
-نزّل **PickerHub-0.6.1-win-x64.zip** لجهاز Windows 10/11 بنظام x64. من مستكشف الملفات اختر **Extract All**، ثم افتح **PickerHub.exe** داخل المجلد. يمكنك إنشاء اختصار لملف التشغيل. يستخدم التطبيق عدسة PickerHub على كامل سطح المكتب الافتراضي. يشمل ذلك الشاشات الممتدة والموضوعة إلى يسار الشاشة الرئيسية. تعرض العدسة البكسلات الحية قرب المؤشر، ويمكن تبديل النافذة بـAlt+Tab أثناء الاختيار. انقر لتثبيت اللون، أو اضغط Esc للإلغاء. استخدم العجلة لتغيير التكبير والأسهم للتنقل.
+نزّل **PickerHub-0.7.0-win-x64.zip** لجهاز Windows 10/11 بنظام x64. من مستكشف الملفات اختر **Extract All**، ثم افتح **PickerHub.exe** داخل المجلد. يمكنك إنشاء اختصار لملف التشغيل. يستخدم التطبيق عدسة PickerHub على كامل سطح المكتب الافتراضي. يشمل ذلك الشاشات الممتدة والموضوعة إلى يسار الشاشة الرئيسية. تعرض العدسة البكسلات الحية قرب المؤشر، ويمكن تبديل النافذة بـAlt+Tab أثناء الاختيار. انقر لتثبيت اللون، أو اضغط Esc للإلغاء. استخدم العجلة لتغيير التكبير والأسهم للتنقل.
 
-ملفات التسليم المحلي غير موقّعة بشهادة ناشر Windows. تحقق من بصمة الحزمة باستخدام `Get-FileHash .\PickerHub-0.6.1-win-x64.zip`. إذا منع الجهاز تشغيل التطبيقات غير الموقعة، يمكن بناء نسخة من المصدر ضمن سياسة المؤسسة. احتفظ بمجلد التطبيق كاملاً إذا ظهرت رسالة عن DLL مفقود.
+ملفات التسليم المحلي غير موقّعة بشهادة ناشر Windows. تحقق من بصمة الحزمة باستخدام `Get-FileHash .\PickerHub-0.7.0-win-x64.zip`. إذا منع الجهاز تشغيل التطبيقات غير الموقعة، يمكن بناء نسخة من المصدر ضمن سياسة المؤسسة. احتفظ بمجلد التطبيق كاملاً إذا ظهرت رسالة عن DLL مفقود.
 
 ## Linux
 
-**Ubuntu وDebian على x86-64:** نزّل **pickerhub_0.6.1_amd64.deb**. نفّذ الأمر من مجلد التنزيل ثم افتح PickerHub من قائمة التطبيقات أو شغّل `pickerhub`.
+**Ubuntu وDebian على x86-64:** نزّل **pickerhub_0.7.0_amd64.deb**. نفّذ الأمر من مجلد التنزيل ثم افتح PickerHub من قائمة التطبيقات أو شغّل `pickerhub`.
 
 ```sh
-sudo apt install ./pickerhub_0.6.1_amd64.deb
+sudo apt install ./pickerhub_0.7.0_amd64.deb
 ```
 
-تحل هذه الحزمة محل مشغّل الإصدار 0.1 المُثبت عبر apt. لتثبيت محلي بلا صلاحيات مسؤول على Ubuntu أو Fedora أو Arch أو openSUSE، فك **PickerHub-0.6.1-linux-x64.tar.gz** في مجلد ثابت، ثم شغّل `./PickerHub/PickerHub`. يحتاج التطبيق إلى سطح مكتب رسومي وX11 أو XWayland، ومكتبات fontconfig وICU وOpenSSL المعتادة. متطلبات glibc لمحرك Rust تتبع النظام الذي بُنيت عليه الحزمة. إذا ظهرت رسالة GLIBC أحدث، ابنِ على توزيعتك أو استخدم حزمة من نظام بناء متوافق.
+تحل هذه الحزمة محل مشغّل الإصدار 0.1 المُثبت عبر apt. لتثبيت محلي بلا صلاحيات مسؤول على Ubuntu أو Fedora أو Arch أو openSUSE، فك **PickerHub-0.7.0-linux-x64.tar.gz** في مجلد ثابت، ثم شغّل `./PickerHub/PickerHub`. يحتاج التطبيق إلى سطح مكتب رسومي وX11 أو XWayland، ومكتبات fontconfig وICU وOpenSSL المعتادة. متطلبات glibc لمحرك Rust تتبع النظام الذي بُنيت عليه الحزمة. إذا ظهرت رسالة GLIBC أحدث، ابنِ على توزيعتك أو استخدم حزمة من نظام بناء متوافق.
 
 - **Wayland** — تستخدم القطّارة إضافة GNOME Color Picker إن كانت خدمتها مفعّلة، أو تستدعي PickColor عبر بوابة سطح المكتب. عند استخدام البوابة تحتاج إلى xdg-desktop-portal وخلفية تدعم اختيار الألوان. يتحكم سطح المكتب في شكل المؤشر والتكبير. [واجهة اختيار اللون](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.Screenshot.html#org-freedesktop-portal-screenshot-pickcolor)
 - لتبديل النوافذ أثناء الالتقاط على Wayland، فعّل «استخدام عدسة PickerHub عبر مشاركة الشاشة» في الإعدادات. يحتاج هذا الوضع إلى PipeWire وGStreamer مع ملحقات الفيديو. اختر الشاشات من نافذة النظام وأنهِ المشاركة من الإعدادات عند الانتهاء.
@@ -25,7 +25,7 @@ sudo apt install ./pickerhub_0.6.1_amd64.deb
 
 ## macOS
 
-استخدم **PickerHub-0.6.1-osx-arm64.zip** لأجهزة Apple Silicon أو **PickerHub-0.6.1-osx-x64.zip** لأجهزة Intel. يستهدف التطبيق macOS 14 أو أحدث ضمن فترة دعم بيئة التشغيل. فك الضغط ثم انقل **PickerHub.app** إلى Applications وافتحه من Finder. تشغّل «القطّارة» عدسة الألوان النظامية NSColorSampler. يتولى AppKit اختيار بكسل من الشاشات المتصلة ويعيده بصيغة sRGB. [توثيق Apple](https://developer.apple.com/documentation/appkit/nscolorsampler)
+استخدم **PickerHub-0.7.0-osx-arm64.zip** لأجهزة Apple Silicon أو **PickerHub-0.7.0-osx-x64.zip** لأجهزة Intel. يستهدف التطبيق macOS 14 أو أحدث ضمن فترة دعم بيئة التشغيل. فك الضغط ثم انقل **PickerHub.app** إلى Applications وافتحه من Finder. تشغّل «القطّارة» عدسة الألوان النظامية NSColorSampler. يتولى AppKit اختيار بكسل من الشاشات المتصلة ويعيده بصيغة sRGB. [توثيق Apple](https://developer.apple.com/documentation/appkit/nscolorsampler)
 
 الحزم المحلية غير موثقة لدى Apple. إذا حجب Gatekeeper تشغيل التطبيق يمكنك بناء نسخة محلية بالطريقة أدناه. قارن البصمة باستخدام `shasum -a 256`. على جهاز تديره مؤسسة راجع سياسة تثبيت تطبيقات سطح المكتب.
 
@@ -45,3 +45,7 @@ python3 scripts/build.py --packages
 ```
 
 ينتج السكربت مجلد تطبيق قابل للتشغيل في `dist/native/<rid>/` بالإضافة إلى الأرشيف. استخدم **نسخة احتياطية** قبل الانتقال إلى جهاز أو تثبيت جديد. تحتفظ المكتبة بالاسم `workspace.json` في مجلد بيانات PickerHub المحلي. على Linux يتبع المسار XDG_DATA_HOME أو ‎~/.local/share‎، وعلى Windows يتبع LocalAppData، وعلى macOS يتبع Application Support.
+
+## معاينة ظرف «باقة اليوم»
+
+شغّل التطبيق بالخيار `--preview-envelope` لفتح الظرف في مكتبة مؤقتة تُحذف عند الإغلاق، دون أن تمس مكتبتك: `pickerhub --preview-envelope` على Linux، و`PickerHub.exe --preview-envelope` على Windows، و`PickerHub.app/Contents/MacOS/PickerHub --preview-envelope` على macOS. أعد المعاينة بزر «إعادة المعاينة» أو بالحرف R. يضيف `--english` الواجهة الإنجليزية و`--light` المظهر الفاتح. في حزمة Debian يظهر الخيار نفسه في قائمة أيقونة PickerHub باسم «معاينة ظرف باقة اليوم».

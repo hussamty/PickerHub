@@ -4,12 +4,14 @@ Native color picker for Windows, Linux and macOS. Download the archive matching 
 
 **Linux:** use the `.deb` on Ubuntu/Debian or extract the `linux-x64.tar.gz` archive. **macOS:** choose `osx-arm64` for Apple Silicon or `osx-x64` for Intel. Mac preview builds are ad-hoc signed, not notarized.
 
-New in 0.6.1:
+New in 0.7.0:
 
-- Aligned glass header with a dedicated titlebar and compact-aware action row.
-- Maximize button disappears when maximized; double-click the titlebar to restore.
-- Slower, reversible sidebar transitions and a short pointer-exit grace period.
-- Consistent mascot icon across the titlebar, tray, native executables and launchers, with package checks on all four platforms.
+- New typography: Plus Jakarta Sans for Latin and Noto Kufi Arabic for Arabic on one type scale, with refined weights, line heights and spacing throughout.
+- Maximized windows now show a Restore button beside Minimize; Restore returns the window to its previous size.
+- A redesigned palette-of-the-day envelope with exact corners and edges, a perspective flap, a lined interior and the PickerHub seal.
+- `--preview-envelope` opens the envelope in a temporary library so it can be replayed at will (Linux launchers also offer it in the app's context menu).
+- A new PickerHub mark as the app icon, and a single-row top bar.
+- Short windows keep every navigation tool on screen; the minimum window size is 560 × 480.
 
 Image paste/drop, full-color cards and responsive scrolling from 0.6.0 are included.
 

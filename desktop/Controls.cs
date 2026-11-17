@@ -84,10 +84,13 @@ internal sealed class Spine : Glass
         KeyDown += (_, e) => { if (e.Key == Key.Escape && pinned) { e.Handled = true; Release(); } };
         items.LayoutUpdated += (_, _) => Mark();
     }
+    // Every row stays on screen: in a short window the rows shrink, down to 30 px, before anything is cut off.
     public void Fit(double availableHeight)
     {
-        double height = availableHeight < 540 ? 36 : 44;
-        foreach (var row in items.Children.OfType<Button>()) { row.Height = height; row.MinHeight = height; }
+        var rows = items.Children.OfType<Button>().ToList(); int rules = items.Children.Count - rows.Count;
+        double chrome = Margin.Top + Margin.Bottom + Padding.Top + Padding.Bottom + items.Spacing * (items.Children.Count - 1) + rules * 11;
+        double height = Math.Clamp(Math.Floor((availableHeight - chrome) / Math.Max(1, rows.Count)), 30, 44);
+        foreach (var row in rows) { row.Height = height; row.MinHeight = height; }
         current.Height = hover.Height = height;
     }
     public bool Motion
@@ -148,7 +151,7 @@ internal sealed class Spine : Glass
     public void Divide() => items.Children.Add(new Border { Classes = { "hairline" }, Margin = new Thickness(12, 5) });
     public void Label(Button button, string symbol, string label)
     {
-        var text = new TextBlock { Text = label, FontSize = 13, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap, Opacity = expanded ? 1 : 0, Margin = new Thickness(2, 0, 14, 0) };
+        var text = new TextBlock { Text = label, FontSize = Typography.Control, FontWeight = FontWeight.Medium, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.NoWrap, Opacity = expanded ? 1 : 0, Margin = new Thickness(2, 0, 14, 0) };
         if (button.Content is Grid old) labels.Remove(old.Children.OfType<TextBlock>().First());
         labels.Add(text); text.Transitions = Fade(labels.Count - 1);
         var icon = new Icon(symbol, 20) { HorizontalAlignment = HorizontalAlignment.Center };

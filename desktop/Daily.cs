@@ -34,10 +34,32 @@ internal sealed partial class MainWindow
         catch (Exception e) { content.Children.Add(Empty(L.T("تعذّر فتح باقة اليوم"), e.Message, "sparkles")); return; }
         string phase = d.Text("state");
         bool has = d.GetProperty("palette").ValueKind == JsonValueKind.Object;
+        if (App.Preview) content.Children.Add(PreviewBar());
         if (phase == "sealed") Sealed(d, has);
         else if (has) Revealed(d);
         else Waiting(d);
         content.Children.Add(Row(Btn(L.T("أرشيف الباقات"), DailyArchive), Btn(L.T("ألوان العلامة المثبتة"), BrandColors)));
+    }
+
+    // The preview's own controls: replay the opening from a sealed envelope, with or without motion.
+    Control PreviewBar()
+    {
+        var calm = new CheckBox { Content = L.T("تقليل الحركة"), IsChecked = state.ReduceMotion, VerticalAlignment = VerticalAlignment.Center };
+        calm.IsCheckedChanged += (_, _) => _ = Guard(() => { Edit(() => state.ReduceMotion = calm.IsChecked == true); return Task.CompletedTask; });
+        var note = Label(L.T("معاينة: مكتبة مؤقتة تُحذف عند الإغلاق ولا تمسّ مكتبتك. R لإعادة المعاينة."));
+        note.VerticalAlignment = VerticalAlignment.Center;
+        var replay = Btn("refresh", L.T("إعادة المعاينة"), ReplayEnvelope);
+        AutomationProperties.SetAutomationId(replay, "preview-replay");
+        return Row(replay, calm, note);
+    }
+    // Forget today's palette so the core seals a fresh envelope, then build the page again.
+    void ReplayEnvelope()
+    {
+        if (!App.Preview) return;
+        dailyClock?.Stop();
+        File.Delete(Path.Combine(Workspace.Folder, "daily_palette_state.json"));
+        pack = null; packKey = ""; dailyStaged = false;
+        Render(); status.Text = L.T("الظرف مغلق من جديد");
     }
 
     PackStage? pack;
@@ -52,9 +74,9 @@ internal sealed partial class MainWindow
     // A sealed envelope in the middle of the page, one action beneath it, and the previous palette within reach.
     void Sealed(JsonElement d, bool has)
     {
-        var stage = new PackStage(Motion, "no. " + (d.GetProperty("serial").GetInt64() + 1).ToString("00"));
+        var stage = new PackStage(Motion, "No. " + (d.GetProperty("serial").GetInt64() + 1).ToString("00"));
         pack = stage; packKey = "";
-        var words = Col(Text(has ? L.T("باقة جديدة بانتظارك") : L.T("اكتشاف اليوم"), 26, true),
+        var words = Col(Text(has ? L.T("باقة جديدة بانتظارك") : L.T("اكتشاف اليوم"), Typography.Display, true),
             Label(L.T("باقة ألوان واحدة كل 24 ساعة، مستوحاة من مشهد طبيعي، بأدوار جاهزة للتصميم.")));
         words.Spacing = 4; words.HorizontalAlignment = HorizontalAlignment.Center;
         var open = Btn("sparkles", L.T("افتح الباقة"), () => Unseal(stage, words), true);
@@ -106,17 +128,17 @@ internal sealed partial class MainWindow
         content.Children.Add(pack);
 
         // The story: what this palette is, and when the next one comes.
-        var moods = Line(6, [.. p.GetProperty("moods").EnumerateArray().Select(m => (Control)Of(new Border { Child = Text(m.Text("label"), 12), Padding = new Thickness(11, 3) }, "status"))]);
-        var serial = Tone(Mono("no. " + p.GetProperty("serial").GetInt64().ToString("00") + " / " + p.Text("english").ToLowerInvariant(), 11), "Muted");
+        var moods = Line(6, [.. p.GetProperty("moods").EnumerateArray().Select(m => (Control)Of(new Border { Child = Text(m.Text("label"), Typography.Label), Padding = new Thickness(12, 3) }, "status"))]);
+        var serial = Tone(Mono("no. " + p.GetProperty("serial").GetInt64().ToString("00") + " / " + p.Text("english").ToLowerInvariant(), Typography.Caption), "Muted");
         var top = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto") }; Grid.SetColumn(serial, 2); top.Children.Add(moods); top.Children.Add(serial);
-        var heading = Col(Text(p.Text("name"), 26, true), Text(p.Text("story"), 14)); heading.Spacing = 0;
+        var heading = Col(Text(p.Text("name"), Typography.Display, true), Text(p.Text("story"), Typography.Lead)); heading.Spacing = 0;
 
-        var remaining = Mono(Span(d.GetProperty("remaining").GetInt64()), 20, true);
+        var remaining = Mono(Span(d.GetProperty("remaining").GetInt64()), Typography.Heading, true);
         Control timing;
         if (phase == "clock")
         {
             string retry = Local(d.GetProperty("retryAt"));
-            timing = Col(Of(Text(L.T("وقت الجهاز غير صالح"), 15, true), "danger"),
+            timing = Col(Of(Text(L.T("وقت الجهاز غير صالح"), Typography.Lead, true), "danger"),
                 Label(L.T("ساعة الجهاز الآن أقدم من آخر وقت سجّله التطبيق، لذلك توقّف العدّ. صحّح الساعة، أو انتظر حتى ") + retry + L.T(" لتفتح باقة جديدة. باقتك الحالية ما زالت متاحة.")));
         }
         else
@@ -125,7 +147,7 @@ internal sealed partial class MainWindow
             Count(d.GetProperty("remaining").GetInt64(), remaining);
         }
         if (d.GetProperty("altered").GetBoolean()) timing = Col(timing, Label(L.T("تغيّر ملف حالة الباقة خارج التطبيق، فبدأ العدّ من جديد.")));
-        var story = Col(top, heading, timing); story.Spacing = 10;
+        var story = Col(top, heading, timing); story.Spacing = 12;
 
         // What to do with it.
         bool saved = flags.GetProperty("saved").GetBoolean(), applied = flags.GetProperty("applied").GetBoolean(), dismissed = flags.GetProperty("dismissed").GetBoolean();

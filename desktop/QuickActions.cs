@@ -22,7 +22,7 @@ internal sealed partial class MainWindow
     {
         // A new banner must own its own controls. Reparenting the previous message
         // while its StackPanel is still attached throws from Avalonia's visual tree.
-        var errorText = Text(L.T(message), 13);
+        var errorText = Text(L.T(message), Typography.Body);
         var actions = Row(Btn(L.T("الإعدادات والاستعادة"), Settings), Btn(L.T("إغلاق الرسالة"), () => errorBanner.IsVisible = false));
         if (retry != null) actions.Children.Insert(0, Btn(L.T("إعادة المحاولة"), async () => { errorBanner.IsVisible = false; await retry(); }));
         errorBanner.Child = Col(errorText, actions);
@@ -74,15 +74,20 @@ internal sealed partial class MainWindow
         KeyDown += (_, e) =>
         {
             if (e.Source is TextBox || OverlayOpen || picking) return;
+            if (App.Preview && e.Key == Key.R && e.KeyModifiers == KeyModifiers.None && page == DailyTool) { e.Handled = true; _ = Guard(() => { ReplayEnvelope(); return Task.CompletedTask; }); return; }
             bool command = e.KeyModifiers.HasFlag(OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control);
             if (command && (e.Key == Key.Z || e.Key == Key.Y))
             { e.Handled = true; _ = Guard(() => { Travel(e.Key == Key.Y || e.KeyModifiers.HasFlag(KeyModifiers.Shift)); return Task.CompletedTask; }); }
         };
-        using var stream = Avalonia.Platform.AssetLoader.Open(new Uri("avares://PickerHub/Assets/icon-small-128.png"));
-        tray = new TrayIcon { Icon = new WindowIcon(stream), ToolTipText = "PickerHub", IsVisible = true };
-        SetTrayMenu();
-        tray.Clicked += (_, _) => BringForward();
-        TrayIcon.SetIcons(Application.Current!, new TrayIcons { tray });
+        // A preview window stays out of the tray: the real PickerHub may already be there.
+        if (!App.Preview)
+        {
+            using var stream = Avalonia.Platform.AssetLoader.Open(new Uri("avares://PickerHub/Assets/icon-small-128.png"));
+            tray = new TrayIcon { Icon = new WindowIcon(stream), ToolTipText = "PickerHub", IsVisible = true };
+            SetTrayMenu();
+            tray.Clicked += (_, _) => BringForward();
+            TrayIcon.SetIcons(Application.Current!, new TrayIcons { tray });
+        }
         if (Application.Current?.PlatformSettings is { } platform)
         {
             EventHandler<Avalonia.Platform.PlatformColorValues> changed = (_, _) => Dispatcher.UIThread.Post(() => { if (!closed && state.FollowSystemTheme) Render(); });
@@ -90,7 +95,7 @@ internal sealed partial class MainWindow
         }
         bool openedOnce = false;
         Opened += (_, _) => { if (openedOnce) return; openedOnce = true; if (state.GlobalShortcut) _ = Guard(ConfigureShortcut); };
-        Closed += (_, _) => { closed = true; analysisCancellation?.Cancel(); shortcut?.Dispose(); tray.Dispose(); dailyClock?.Stop(); };
+        Closed += (_, _) => { closed = true; analysisCancellation?.Cancel(); shortcut?.Dispose(); tray?.Dispose(); dailyClock?.Stop(); };
     }
     void SetTrayMenu()
     {
@@ -105,7 +110,7 @@ internal sealed partial class MainWindow
     async Task ConfigureShortcut()
     {
         shortcut?.Dispose(); shortcut = null;
-        if (!state.GlobalShortcut) { shortcutStatus = L.T("غير مفعّل"); return; }
+        if (!state.GlobalShortcut || App.Preview) { shortcutStatus = L.T("غير مفعّل"); return; }
         shortcutStatus = L.T("جارٍ التفعيل…");
         var next = new GlobalShortcut(); shortcut = next;
         try

@@ -18,10 +18,10 @@ internal sealed partial class MainWindow
     Control CardFront(Specimen item, int number)
     {
         var info = Core.Describe(item.Hex); var ink = Paint(info.Text("ink"));
-        var serial = Mono((number + 1).ToString("00"), 12); serial.HorizontalAlignment = HorizontalAlignment.Left;
+        var serial = Mono((number + 1).ToString("00"), Typography.Label); serial.HorizontalAlignment = HorizontalAlignment.Left;
         var code = Mono(item.Hex, 14, true); code.HorizontalAlignment = HorizontalAlignment.Right;
         var head = new Grid(); head.Children.Add(serial); head.Children.Add(code); head.VerticalAlignment = VerticalAlignment.Top;
-        var name = Text(item.Name, 25, true); name.MaxLines = 3; name.TextTrimming = TextTrimming.CharacterEllipsis;
+        var name = Text(item.Name, Typography.Feature, true); name.MaxLines = 3; name.TextTrimming = TextTrimming.CharacterEllipsis;
         var family = Text(info.Text("base"), 13);
         var caption = Col(name, family); caption.Spacing = 4; caption.VerticalAlignment = VerticalAlignment.Bottom; caption.FlowDirection = L.Flow;
         var face = new Panel(); face.Children.Add(head); face.Children.Add(caption);
@@ -34,7 +34,7 @@ internal sealed partial class MainWindow
         var c = Core.Describe(item.Hex); var formats = c.GetProperty("formats");
         var head = new DockPanel { FlowDirection = FlowDirection.LeftToRight };
         var dot = new Border { Width = 12, Height = 12, CornerRadius = new CornerRadius(6), Background = Paint(item.Hex) }; DockPanel.SetDock(dot, Dock.Right); head.Children.Add(dot);
-        head.Children.Add(Tone(Mono("no. " + (number + 1).ToString("00") + " / " + c.Text("english").ToLowerInvariant(), 11), "Muted"));
+        head.Children.Add(Tone(Mono("no. " + (number + 1).ToString("00") + " / " + c.Text("english").ToLowerInvariant(), Typography.Caption), "Muted"));
         int light = (int)Math.Round(Color.Parse(item.Hex).ToHsl().L * 100);
         var scale = new Grid { ColumnDefinitions = new ColumnDefinitions(string.Join(",", Enumerable.Repeat("*", 10))), Height = 5, FlowDirection = FlowDirection.LeftToRight };
         for (int i = 0; i < 10; i++)
@@ -43,34 +43,34 @@ internal sealed partial class MainWindow
             step[!Border.BackgroundProperty] = new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension(i < Math.Round(light / 10d) ? "Ink" : "Line");
             Grid.SetColumn(step, i); scale.Children.Add(step);
         }
-        var lightness = new DockPanel(); var percent = Mono(light + "%", 11); DockPanel.SetDock(percent, Dock.Right); lightness.Children.Add(percent); lightness.Children.Add(Label(L.T("السطوع")));
+        var lightness = new DockPanel(); var percent = Mono(light + "%", Typography.Caption); DockPanel.SetDock(percent, Dock.Right); lightness.Children.Add(percent); lightness.Children.Add(Label(L.T("السطوع")));
         var rows = new StackPanel { Spacing = 5 };
         foreach (var key in new[] { "HEX", "RGB", "HSL", "CMYK" })
         {
             var row = new DockPanel { FlowDirection = FlowDirection.LeftToRight }; var value = Mono(formats.Text(key).Replace("rgb", "").Replace("hsl", "").Trim('(', ')'), 11.5);
-            DockPanel.SetDock(value, Dock.Right); row.Children.Add(value); row.Children.Add(Tone(Mono(key.ToLowerInvariant(), 11), "Muted")); rows.Children.Add(row);
+            DockPanel.SetDock(value, Dock.Right); row.Children.Add(value); row.Children.Add(Tone(Mono(key.ToLowerInvariant(), Typography.Caption), "Muted")); rows.Children.Add(row);
         }
         var shades = Core.Harmony(item.Hex, 4);
         var strip = new Grid { ColumnDefinitions = new ColumnDefinitions(string.Join(",", shades.Select(_ => "*"))), Height = 40, FlowDirection = FlowDirection.LeftToRight };
         for (int i = 0; i < shades.Length; i++) { var shade = new Border { Background = Paint(shades[i]) }; Grid.SetColumn(shade, i); strip.Children.Add(shade); }
-        var body = Col(head, Text(item.Name, 21, true), Col(lightness, scale), Of(new Border(), "hairline"), rows,
+        var body = Col(head, Text(item.Name, Typography.Heading, true), Col(lightness, scale), Of(new Border(), "hairline"), rows,
             new Border { CornerRadius = new CornerRadius(10), ClipToBounds = true, Child = strip }, Label(c.Text("base") + L.T("، ") + c.Text("shade")));
-        body.Spacing = 11; body.FlowDirection = L.Flow;
+        body.Spacing = 12; body.FlowDirection = L.Flow;
         // The reverse is denser glass, so the measurements stay readable over the cards beneath.
         return Tone(new Glass("DenseTint") { Radius = 26, Blur = 18, Padding = new Thickness(20, 18), Child = body }, "Ink");
     }
     // The deck with its pager and the actions for whichever card is on top.
     (Control View, Deck Deck) DeckView(IReadOnlyList<Specimen> items, int start, Action<int> moved, params Control[] actions)
     {
-        var name = Text("", 15, true); name.HorizontalAlignment = HorizontalAlignment.Center; name.TextWrapping = TextWrapping.NoWrap; name.TextTrimming = TextTrimming.CharacterEllipsis;
-        var position = Tone(Mono("", 11), "Muted"); position.HorizontalAlignment = HorizontalAlignment.Center;
+        var name = Text("", Typography.Lead, true); name.HorizontalAlignment = HorizontalAlignment.Center; name.TextWrapping = TextWrapping.NoWrap; name.TextTrimming = TextTrimming.CharacterEllipsis;
+        var position = Tone(Mono("", Typography.Caption), "Muted"); position.HorizontalAlignment = HorizontalAlignment.Center;
         var deck = new Deck(items.Count, start, Motion, (i, back) => back ? CardBack(items[i], i) : CardFront(items[i], i));
         void Sync(int i) { moved(i); name.Text = items[i].Name; position.Text = (i + 1).ToString("00") + " / " + items.Count.ToString("00"); }
         deck.Changed += Sync; Sync(start);
         var caption = Col(name, position); caption.Spacing = 0; caption.Width = 150; caption.VerticalAlignment = VerticalAlignment.Center;
         var pager = Line(8, Of(Liquid("chevron-right", L.T("اللون السابق"), deck.Previous), "still"), caption, Of(Liquid("chevron-left", L.T("اللون التالي"), deck.Next), "still"));
         var tools = Cluster([Liquid("refresh", L.T("قلب البطاقة"), deck.Flip), .. actions]);
-        var view = Col(deck, pager, tools); view.Spacing = 10; view.HorizontalAlignment = HorizontalAlignment.Center;
+        var view = Col(deck, pager, tools); view.Spacing = 12; view.HorizontalAlignment = HorizontalAlignment.Center;
         foreach (var child in view.Children) child.HorizontalAlignment = HorizontalAlignment.Center;
         return (view, deck);
     }
@@ -164,8 +164,8 @@ internal sealed partial class MainWindow
     void ContrastPage()
     {
         var r = Core.Contrast(foreground, background);
-        var sample = Text(L.T("تصميم واضح للجميع"), 30, true);
-        var normal = Text(L.T("النص المقروء يبدأ بتباين مناسب بين اللون والخلفية."), 14);
+        var sample = Text(L.T("تصميم واضح للجميع"), Typography.Display, true);
+        var normal = Text(L.T("النص المقروء يبدأ بتباين مناسب بين اللون والخلفية."), Typography.Body);
         var preview = new Border { Background = Paint(background), Padding = new Thickness(28, 52), CornerRadius = new CornerRadius(24), BorderThickness = new Thickness(1), Child = Col(sample, normal) };
         preview[!Border.BorderBrushProperty] = new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("Line");
         Avalonia.Controls.Documents.TextElement.SetForeground(preview, Paint(foreground));
@@ -181,8 +181,8 @@ internal sealed partial class MainWindow
             var (key, level, size) = levels[i]; bool pass = r.GetProperty(key).GetBoolean();
             var mark = Tone(new Icon(pass ? "check" : "x", 18), pass ? "AccentText" : "Muted"); mark.HorizontalAlignment = HorizontalAlignment.Left;
             var verdict = Label(pass ? L.T("ناجح") : L.T("غير مناسب"));
-            var top = new DockPanel(); DockPanel.SetDock(mark, Dock.Right); top.Children.Add(mark); top.Children.Add(Mono(level, 15, true));
-            var body = Col(top, Text(size, 13), verdict); body.Spacing = 2;
+            var top = new DockPanel(); DockPanel.SetDock(mark, Dock.Right); top.Children.Add(mark); top.Children.Add(Mono(level, Typography.Lead, true));
+            var body = Col(top, Text(size, Typography.Control), verdict); body.Spacing = 2;
             var tile = Of(new Border { Child = body }, "tile"); Grid.SetColumn(tile, i % 2 * 2); Grid.SetRow(tile, i / 2 * 2); grid.Children.Add(tile);
         }
         var checks = Col(ratio, Label(L.T("نسبة التباين")), grid);

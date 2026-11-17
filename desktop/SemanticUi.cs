@@ -31,7 +31,7 @@ internal sealed partial class MainWindow
             Btn("CSS", async () => { var value = SemanticPalette.Css(Themes()); dialog.Close(); await WriteFile("palette.css", value); }),
             Btn("Design tokens", async () => { var value = SemanticPalette.Tokens(Themes()); dialog.Close(); await WriteFile("palette.tokens.json", value); }),
             Btn(L.T("فحص التباين"), () => { var checks = SemanticPalette.Checks(Read()); feedback.Text = checks.Length == 0 ? L.T("عيّن النص والخلفية لفحص التباين.") : string.Join("\n", checks.Select(c => $"{c.Foreground} / {c.Background}: {c.Ratio:0.00}:1 · AA {(c.AA ? "✓" : "×")}")); }));
-        dialog.Content = Col(Text(L.T("أدوار الألوان"), 20, true), Label(L.T("أدوار محفوظة مستقلة. اترك الدور فارغاً لاستبعاده.")),
+        dialog.Content = Col(Text(L.T("أدوار الألوان"), Typography.Heading, true), Label(L.T("أدوار محفوظة مستقلة. اترك الدور فارغاً لاستبعاده.")),
             Choose([L.T("فاتح"), L.T("داكن")], isDark ? 1 : 0, i => isDark = i == 1), rows, feedback, actions, Btn(L.T("إغلاق"), () => dialog.Close()));
         await dialog.Show();
     }
@@ -62,7 +62,7 @@ internal sealed partial class MainWindow
         {
             var dots = Row([.. entry.Light.Select(r => (Control)Dot(r.Value, () => _ = Guard(() => Copy(r.Value)), 26))]);
             var themes = new Dictionary<string, Dictionary<string, string>> { ["light"] = entry.Light, ["dark"] = entry.Dark };
-            entries.Children.Add(Col(Text(entry.Name, 16, true), Label(entry.CreatedAt), dots, Row(
+            entries.Children.Add(Col(Text(entry.Name, Typography.Title, true), Label(entry.CreatedAt), dots, Row(
                 Btn(L.T("تصدير"), async () => { dialog.Close(); await ExportThemes(themes); }),
                 Btn(L.T("حفظ كلوحة"), () =>
                 {
@@ -71,7 +71,7 @@ internal sealed partial class MainWindow
                 }))));
         }
         if (entries.Children.Count == 0) entries.Children.Add(Label(L.T("ستظهر هنا الباقات التي تفتحها، حتى 90 باقة.")));
-        dialog.Content = Col(Text(L.T("أرشيف الباقات"), 20, true), entries, Btn(L.T("إغلاق"), () => dialog.Close())); await dialog.Show();
+        dialog.Content = Col(Text(L.T("أرشيف الباقات"), Typography.Heading, true), entries, Btn(L.T("إغلاق"), () => dialog.Close())); await dialog.Show();
     }
     async Task BrandColors()
     {
@@ -82,7 +82,7 @@ internal sealed partial class MainWindow
                 Btn(L.T("تثبيت اللون المحدد"), () => { Edit(() => state.BrandLocks[role] = state.Color); dialog.Close(); }),
                 Btn(L.T("إلغاء التثبيت"), () => { Edit(() => state.BrandLocks.Remove(role)); dialog.Close(); }))));
         }
-        dialog.Content = Col(Text(L.T("ألوان العلامة المثبتة"), 18, true), Label(L.T("تُطبّق على تصدير باقة اليوم. افحص التباين بعد التثبيت.")), rows, Btn(L.T("إغلاق"), () => dialog.Close()));
+        dialog.Content = Col(Text(L.T("ألوان العلامة المثبتة"), Typography.Heading, true), Label(L.T("تُطبّق على تصدير باقة اليوم. افحص التباين بعد التثبيت.")), rows, Btn(L.T("إغلاق"), () => dialog.Close()));
         await dialog.Show();
     }
     async Task PaletteContrast(Palette p)
@@ -95,11 +95,11 @@ internal sealed partial class MainWindow
         void Cell(Control child, int row, int column) { Grid.SetRow(child, row); Grid.SetColumn(child, column); grid.Children.Add(child); }
         for (int i = 0; i < colors.Length; i++)
         {
-            Cell(Mono(colors[i].Hex, 11), i + 1, 0); Cell(Mono(colors[i].Hex, 11), 0, i + 1);
+            Cell(Mono(colors[i].Hex, Typography.Caption), i + 1, 0); Cell(Mono(colors[i].Hex, Typography.Caption), 0, i + 1);
             for (int j = 0; j < colors.Length; j++)
             {
                 var r = Core.Contrast(colors[i].Hex, colors[j].Hex); bool aa = r.GetProperty("aa").GetBoolean();
-                var value = Mono(r.GetProperty("ratio").GetDouble().ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + (aa ? " ✓" : " ×"), 11);
+                var value = Mono(r.GetProperty("ratio").GetDouble().ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + (aa ? " ✓" : " ×"), Typography.Caption);
                 value.Foreground = Paint(Core.Describe(colors[j].Hex).Text("ink")); value.HorizontalAlignment = HorizontalAlignment.Center;
                 var tile = new Border { Background = Paint(colors[j].Hex), Child = value, Margin = new Thickness(1), CornerRadius = new CornerRadius(5) };
                 ToolTip.SetTip(tile, colors[i].Hex + " / " + colors[j].Hex + (aa ? " · AA" : " · AA fail")); Cell(tile, i + 1, j + 1);
@@ -116,9 +116,9 @@ internal sealed partial class MainWindow
                 var swatch = new Border { Width = 34, Height = 34, Background = Paint(preview), CornerRadius = new CornerRadius(8), Margin = new Thickness(3) };
                 ToolTip.SetTip(swatch, color.Hex + " → " + preview); dots.Children.Add(swatch);
             }
-            simulation.Children.Add(Col(Mono(modes[kind], 12), dots));
+            simulation.Children.Add(Col(Mono(modes[kind], Typography.Label), dots));
         }
-        dialog.Content = Col(Text(L.T("مصفوفة التباين"), 20, true), Label(L.T("أول 12 لوناً من التحديد أو اللوحة. ✓ يحقق AA للنص العادي.")),
+        dialog.Content = Col(Text(L.T("مصفوفة التباين"), Typography.Heading, true), Label(L.T("أول 12 لوناً من التحديد أو اللوحة. ✓ يحقق AA للنص العادي.")),
             new ScrollViewer { Content = grid, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto }, Label(L.T("محاكاة رؤية الألوان تقريبية. قياسات التباين للألوان الأصلية.")), simulation, Btn(L.T("إغلاق"), () => dialog.Close()));
         await dialog.Show();
     }

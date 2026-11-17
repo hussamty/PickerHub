@@ -14,14 +14,12 @@ internal sealed partial class MainWindow
 {
     Button? minimizeWindow, maximizeWindow, closeWindow;
     Glass? titlebarSurface;
-    Control? titlebarDragArea;
     readonly Dictionary<WindowEdge, Cursor> resizeCursors = [];
     bool CustomChrome => !OperatingSystem.IsMacOS();
 
     // The bar is the titlebar: its empty space moves the window, and the window actions close the row.
     Control BuildTitlebar(Grid row, int column)
     {
-        titlebarDragArea = row;
         if (CustomChrome)
         {
             SystemDecorations = SystemDecorations.None;
@@ -102,14 +100,17 @@ internal sealed partial class MainWindow
         return left ? WindowEdge.West : right ? WindowEdge.East : null;
     }
     void ToggleMaximize() => WindowState = WindowState is WindowState.Maximized or WindowState.FullScreen ? WindowState.Normal : WindowState.Maximized;
+    // The middle action always answers the current size: maximize from a normal window, restore from a
+    // maximized one. Minimize keeps its own slot and only ever minimizes.
     void UpdateWindowChrome()
     {
         if (maximizeWindow == null) return;
         bool maximized = WindowState is WindowState.Maximized or WindowState.FullScreen;
-        maximizeWindow.IsVisible = !maximized && CanResize;
+        maximizeWindow.IsVisible = CanResize;
+        string glyph = maximized ? "restore" : "square";
+        if (maximizeWindow.Tag as string != glyph) { maximizeWindow.Tag = glyph; maximizeWindow.Content = new Icon(glyph, 16); }
         Cursor = Cursor.Default;
-        if (titlebarDragArea != null) ToolTip.SetTip(titlebarDragArea, maximized ? L.T("انقر مرتين على شريط العنوان لاستعادة حجم النافذة") : null);
-        foreach (var (button, label) in new[] { (minimizeWindow!, L.T("تصغير النافذة")), (maximizeWindow, L.T("تكبير النافذة")), (closeWindow!, L.T("إغلاق التطبيق")) })
+        foreach (var (button, label) in new[] { (minimizeWindow!, L.T("تصغير النافذة")), (maximizeWindow, maximized ? L.T("استعادة حجم النافذة") : L.T("تكبير النافذة")), (closeWindow!, L.T("إغلاق التطبيق")) })
         { AutomationProperties.SetName(button, label); ToolTip.SetTip(button, label); }
     }
 }

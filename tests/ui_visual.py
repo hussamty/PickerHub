@@ -77,6 +77,11 @@ for language in ('ar','en'):
                 xt.XTestFakeKeyEvent(d, ctrl, 1, 0); xt.XTestFakeKeyEvent(d, key, 1, 0)
                 xt.XTestFakeKeyEvent(d, key, 0, 0); xt.XTestFakeKeyEvent(d, ctrl, 0, 0); x.XFlush(d)
                 time.sleep(.3); process.stdin.write('\n'); process.stdin.flush()
+            elif line.startswith('CLICK '):
+                _, px, py = line.split()
+                xt.XTestFakeMotionEvent(d, 0, int(px), int(py), 0); x.XFlush(d); time.sleep(.08)
+                xt.XTestFakeButtonEvent(d, 1, 1, 0); xt.XTestFakeButtonEvent(d, 1, 0, 0); x.XFlush(d)
+                time.sleep(.1); process.stdin.write('\n'); process.stdin.flush()
             elif line.startswith('DOUBLECLICK '):
                 _, px, py = line.split()
                 xt.XTestFakeMotionEvent(d, 0, int(px), int(py), 0); x.XFlush(d)

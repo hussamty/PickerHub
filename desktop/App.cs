@@ -7,6 +7,8 @@ namespace PickerHub;
 internal class App : Application
 {
     internal static SingleInstance? Instance;
+    // --preview-envelope: the daily envelope in a throwaway library, ready to be opened again and again.
+    internal static bool Preview;
     internal static string Version => typeof(App).Assembly.GetName().Version!.ToString(3);
     [STAThread]
     public static int Main(string[] args)
@@ -18,12 +20,22 @@ internal class App : Application
         }
         if (args.Contains("--self-test")) return SelfTests.Run();
         if (args.Contains("--version")) { Console.WriteLine("PickerHub " + Version); return 0; }
+        if (args.Contains("--help"))
+        {
+            Console.WriteLine("PickerHub " + Version + "\n\nUsage: pickerhub [--preview-envelope [--english] [--light]] [--version]\n\n" +
+                "  --preview-envelope  Open the palette-of-the-day envelope in a temporary library. Replay it as often as\n" +
+                "                      you like; nothing touches your own library, and the temporary one is deleted on close.\n" +
+                "  --english, --light  Start the preview in English or in the light theme.");
+            return 0;
+        }
         if (args.Contains("--check-core")) { Console.WriteLine(Core.Describe("#87CEEB").Text("hex")); return 0; }
         string? testRoot = null;
-        if (args.Contains("--ui-test"))
+        if (args.Contains("--ui-test") || args.Contains("--preview-envelope"))
         {
-            testRoot = Path.Combine(Path.GetTempPath(), "pickerhub-ui-" + Guid.NewGuid().ToString("N")); Workspace.RootOverride = testRoot;
-            new Workspace { Language = args.Contains("--english") ? "en" : "ar" }.Save();
+            // Both run in a library of their own, so they can never touch the user's colors or lock them.
+            Preview = !args.Contains("--ui-test");
+            testRoot = Path.Combine(Path.GetTempPath(), (Preview ? "pickerhub-preview-" : "pickerhub-ui-") + Guid.NewGuid().ToString("N")); Workspace.RootOverride = testRoot;
+            new Workspace { Language = args.Contains("--english") ? "en" : "ar", Theme = args.Contains("--light") ? "light" : "dark" }.Save();
         }
         try { Instance = SingleInstance.Open(); if (Instance == null) return 0; }
         catch (Exception e) { Console.Error.WriteLine(e.Message); return 2; }

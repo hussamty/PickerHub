@@ -71,99 +71,261 @@ internal sealed class SwatchCard : Border
 }
 
 // The envelope, drawn in two layers so the cards can sit between its back and its front pocket.
-// The flap turns about its top edge: closed it lies over the pocket (front layer); past upright it
-// stands behind the cards and shows its dark lining (back layer).
+// Every outline is exact geometry: one radius for all outer corners, a V-shaped mouth with a filleted
+// point, and straight flap edges that meet in a filleted tip. The flap turns about the top edge and is
+// seen through the stage's lens: closed it lies over the pocket (front layer); past upright it stands
+// behind the cards and shows its lining (back layer). The paper is painted with Skia, so each edge is
+// anti-aliased once, shadows are true blurs and every gradient is dithered.
 internal sealed class EnvelopeArt(bool front) : Control
 {
-    public const double W = 188, H = 244, Head = 118, Rim = 30, Flap = 114;
-    static readonly Geometry sparkle = Geometry.Parse("M16 18a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m0 -12a2 2 0 0 1 2 2a2 2 0 0 1 2 -2a2 2 0 0 1 -2 -2a2 2 0 0 1 -2 2m-7 12a6 6 0 0 1 6 -6a6 6 0 0 1 -6 -6a6 6 0 0 1 -6 6a6 6 0 0 1 6 6");
-    static readonly IBrush Lining = new SolidColorBrush(Color.Parse("#191917")), Ink = new SolidColorBrush(Color.Parse("#111111"));
-    static readonly FontFamily code = new("Cascadia Mono, JetBrains Mono, DejaVu Sans Mono, Menlo, Consolas, monospace");
+    // Rim is how far the point of the mouth sits below the top edge; cards and confetti leave from there.
+    public const double W = 188, H = 244, Head = 120, Rim = 62;
+    const float Wf = (float)W, Hf = (float)H, Corner = 10, MouthFillet = 9, Apex = 128, TipFillet = 16, Lens = 900, SealR = 19, SealY = 92;
+    static readonly IBrush Ink = new SolidColorBrush(Color.Parse("#111111")), Emboss = new SolidColorBrush(Color.Parse("#66FFFFFF"));
+    static readonly IPen Rule = new Pen(new SolidColorBrush(Color.Parse("#2E111111")), 1);
     double angle, light;
     public string Serial = "";
     // Flap angle in degrees: 0 closed, 180 folded all the way back.
     public double Angle { get => angle; set { value = Math.Clamp(value, 0, 178); if (Math.Abs(value - angle) > .05) { angle = value; InvalidateVisual(); } } }
-    // Where the light falls across the foil, -1 to 1.
+    // Where the light falls across the paper, -1 to 1.
     public double Light { get => light; set { if (Math.Abs(value - light) > .004) { light = value; InvalidateVisual(); } } }
 
-    static LinearGradientBrush Across(double tilt, params (uint Color, double At)[] stops)
+    // ---- Geometry, in the body's own frame: x from 0 to W, y from 0 (the top edge and hinge) to H. ----
+    static SKPath Build(Action<SKPath> draw) { var path = new SKPath(); draw(path); return path; }
+    static readonly SKPath BodyShape = Build(p => p.AddRoundRect(new SKRect(0, 0, Wf, Hf), Corner, Corner));
+    // The pocket is the body below the mouth: from just under each top corner down to a filleted V.
+    static readonly SKPath PocketShape = Build(p =>
     {
-        var brush = new LinearGradientBrush { StartPoint = new RelativePoint(0, .35 - tilt, RelativeUnit.Relative), EndPoint = new RelativePoint(1, .65 + tilt, RelativeUnit.Relative) };
-        foreach (var (color, at) in stops) brush.GradientStops.Add(new GradientStop(Color.FromUInt32(color), Math.Clamp(at, 0, 1)));
-        return brush;
+        p.MoveTo(0, Corner);
+        p.ArcTo(new SKPoint(Wf / 2, (float)Rim), new SKPoint(Wf, Corner), MouthFillet);
+        p.LineTo(Wf, Corner);
+        p.ArcTo(new SKPoint(Wf, Hf), new SKPoint(0, Hf), Corner);
+        p.ArcTo(new SKPoint(0, Hf), new SKPoint(0, 0), Corner);
+        p.Close();
+    });
+    static readonly SKPath LipLine = Build(p =>
+    {
+        p.MoveTo(0, Corner);
+        p.ArcTo(new SKPoint(Wf / 2, (float)Rim), new SKPoint(Wf, Corner), MouthFillet);
+        p.LineTo(Wf, Corner);
+    });
+    static readonly SKPath PocketRim = Build(p =>
+    {
+        p.MoveTo(Wf, Corner);
+        p.ArcTo(new SKPoint(Wf, Hf), new SKPoint(0, Hf), Corner);
+        p.ArcTo(new SKPoint(0, Hf), new SKPoint(0, 0), Corner);
+        p.LineTo(0, Corner);
+    });
+    // The inside of the back, seen through the mouth. It runs 1.5 px under the pocket, so the two leave no seam.
+    // Its top corners follow the flap's (see Fold).
+    static SKPath Inside(float corner) => Build(p =>
+    {
+        p.MoveTo(0, Corner + 1.5f);
+        p.ArcTo(new SKPoint(0, 0), new SKPoint(Wf, 0), corner);
+        p.ArcTo(new SKPoint(Wf, 0), new SKPoint(Wf, Hf), corner);
+        p.LineTo(Wf, Corner + 1.5f);
+        p.ArcTo(new SKPoint(Wf / 2, (float)Rim + 1.5f), new SKPoint(0, Corner + 1.5f), MouthFillet);
+        p.Close();
+    });
+    static readonly SKPath InsideShape = Inside(Corner);
+    // The flap shares the body's top edge and corners exactly; its sides run straight into a filleted tip.
+    static SKPath Flap(float corner) => Build(p =>
+    {
+        p.MoveTo(0, corner);
+        p.ArcTo(new SKPoint(0, 0), new SKPoint(Wf, 0), corner);
+        p.ArcTo(new SKPoint(Wf, 0), new SKPoint(Wf, Hf), corner);
+        p.ArcTo(new SKPoint(Wf / 2, Apex), new SKPoint(0, corner), TipFillet);
+        p.Close();
+    });
+    static readonly SKPath FlapShape = Flap(Corner);
+    // The flap's free edges, without the fold.
+    static SKPath FlapEdge(float corner) => Build(p =>
+    {
+        p.MoveTo(corner, 0);
+        p.ArcTo(new SKPoint(0, 0), new SKPoint(0, Hf), corner);
+        p.ArcTo(new SKPoint(Wf / 2, Apex), new SKPoint(Wf, corner), TipFillet);
+        p.LineTo(Wf, corner);
+        p.ArcTo(new SKPoint(Wf, 0), new SKPoint(0, 0), corner);
+    });
+    static readonly SKPath FlapRim = FlapEdge(Corner);
+    // Closed, the envelope's top corners are the flap's and the back's together, rounded as one. Opened, two
+    // rounded corners would pinch the fold into ears, so both square off while the flap stands past upright.
+    static float Fold(double degrees) { double t = Math.Clamp((degrees - 90) / 60, 0, 1); return (float)(Corner * (1 - t * t * (3 - 2 * t))); }
+    // The PickerHub mark from the app icon: the P whose bowl is the eyedropper's lens, and the picked pixel in it.
+    static readonly SKPath Mark = Build(p =>
+    {
+        p.AddPath(SKPath.ParseSvgPathData("M462 176 H622 A170 170 0 0 1 792 346 V506 A170 170 0 0 1 622 676 H388 V752 L366 846 Q361 868 340 868 Q319 868 314 846 L292 752 V346 A170 170 0 0 1 462 176 Z M462 272 A74 74 0 0 0 388 346 V580 H622 A74 74 0 0 0 696 506 V346 A74 74 0 0 0 622 272 Z"));
+        p.FillType = SKPathFillType.EvenOdd;
+    });
+
+    // The flap turns about the hinge and is seen through the same lens as the cards, so its tip widens as it comes forward.
+    static SKMatrix Hinge(double degrees)
+    {
+        double turn = degrees * Math.PI / 180;
+        var lens = new SKMatrix { ScaleX = 1, ScaleY = (float)Math.Cos(turn), Persp1 = (float)(-Math.Sin(turn) / Lens), Persp2 = 1 };
+        return SKMatrix.CreateTranslation(Wf / 2, 0).PreConcat(lens).PreConcat(SKMatrix.CreateTranslation(-Wf / 2, 0));
     }
-    // Glossy foil: the brand yellow, an iridescent wash, one bright streak, and darker edges where it curves away.
-    void Foil(DrawingContext context, Geometry shape, double lift)
+    static uint Mix(uint a, uint b, float t)
     {
-        double at = light * .2;
-        context.DrawGeometry(new SolidColorBrush(Tones.Blend(0xFFF5E600, 0xFFFFF96B, lift)), null, shape);
-        context.DrawGeometry(Across(.3, (0x00FF5FA2, .05 + at), (0x66FF5FA2, .26 + at), (0x668B5CF6, .44 + at), (0x593B9DFF, .6 + at), (0x4034D399, .76 + at), (0x0034D399, .95 + at)), null, shape);
-        double streak = .36 + light * .24;
-        context.DrawGeometry(Across(.12, (0x00FFFFFF, streak - .16), (0xB3FFFFFF, streak), (0x00FFFFFF, streak + .16)), null, shape);
-        context.DrawGeometry(Across(0, (0x47111111, 0), (0x00111111, .16), (0x00111111, .84), (0x52111111, 1)), new Pen(new SolidColorBrush(Color.Parse("#40111111")), 1), shape);
+        uint Channel(int shift) => (uint)Math.Round(((a >> shift) & 255) + ((((b >> shift) & 255) - (double)((a >> shift) & 255)) * Math.Clamp(t, 0, 1))) << shift;
+        return Channel(24) | Channel(16) | Channel(8) | Channel(0);
     }
-    static StreamGeometry Tongue(double tip)
+    static SKShader Linear(SKPoint from, SKPoint to, params (uint Color, float At)[] stops) =>
+        SKShader.CreateLinearGradient(from, to, stops.Select(s => new SKColor(s.Color)).ToArray(), stops.Select(s => s.At).ToArray(), SKShaderTileMode.Clamp);
+
+    // Brand-yellow paper: lighter where it faces the light, with a soft specular band that follows the pointer
+    // and a faint pearl tint at the band's edges.
+    static void Paper(SKCanvas canvas, SKPath shape, SKRect area, float lift, float light)
     {
-        var shape = new StreamGeometry();
-        using var draw = shape.Open();
-        double reach = tip - Head;
-        draw.BeginFigure(new Point(0, Head), true);
-        draw.LineTo(new Point(W, Head));
-        draw.CubicBezierTo(new Point(W, Head + reach * .56), new Point(W * .64, tip), new Point(W / 2, tip));
-        draw.CubicBezierTo(new Point(W * .36, tip), new Point(0, Head + reach * .56), new Point(0, Head));
-        draw.EndFigure(true);
-        return shape;
+        using (var fill = new SKPaint { IsAntialias = true, IsDither = true })
+        {
+            fill.Shader = Linear(new SKPoint(0, area.Top), new SKPoint(0, area.Bottom), (Mix(0xFFFFF45E, 0xFFFFF9A6, lift), 0), (Mix(0xFFFFF000, 0xFFFFF462, lift), .5f), (Mix(0xFFF5DD00, 0xFFFBEB3A, lift), 1));
+            canvas.DrawPath(shape, fill);
+        }
+        float at = .5f + Math.Clamp(light, -1, 1) * .22f;
+        canvas.Save(); canvas.ClipPath(shape, SKClipOperation.Intersect, true);
+        using (var band = new SKPaint { IsDither = true })
+        {
+            band.Shader = Linear(new SKPoint(area.Left - 60, area.Top), new SKPoint(area.Right + 60, area.Bottom),
+                (0x00FFFFFF, 0), (0x00FFFFFF, at - .2f), (0x24FFE4F1, at - .08f), (0x5CFFFFFF, at), (0x24D8F1FF, at + .08f), (0x00FFFFFF, at + .2f), (0x00FFFFFF, 1));
+            canvas.DrawRect(area, band);
+        }
+        canvas.Restore();
+    }
+    // A line along an outline, clipped inside the shape: half a stroke wide, and it never doubles the outer edge.
+    static void Edge(SKCanvas canvas, SKPath shape, SKPath line, uint color, float width)
+    {
+        canvas.Save(); canvas.ClipPath(shape, SKClipOperation.Intersect, true);
+        using (var pen = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = width, StrokeJoin = SKStrokeJoin.Round, StrokeCap = SKStrokeCap.Round, Color = new SKColor(color) })
+            canvas.DrawPath(line, pen);
+        canvas.Restore();
+    }
+    // The lining: deep charcoal with a fine yellow pinstripe, as good stationery is lined.
+    static void Lining(SKCanvas canvas, SKPath shape, SKRect area)
+    {
+        using (var fill = new SKPaint { IsAntialias = true, IsDither = true, Shader = Linear(new SKPoint(0, area.Top), new SKPoint(0, area.Bottom), (0xFF2A2A27, 0), (0xFF161615, 1)) })
+            canvas.DrawPath(shape, fill);
+        canvas.Save(); canvas.ClipPath(shape, SKClipOperation.Intersect, true);
+        using (var stripe = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1, Color = new SKColor(0x14FFF000) })
+            for (float k = area.Left - area.Height; k < area.Right; k += 6) canvas.DrawLine(k, area.Bottom, k + area.Height, area.Top, stripe);
+        canvas.Restore();
+    }
+    // The seal: a disc of brand black with a fine yellow ring and the PickerHub mark.
+    static void Seal(SKCanvas canvas, float x, float y)
+    {
+        using (var blur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 2.2f))
+        using (var shadow = new SKPaint { IsAntialias = true, Color = new SKColor(0x66000000), MaskFilter = blur })
+            canvas.DrawCircle(x, y + 1.5f, SealR, shadow);
+        using (var disc = new SKPaint { IsAntialias = true, IsDither = true })
+        {
+            disc.Shader = SKShader.CreateRadialGradient(new SKPoint(x - SealR * .35f, y - SealR * .45f), SealR * 1.7f, [new SKColor(0xFF41413C), new SKColor(0xFF161615), new SKColor(0xFF0A0A0A)], [0, .5f, 1], SKShaderTileMode.Clamp);
+            canvas.DrawCircle(x, y, SealR, disc);
+        }
+        using (var ring = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1, Color = new SKColor(0x99FFF000) })
+            canvas.DrawCircle(x, y, SealR - 3.5f, ring);
+        canvas.Save();
+        canvas.Translate(x, y); canvas.Scale(SealR * 1.08f / 692); canvas.Translate(-542, -522);   // the mark is 692 units tall
+        using (var mark = new SKPaint { IsAntialias = true, Color = new SKColor(0xFFFFF000) }) canvas.DrawPath(Mark, mark);
+        using (var pixel = new SKPaint { IsAntialias = true, Color = SKColors.White }) canvas.DrawRoundRect(new SKRect(472, 356, 612, 496), 30, 30, pixel);
+        canvas.Restore();
+    }
+
+    // ---- The layers ----
+    static void Back(SKCanvas canvas, double degrees, bool dark)
+    {
+        canvas.Translate(0, (float)Head);
+        using (var blur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 9))
+        using (var drop = new SKPaint { IsAntialias = true, Color = new SKColor(0, 0, 0, (byte)(dark ? 115 : 40)), MaskFilter = blur })
+        { canvas.Save(); canvas.Translate(0, 7); canvas.DrawPath(BodyShape, drop); canvas.Restore(); }
+        // Closed, the flap and pocket cover the inside exactly; drawing it would only darken their edges.
+        if (degrees < .5) return;
+        float corner = Fold(degrees);
+        using (var inside = corner < Corner ? Inside(corner) : null) Lining(canvas, inside ?? InsideShape, new SKRect(0, 0, Wf, (float)Rim + 2));
+        if (degrees <= 90) return;
+        var hinge = Hinge(degrees); canvas.Concat(ref hinge);
+        // Opened, the flap reaches 1.5 px back across the fold, so the fold leaves no seam either.
+        using var face = Flap(corner); using var edge = FlapEdge(corner);
+        using var lining = Build(p => { p.AddPath(face); p.AddRect(new SKRect(corner, -1.5f, Wf - corner, .5f)); });
+        Lining(canvas, lining, new SKRect(0, -2, Wf, Apex));
+        Edge(canvas, face, edge, 0xF2FFF000, 1.8f);   // the yellow outside shows only as the paper's edge
+    }
+    static void Pocket(SKCanvas canvas, double degrees, float light, bool dark)
+    {
+        canvas.Translate(0, (float)Head);
+        if (degrees > 2)
+        {
+            // The pocket's lip shades whatever stands just inside it.
+            canvas.Save(); canvas.ClipPath(InsideShape, SKClipOperation.Intersect, true); canvas.Translate(0, -3);
+            using (var blur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 5))
+            using (var shade = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 12, Color = new SKColor(0x6B000000), MaskFilter = blur })
+                canvas.DrawPath(LipLine, shade);
+            canvas.Restore();
+        }
+        Paper(canvas, PocketShape, new SKRect(0, 0, Wf, Hf), 0, light);
+        Edge(canvas, PocketShape, PocketRim, dark ? 0x1F000000u : 0x33000000u, 1.4f);
+        Edge(canvas, PocketShape, LipLine, 0xC2FFFFFF, 1.8f);   // the lip catches the light
+        if (degrees >= 88) return;
+        // The closed flap lifts off the pocket a little, and its shadow lengthens as it rises.
+        float k = (float)Math.Cos(degrees * Math.PI / 180);
+        canvas.Save(); canvas.ClipPath(PocketShape, SKClipOperation.Intersect, true); canvas.Translate(0, 2.2f + 5 * (1 - k));
+        var hinge = Hinge(degrees); canvas.Concat(ref hinge);
+        using (var blur = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 3.2f + 4 * (1 - k)))
+        using (var shade = new SKPaint { IsAntialias = true, Color = new SKColor(0, 0, 0, (byte)(78 * k)), MaskFilter = blur })
+            canvas.DrawPath(FlapShape, shade);
+        canvas.Restore();
+    }
+    static void Flap(SKCanvas canvas, double degrees, float light)
+    {
+        canvas.Translate(0, (float)Head);
+        var hinge = Hinge(degrees); canvas.Concat(ref hinge);
+        // It catches more light as it lifts toward the viewer.
+        Paper(canvas, FlapShape, new SKRect(0, 0, Wf, Apex), (float)(Math.Sin(degrees * Math.PI / 180) * .8), light + .18f);
+        Edge(canvas, FlapShape, FlapRim, 0x9EFFFFFF, 1.8f);
+        Seal(canvas, Wf / 2, SealY);
+    }
+    // The printed face: the name of the pack, debossed, and a stamp line with the maker and the number.
+    void Labels(DrawingContext context)
+    {
+        var family = TextElement.GetFontFamily(this);
+        string name = L.T("باقة اليوم");
+        FormattedText Title(double size, IBrush brush) => new(name, CultureInfo.InvariantCulture, L.Flow, new Typeface(family, FontStyle.Normal, FontWeight.SemiBold), size, brush);
+        double size = 21; while (size > 15 && Title(size, Ink).Width > W - 36) size -= .5;
+        var title = Title(size, Ink); var at = new Point((W - title.Width) / 2, Head + H * .655 - title.Height / 2);
+        context.DrawText(Title(size, Emboss), at + new Point(0, .9));
+        context.DrawText(title, at);
+        var stamp = new Typeface(family, FontStyle.Normal, FontWeight.Bold);
+        var maker = new FormattedText("PickerHub", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, stamp, 10.5, Ink);
+        var number = new FormattedText(Serial, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface(family, FontStyle.Normal, FontWeight.SemiBold), 10.5, Ink);
+        double line = Head + H - 21;
+        context.DrawText(maker, new Point(18, line - maker.Height / 2));
+        context.DrawText(number, new Point(W - 18 - number.Width, line - number.Height / 2));
+        context.DrawLine(Rule, new Point(18, line - 14.5), new Point(W - 18, line - 14.5));
     }
     public override void Render(DrawingContext context)
     {
-        double turn = angle * Math.PI / 180, fold = Math.Cos(turn), tip = Head + Flap * fold;
-        if (!front)
+        // The paint passes run on the render thread, so they capture plain values and never this control.
+        bool dark = ActualThemeVariant == ThemeVariant.Dark;
+        double degrees = angle; float shine = (float)light;
+        var reach = new Rect(-48, -24, W + 96, H + Head + 72);
+        if (!front) { context.Custom(new Sheet(reach, canvas => Back(canvas, degrees, dark))); return; }
+        context.Custom(new Sheet(reach, canvas => Pocket(canvas, degrees, shine, dark)));
+        Labels(context);
+        if (degrees < 90) context.Custom(new Sheet(reach, canvas => Flap(canvas, degrees, shine)));
+    }
+    // One Skia pass recorded for the render thread.
+    sealed class Sheet(Rect bounds, Action<SKCanvas> paint) : ICustomDrawOperation
+    {
+        public Rect Bounds => bounds;
+        public bool HitTest(Point p) => false;
+        public bool Equals(ICustomDrawOperation? other) => false;
+        public void Dispose() { }
+        public void Render(ImmediateDrawingContext context)
         {
-            if (fold < 0)
-            {
-                // Seen from inside: the lining, with the foil showing as a thin edge.
-                var open = Tongue(tip);
-                context.DrawGeometry(Lining, new Pen(new SolidColorBrush(Color.Parse("#FFF000")), 1.5), open);
-                context.DrawGeometry(Across(0, (0x33FFFFFF, 0), (0x00FFFFFF, .5), (0x40000000, 1)), null, open);
-            }
-            var back = new Rect(0, Head, W, H);
-            context.DrawRectangle(Lining, null, back, 16, 16);
-            context.DrawRectangle(new LinearGradientBrush
-            {
-                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
-                GradientStops = [new(Color.Parse("#2EFFFFFF"), 0), new(Color.Parse("#00FFFFFF"), .2), new(Color.Parse("#66000000"), 1)]
-            }, null, back, 16, 16);
-            return;
+            if (context.TryGetFeature<ISkiaSharpApiLeaseFeature>() is not { } feature) return;
+            using var lease = feature.Lease();
+            var canvas = lease.SkCanvas; int saved = canvas.Save();
+            try { paint(canvas); } finally { canvas.RestoreToCount(saved); }
         }
-        // The pocket: its top edge dips in the middle, where a thumb would pull the cards.
-        var pocket = new StreamGeometry();
-        using (var draw = pocket.Open())
-        {
-            double top = Head + Rim, bottom = Head + H, r = 16;
-            draw.BeginFigure(new Point(0, top), true);
-            draw.QuadraticBezierTo(new Point(W / 2, top + 40), new Point(W, top));
-            draw.LineTo(new Point(W, bottom - r));
-            draw.ArcTo(new Point(W - r, bottom), new Size(r, r), 0, false, SweepDirection.Clockwise);
-            draw.LineTo(new Point(r, bottom));
-            draw.ArcTo(new Point(0, bottom - r), new Size(r, r), 0, false, SweepDirection.Clockwise);
-            draw.EndFigure(true);
-        }
-        Foil(context, pocket, 0);
-        var face = new Typeface(TextElement.GetFontFamily(this), FontStyle.Normal, FontWeight.Bold);
-        var title = new FormattedText(L.T("باقة اليوم"), CultureInfo.InvariantCulture, L.Flow, face, 21, Ink);
-        context.DrawText(title, new Point((W - title.Width) / 2, Head + H - 92));
-        var mono = new Typeface(code, FontStyle.Normal, FontWeight.Bold);
-        context.DrawText(new FormattedText("PickerHub", CultureInfo.InvariantCulture, FlowDirection.LeftToRight, mono, 10, Ink), new Point(16, Head + H - 34));
-        var serial = new FormattedText(Serial, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, mono, 10, Ink);
-        context.DrawText(serial, new Point(W - 16 - serial.Width, Head + H - 34));
-        if (fold < 0) return;
-        // The closed flap catches more light as it lifts toward the viewer.
-        Foil(context, Tongue(tip), Math.Sin(turn) * .8);
-        context.DrawLine(new Pen(new SolidColorBrush(Color.Parse("#80FFFFFF")), 1), new Point(4, Head + .5), new Point(W - 4, Head + .5));
-        var seal = new Point(W / 2, Head + Flap * fold * .72);
-        context.DrawEllipse(Ink, null, seal, 19, 19 * fold);
-        using (context.PushTransform(Matrix.CreateTranslation(-12, -12) * Matrix.CreateScale(1.05, 1.05 * fold) * Matrix.CreateTranslation(seal.X, seal.Y)))
-            context.DrawGeometry(null, new Pen(new SolidColorBrush(Color.Parse("#FFF000")), 1.8, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), sparkle);
     }
 }
 
@@ -591,15 +753,17 @@ internal sealed class PackStage : Panel
         }
         // Before the cue: a quick shake, as if something inside wants out.
         double shake = phase == Phase.Opening && clock < .7 ? 6.5 * Math.Sin(clock * 29) * Math.Exp(-clock * 5.2) : 0;
-        double fall = dropAt < 0 ? 0 : Math.Clamp((clock - dropAt) / .55, 0, 1), bob = phase == Phase.Sealed ? Math.Sin(idle * 1.7) * 5 : 0;
+        double fall = dropAt < 0 ? 0 : Math.Clamp((clock - dropAt) / .5, 0, 1), bob = phase == Phase.Sealed ? Math.Sin(idle * 1.7) * 5 : 0;
         double squeeze = 1 - push.X * .05 + (phase == Phase.Opening && clock < .3 ? -.05 * Math.Sin(clock / .3 * Math.PI) : 0);
-        lean.Matrix = Pose(pitch.X, turn.X + (phase == Phase.Sealed ? Math.Sin(idle * 1.1) * 3 : 0), shake + fall * 13, squeeze, fall * fall * 40, bob + fall * fall * 330);
-        back.Opacity = front.Opacity = 1 - Math.Pow(fall, 1.4);
+        // Its work done, the envelope sinks a little and fades. It is gone before it could reach the stage's edge.
+        double away = fall * fall * (3 - 2 * fall);
+        lean.Matrix = Pose(pitch.X, turn.X + (phase == Phase.Sealed ? Math.Sin(idle * 1.1) * 3 : 0), shake + away * 4, squeeze * (1 - .06 * away), away * 6, bob + away * 26);
+        back.Opacity = front.Opacity = Math.Pow(1 - fall, 1.6);
         back.Angle = front.Angle = flap.X;
         back.Light = front.Light = turn.X / 17 + (phase == Phase.Sealed ? Math.Sin(idle * 1.1) * .35 : 0) + flap.X / 400;
         var body = Envelope;
         far.LightAt = new Point(Bounds.Width / 2, body.Y + EnvelopeArt.Head + 70); far.LightUp = 1; far.LightReach = 190;
-        far.ShadowAt = new Point(Bounds.Width / 2 + fall * 30, Tall - 22); far.ShadowUp = (1 - fall) * (1 - bob / 30);
+        far.ShadowAt = new Point(Bounds.Width / 2 + away * 6, Tall - 22); far.ShadowUp = (1 - fall) * (1 - bob / 30);
         far.InvalidateVisual();
     }
 }

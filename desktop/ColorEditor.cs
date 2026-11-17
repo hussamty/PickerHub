@@ -46,9 +46,9 @@ internal sealed partial class MainWindow
         string ink = c.Text("ink");
 
         // The specimen: the selected color at full size, labelled in its own readable ink.
-        var title = Col(Text(c.Text("name"), 26, true), Text(c.Text("base") + L.T("، ") + c.Text("shade"), 12)); title.Spacing = 0; title.VerticalAlignment = VerticalAlignment.Bottom; title.HorizontalAlignment = HorizontalAlignment.Right; title.FlowDirection = L.Flow;
-        var code = Mono(state.Color, 20, true); code.VerticalAlignment = VerticalAlignment.Bottom; code.HorizontalAlignment = HorizontalAlignment.Left;
-        var english = Mono(c.Text("english").ToLowerInvariant(), 12); english.VerticalAlignment = VerticalAlignment.Top; english.HorizontalAlignment = HorizontalAlignment.Right; english.Opacity = .8;
+        var title = Col(Text(c.Text("name"), Typography.Display, true), Text(c.Text("base") + L.T("، ") + c.Text("shade"), Typography.Label)); title.Spacing = 0; title.VerticalAlignment = VerticalAlignment.Bottom; title.HorizontalAlignment = HorizontalAlignment.Right; title.FlowDirection = L.Flow;
+        var code = Mono(state.Color, Typography.Heading, true); code.VerticalAlignment = VerticalAlignment.Bottom; code.HorizontalAlignment = HorizontalAlignment.Left;
+        var english = Mono(c.Text("english").ToLowerInvariant(), Typography.Label); english.VerticalAlignment = VerticalAlignment.Top; english.HorizontalAlignment = HorizontalAlignment.Right; english.Opacity = .8;
         var quick = Cluster(LiquidOn(ink, "copy", L.T("نسخ اللون"), () => Copy(PickValue(state, state.Color))), LiquidOn(ink, "download", L.T("تصدير اللون"), () => Export(new Palette { Name = c.Text("name"), Colors = [Swatch.From(state.Color)] })));
         quick.HorizontalAlignment = HorizontalAlignment.Left; quick.VerticalAlignment = VerticalAlignment.Top; quick.FlowDirection = FlowDirection.LeftToRight;
         var face = new Panel { FlowDirection = FlowDirection.LeftToRight }; face.Children.AddRange([english, quick, title, code]);
@@ -58,7 +58,7 @@ internal sealed partial class MainWindow
 
         var hex = new TextBox { Text = state.Color, MaxLength = 7, FlowDirection = FlowDirection.LeftToRight, FontFamily = Code, FontSize = 17, MinHeight = 44, VerticalContentAlignment = VerticalAlignment.Center };
         AutomationProperties.SetAutomationId(hex, "hex-input"); AutomationProperties.SetName(hex, L.T("قيمة HEX"));
-        var error = Of(Text("", 12), "danger"); error.IsVisible = false;
+        var error = Of(Text("", Typography.Label), "danger"); error.IsVisible = false;
         void Apply() { var next = "#" + (hex.Text ?? "").Trim().TrimStart('#'); if (!Workspace.Hex(next)) { error.IsVisible = true; error.Text = L.T("أدخل ست خانات HEX."); return; } Select(next); }
         hex.KeyDown += (_, ev) => { if (ev.Key == Key.Enter) { ev.Handled = true; _ = Guard(() => { Apply(); return Task.CompletedTask; }); } };
         var input = new Grid { ColumnDefinitions = new ColumnDefinitions("*,8,Auto"), FlowDirection = FlowDirection.LeftToRight };
@@ -86,7 +86,7 @@ internal sealed partial class MainWindow
         {
             string value = formats.Text(key); var b = Of(Btn("", () => Copy(Core.Describe(state.Color).GetProperty("formats").Text(key))), "row");
             var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("52,*,20"), FlowDirection = FlowDirection.LeftToRight };
-            grid.Children.Add(Tone(Mono(key, 11, true), "Muted"));
+            grid.Children.Add(Tone(Mono(key, Typography.Caption, true), "Muted"));
             var val = Mono(value, 13); val.TextWrapping = TextWrapping.NoWrap; val.TextTrimming = TextTrimming.CharacterEllipsis; Grid.SetColumn(val, 1); grid.Children.Add(val);
             var copy = Tone(new Icon("copy", 15), "Muted"); Grid.SetColumn(copy, 2); grid.Children.Add(copy); b.Content = grid;
             AutomationProperties.SetName(b, L.T("نسخ ") + key + " " + value); ToolTip.SetTip(b, L.T("نسخ ") + key); ToolTip.SetPlacement(b, PlacementMode.Top); (key is "HEX" or "RGB" or "HSL" or "OKLCH" ? rows : extraRows).Children.Add(b); formatRows[key] = (b, val);
@@ -102,7 +102,7 @@ internal sealed partial class MainWindow
         var harmonies = Section(L.T("تناغم الألوان"), new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = strip }, harmonyTools);
 
         // Recent colors sit under the harmonies, where the shorter column has room, so the whole page shows without scrolling.
-        var side = Col(formatList, harmonies); side.Spacing = 18;
+        var side = Col(formatList, harmonies); side.Spacing = 20;
         var recent = new WrapPanel();
         var block = Col(Line(10, Label(L.T("الألوان الأخيرة")), Btn(L.T("عرض السجل"), () => Go(5))), recent); block.Margin = new Thickness(6, 0); side.Children.Add(block);
         refreshColor = () =>
@@ -124,7 +124,7 @@ internal sealed partial class MainWindow
             if (redoButton != null) redoButton.IsEnabled = edits.CanRedo;
         };
         refreshColor();
-        var main = Col(specimen, Surface(editor)); main.Spacing = 18;
+        var main = Col(specimen, Surface(editor)); main.Spacing = 20;
         content.Children.Add(Pair(main, side, 1.1, 1));
     }
 }

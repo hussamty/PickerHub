@@ -13,7 +13,7 @@ namespace PickerHub;
 internal sealed partial class MainWindow
 {
     readonly Spine spine = new();
-    readonly TextBlock pageTitle = Text("", 26, true);
+    readonly TextBlock pageTitle = Text("", Typography.Display, true);
     readonly TextBlock pageDescription = Label("");
     readonly Border currentDot = new() { Width = 14, Height = 14, CornerRadius = new CornerRadius(7), VerticalAlignment = VerticalAlignment.Center };
     readonly ThemeSwitch themeSwitch = new() { VerticalAlignment = VerticalAlignment.Center };
@@ -60,11 +60,11 @@ internal sealed partial class MainWindow
         // The eyedropper is the one global action: it leads the bar, straight after the identity.
         eyedropper.Height = 40; eyedropper.CornerRadius = new CornerRadius(20); eyedropper.HorizontalAlignment = HorizontalAlignment.Left; eyedropper.VerticalAlignment = VerticalAlignment.Center;
         eyedropper.Content = Line(9, new Icon("color-picker", 19), new TextBlock { Text = L.T("القطّارة"), VerticalAlignment = VerticalAlignment.Center },
-            Of(new Border { VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = "F8", FontSize = 11, FontFamily = Code } }, "keycap"));
+            Of(new Border { VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = "F8", FontSize = Typography.Caption, FontFamily = Code } }, "keycap"));
         eyedropper.FlowDirection = L.Flow;
         AutomationProperties.SetName(eyedropper, L.T("القطّارة"));
 
-        status.Text = Idle; status.FontSize = 12;
+        status.Text = Idle; status.FontSize = Typography.Label;
         // A message is news for a few seconds, then the line goes back to rest.
         var settle = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         settle.Tick += (_, _) => { settle.Stop(); if (!picking) status.Text = Idle; };
@@ -74,7 +74,7 @@ internal sealed partial class MainWindow
         var notice = Of(new Border { Child = status, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(12, 0) }, "status");
 
         // The wordmark follows the TrineHub rule: only the capital H takes the signal color.
-        var wordmark = new TextBlock { FontSize = 17, FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center };
+        var wordmark = new TextBlock { FontSize = Typography.Title, FontWeight = FontWeight.Bold, LetterSpacing = -.2, VerticalAlignment = VerticalAlignment.Center };
         var signal = new Avalonia.Controls.Documents.Run("H"); signal[!Avalonia.Controls.Documents.TextElement.ForegroundProperty] = new DynamicResourceExtension("AccentText");
         wordmark.Inlines = [new Avalonia.Controls.Documents.Run("Picker"), signal, new Avalonia.Controls.Documents.Run("ub")];
         undoButton = Liquid("arrow-back-up", "", () => Travel(false));
@@ -115,7 +115,7 @@ internal sealed partial class MainWindow
 
         // Title and its one-line purpose share a row, so the page keeps the height for its tools.
         pageDescription.VerticalAlignment = VerticalAlignment.Bottom; pageDescription.Margin = new Thickness(0, 0, 0, 9); pageDescription.TextWrapping = TextWrapping.Wrap;
-        var heading = new WrapPanel { Orientation = Orientation.Horizontal, FlowDirection = L.Flow }; heading.Children.Add(pageTitle); pageDescription.Margin = new Thickness(14, 8, 0, 4); heading.Children.Add(pageDescription); heading.Margin = new Thickness(18, 0, 18, 6);
+        var heading = new WrapPanel { Orientation = Orientation.Horizontal, FlowDirection = L.Flow }; heading.Children.Add(pageTitle); pageDescription.Margin = new Thickness(16, 8, 0, 6); heading.Children.Add(pageDescription); heading.Margin = new Thickness(22, 2, 22, 10);
         var work = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), FlowDirection = L.Flow,
             Margin = new Thickness(10, 0, Spine.Closed + 4, 0), MaxWidth = 1336 };
         work.Children.Add(heading);
@@ -151,7 +151,8 @@ internal sealed partial class MainWindow
         DefineTools();
         spine.Relabel(tools.Select(t => (t.Symbol, t.Title)).ToArray());
         eyedropper.FlowDirection = L.Flow;
-        eyedropper.Content = Line(9, new Icon("color-picker", 19), Text(L.T("القطّارة"), 13), Mono("F8", 11));
+        eyedropper.Content = Line(9, new Icon("color-picker", 19), new TextBlock { Text = L.T("القطّارة"), VerticalAlignment = VerticalAlignment.Center },
+            Of(new Border { VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = "F8", FontSize = Typography.Caption, FontFamily = Code } }, "keycap"));
         AutomationProperties.SetName(eyedropper, L.T("القطّارة"));
         modes = [L.T("متجاورة"), L.T("متكاملة"), L.T("ثلاثية"), L.T("متكاملة منقسمة"), L.T("أحادية اللون"), L.T("عالية التباين")];
         status.FlowDirection = L.Flow; status.Text = Idle;
@@ -172,7 +173,8 @@ internal sealed partial class MainWindow
     }
     void StyleShell()
     {
-        pageTitle.Text = tools[page].Title; pageDescription.Text = tools[page].About;
+        pageTitle.Text = tools[page].Title; pageDescription.Text = tools[page].About; pageTitle.LetterSpacing = Typography.Tracking(pageTitle.Text, Typography.Display);
+        pageTitle.LineHeight = Typography.Leading(Typography.Display); pageDescription.LineHeight = Typography.Leading(Typography.Label);
         UpdateWindowChrome();
         currentDot.Background = Paint(state.Color); ToolTip.SetTip(currentDot, state.Color);
         spine.Motion = Motion; spine.Activate(page);
@@ -181,7 +183,7 @@ internal sealed partial class MainWindow
     async Task Settings()
     {
         var d = Dialog(L.T("الإعدادات")); d.Width = 440;
-        var panel = Col(Text(L.T("الإعدادات"), 20, true), Label("PickerHub " + App.Version)); panel.Spacing = 12;
+        var panel = Col(Text(L.T("الإعدادات"), Typography.Heading, true), Label("PickerHub " + App.Version)); panel.Spacing = 12;
         var calm = new CheckBox { Content = L.T("تقليل الحركة"), IsChecked = state.ReduceMotion, IsEnabled = !damaged };
         calm.IsCheckedChanged += async (_, _) => await Guard(() => { Edit(() => state.ReduceMotion = calm.IsChecked == true); return Task.CompletedTask; });
         panel.Children.Add(Field(L.T("اللغة"), Choose(["العربية", "English"], state.Language == "ar" ? 0 : 1, i =>

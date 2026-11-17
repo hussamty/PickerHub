@@ -6,6 +6,7 @@
     and where the dark theme writes in yellow the light theme writes in black.
     Surfaces are glass: a translucent tint, a lit rim, and a blurred backdrop where they overlap content.
     Shape rule: interactive controls are pills (999), glass panes 24 to 26, inputs and swatches 12.
+    Type: Plus Jakarta Sans (Latin) and Noto Kufi Arabic (Arabic) on one scale, Typography in Ui.cs.
   -->
   <Styles.Resources>
     <ResourceDictionary>
@@ -146,6 +147,7 @@
     <Setter Property="Padding" Value="16,0"/>
     <Setter Property="MinHeight" Value="40"/>
     <Setter Property="FontSize" Value="13"/>
+    <Setter Property="FontWeight" Value="Medium"/>
     <Setter Property="Cursor" Value="Hand"/>
     <Setter Property="ClipToBounds" Value="False"/>
     <Setter Property="FocusAdorner" Value="{x:Null}"/>
@@ -389,8 +391,9 @@
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="CornerRadius" Value="999"/>
     <Setter Property="Padding" Value="12,6"/>
-    <Setter Property="FontSize" Value="12"/>
-    <Setter Property="FontFamily" Value="avares://PickerHub/Fonts#IBM Plex Sans Arabic, Segoe UI, sans-serif"/>
+    <Setter Property="FontSize" Value="12.5"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+    <Setter Property="FontFamily" Value="avares://PickerHub/Fonts#Plus Jakarta Sans, avares://PickerHub/Fonts#Noto Kufi Arabic"/>
   </Style>
   <Style Selector="ToolTip:open">
     <Style.Animations>

@@ -101,6 +101,16 @@ The clipping regression was a ScrollViewer padding/viewport mismatch: the report
 Linux/Windows use default custom chrome with native move/resize operations and window state actions. CI's isolated Openbox session checks minimize, maximize, restore, titlebar drag and corner resize. These checks do not prove Windows Snap, real mixed-DPI behavior or macOS clipboard integration; those remain explicit cases in the hardware test guide. macOS retains its native window controls.
 
 
+## 0.7.0 typography, window state and envelope review
+
+The interface ships Plus Jakarta Sans and Noto Kufi Arabic as static Regular, Medium, SemiBold and Bold instances cut from the upstream variable fonts by `scripts/fonts.py`, so weight matching never depends on a platform's variable-font support or synthetic bold. Both families carry a single family name across all four files. Noto Kufi Arabic's line box is tightened to 1.08/0.52 em in hhea and OS/2 typo metrics; letters, hamza and tanween reach 1.04 em and tails 0.47 em, so nothing is cut. Windows uses the typo metrics because USE_TYPO_METRICS is set, and the win metrics still cover every glyph. Both fonts are OFL with no reserved font names; their licences are in `third_party/`.
+
+The middle window action restores a maximized window instead of disappearing. The isolated window-manager suite now clicks it with a real pointer and checks that the window returns to its normal state rather than minimizing, then maximizes and double-clicks the bar.
+
+The palette-of-the-day envelope is painted with Skia from exact paths: tangent-arc fillets, a perspective hinge matrix, clip-inside edge strokes so outer edges are anti-aliased once, the inside omitted while the flap is closed so no dark fringe can appear, and 1.5-pixel overlaps where the lining meets the pocket and the fold. Its exit stays inside the stage. `--preview-envelope` runs it in a temporary library without tray or global shortcut, so it can run beside the real app.
+
+The UI suite now checks every page against its viewport width at 560×480, 820×620, 1120×820 and 1680×1000 in Arabic and English, walking right-to-left subtrees by hand because point translation does not follow their mirroring. It also checks that top-bar actions never overlap or leave the window and that every navigation row stays on screen. It records the sealed envelope in both themes. Real-hardware DPI, Windows Snap and macOS behaviour remain manual checks.
+
 ## 0.6.1 compatibility and chrome review
 
 The icon-only update is included in this release. The tray previously used a generated yellow disc while other surfaces used the mascot; the tray and titlebar now use the small-size mascot. CI checks ICO source sizes and the actual Windows executable icon resources, ICNS bundle metadata/content, and all eight Debian hicolor assets plus the desktop entry. The application window and tray icons are checked in the native UI run. OS icon caches and dock integration still need observation on real desktops.

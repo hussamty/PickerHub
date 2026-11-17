@@ -14,16 +14,31 @@ using Avalonia.Threading;
 
 namespace PickerHub;
 
+// One type scale for both scripts. Plus Jakarta Sans sets Latin and Noto Kufi Arabic sets Arabic: both are
+// geometric and low in contrast and share a 536-unit x-height, so a line that mixes them reads as one face.
+internal static class Typography
+{
+    public const string Family = "avares://PickerHub/Fonts#Plus Jakarta Sans, avares://PickerHub/Fonts#Noto Kufi Arabic";
+    public static readonly FontFamily Face = new(Family);
+    public static readonly FontFamily Code = new("Cascadia Mono, JetBrains Mono, DejaVu Sans Mono, Menlo, Consolas, monospace");
+    public const double Caption = 11, Label = 12.5, Control = 13, Body = 14, Lead = 15, Title = 17, Heading = 20, Feature = 24, Display = 28;
+    // Arabic needs room for its tails and dots; Latin reads better a little tighter.
+    public static double Leading(double size) => size * (L.Language == "ar" ? 1.7 : 1.5);
+    static bool Arabic(string text) => text.Any(c => c is >= '\u0600' and <= '\u06FF' or >= '\u0750' and <= '\u077F' or >= '\u08A0' and <= '\u08FF' or >= '\uFB50' and <= '\uFDFF' or >= '\uFE70' and <= '\uFEFF');
+    // Latin display sizes close up a little. Arabic is never letter-spaced: it would break the joins.
+    public static double Tracking(string? text, double size) => size >= Heading && !Arabic(text ?? "") ? -.012 * size : 0;
+}
+
 // Building blocks shared by every page. Colors and states come from Theme.axaml.
 internal sealed partial class MainWindow
 {
-    static readonly FontFamily Code = new("Cascadia Mono, JetBrains Mono, DejaVu Sans Mono, Menlo, Consolas, monospace");
+    static FontFamily Code => Typography.Code;
     static IBrush Paint(string hex) => new SolidColorBrush(Color.Parse(hex));
     static IBrush Paint(string hex, double alpha) { var c = Color.Parse(hex); return new SolidColorBrush(Color.FromArgb((byte)(alpha * 255), c.R, c.G, c.B)); }
     static T Tone<T>(T control, string token) where T : Control { control[!TextElement.ForegroundProperty] = new DynamicResourceExtension(token); return control; }
     static T Of<T>(T control, params string[] classes) where T : Control { foreach (var name in classes) control.Classes.Add(name); return control; }
 
-    static StackPanel Col(params Control[] controls) { var p = new StackPanel { Spacing = 10 }; p.Children.AddRange(controls); return p; }
+    static StackPanel Col(params Control[] controls) { var p = new StackPanel { Spacing = 12 }; p.Children.AddRange(controls); return p; }
     // Wrapping toolbar row.
     static WrapPanel Row(params Control[] controls) { var p = new WrapPanel(); foreach (var c in controls) { c.Margin = new Thickness(4); p.Children.Add(c); } return p; }
     // Non-wrapping run, for button contents and liquid clusters.
@@ -31,19 +46,18 @@ internal sealed partial class MainWindow
     // Liquid buttons that share one fluid body: a swelling button flows into its neighbours.
     static Goo Cluster(params Control[] controls) { var goo = new Goo(); foreach (var c in controls) { c.Classes.Add("goo"); goo.Add(c); } return goo; }
 
-    static TextBlock Text(string text, double size = 14, bool bold = false) => new()
+    static TextBlock Text(string text, double size = Typography.Body, bool bold = false) => new()
     {
-        Text = text, LineHeight = size * 1.7, FontSize = size, FontWeight = bold ? FontWeight.Bold : FontWeight.Normal, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center,
-        // Arabic final letters carry dots below the line box at display sizes.
-        Padding = new Thickness(0, 0, 0, size >= 18 ? size * .2 : 0)
+        Text = text, LineHeight = Typography.Leading(size), FontSize = size, FontWeight = bold ? FontWeight.SemiBold : FontWeight.Normal,
+        LetterSpacing = Typography.Tracking(text, size), TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center
     };
-    static TextBlock Mono(string text, double size = 13, bool bold = false)
+    static TextBlock Mono(string text, double size = Typography.Control, bool bold = false)
     {
-        var t = Text(text, size, bold); t.FontFamily = Code; t.FlowDirection = FlowDirection.LeftToRight; return t;
+        var t = Text(text, size, bold); t.FontFamily = Code; t.FlowDirection = FlowDirection.LeftToRight; t.LetterSpacing = 0; return t;
     }
     static TextBlock Label(string value)
     {
-        var t = Of(Text(value, 12), "muted");
+        var t = Of(Text(value, Typography.Label), "muted");
         if (Workspace.Hex(value)) { t.FontFamily = Code; t.FlowDirection = FlowDirection.LeftToRight; t.HorizontalAlignment = HorizontalAlignment.Right; }
         return t;
     }
@@ -86,18 +100,18 @@ internal sealed partial class MainWindow
         b[!BorderBrushProperty] = new DynamicResourceExtension("Line"); b.BorderThickness = new Thickness(1);
         ToolTip.SetTip(b, hex); ToolTip.SetPlacement(b, PlacementMode.Top); return b;
     }
-    static Glass Surface(Control child) => new() { Child = child, Padding = new Thickness(20) };
+    static Glass Surface(Control child) => new() { Child = child, Padding = new Thickness(24, 22) };
     static Control Section(string title, Control body, Control? actions = null)
     {
-        var top = new DockPanel { Margin = new Thickness(0, 0, 0, 14), MinHeight = 40 };
+        var top = new DockPanel { Margin = new Thickness(0, 0, 0, 16), MinHeight = 40 };
         if (actions != null) { DockPanel.SetDock(actions, Dock.Right); top.Children.Add(actions); }
-        top.Children.Add(Text(title, 16, true));
+        top.Children.Add(Text(title, Typography.Title, true));
         return Surface(Col(top, body));
     }
     static Control Empty(string title, string help, string symbol, Control? action = null)
     {
-        var stack = Col(Tone(new Icon(symbol, 34), "Muted"), Text(title, 18, true), Label(help));
-        stack.Spacing = 12; stack.HorizontalAlignment = HorizontalAlignment.Center; stack.Margin = new Thickness(20, 44);
+        var stack = Col(Tone(new Icon(symbol, 34), "Muted"), Text(title, Typography.Heading, true), Label(help));
+        stack.Spacing = 12; stack.HorizontalAlignment = HorizontalAlignment.Center; stack.Margin = new Thickness(24, 48);
         foreach (var child in stack.Children) child.HorizontalAlignment = HorizontalAlignment.Center;
         if (action != null) { action.HorizontalAlignment = HorizontalAlignment.Center; action.Margin = new Thickness(0, 8, 0, 0); stack.Children.Add(action); }
         return Surface(stack);
@@ -139,7 +153,7 @@ internal sealed partial class MainWindow
         var input = new TextBox { Text = initial, MaxLength = hex ? 7 : 100, MinHeight = 42, VerticalContentAlignment = VerticalAlignment.Center, FlowDirection = hex ? FlowDirection.LeftToRight : L.Flow };
         if (hex) input.FontFamily = Code;
         AutomationProperties.SetName(input, title);
-        var feedback = Of(Text("", 12), "danger"); feedback.IsVisible = false;
+        var feedback = Of(Text("", Typography.Label), "danger"); feedback.IsVisible = false;
         var d = Dialog(title);
         void OK()
         {
@@ -147,20 +161,20 @@ internal sealed partial class MainWindow
             if (val.Length > 0 && (!hex || Workspace.Hex(val))) d.Close(val);
             else { feedback.IsVisible = true; feedback.Text = hex ? L.T("أدخل ست خانات HEX.") : L.T("أدخل اسماً."); }
         }
-        d.Content = Col(Text(title, 18, true), input, feedback, Choices(Btn(L.T("حفظ"), OK, true), Btn(L.T("إلغاء"), () => d.Close())));
+        d.Content = Col(Text(title, Typography.Heading, true), input, feedback, Choices(Btn(L.T("حفظ"), OK, true), Btn(L.T("إلغاء"), () => d.Close())));
         input.KeyDown += (_, ev) => { if (ev.Key == Avalonia.Input.Key.Enter) { ev.Handled = true; OK(); } };
         d.Opened += () => { input.Focus(); input.SelectAll(); }; return await d.Show<string?>();
     }
     async Task<bool> Confirm(string title)
     {
-        var d = Dialog(title); d.Content = Col(Text(title, 16), Choices(Btn(L.T("تأكيد"), () => d.Close(true), true), Btn(L.T("إلغاء"), () => d.Close(false))));
+        var d = Dialog(title); d.Content = Col(Text(title, Typography.Lead), Choices(Btn(L.T("تأكيد"), () => d.Close(true), true), Btn(L.T("إلغاء"), () => d.Close(false))));
         return await d.Show<bool>();
     }
     async Task<int?> SelectOption(string title, string[] choices, int start = 0)
     {
         var d = Dialog(title); int picked = start; var choice = Choose(choices, start, i => picked = i); choice.HorizontalAlignment = HorizontalAlignment.Stretch;
         AutomationProperties.SetName(choice, title);
-        d.Content = Col(Text(title, 16), choice, Choices(Btn(L.T("اختيار"), () => d.Close((int?)picked), true), Btn(L.T("إلغاء"), () => d.Close())));
+        d.Content = Col(Text(title, Typography.Lead), choice, Choices(Btn(L.T("اختيار"), () => d.Close((int?)picked), true), Btn(L.T("إلغاء"), () => d.Close())));
         return await d.Show<int?>();
     }
 }

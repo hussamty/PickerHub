@@ -145,10 +145,13 @@ def main():
                     icons.mkdir(parents=True)
                     shutil.copy2(ROOT / f"desktop/Assets/icon-{size}.png", icons / "pickerhub.png")
                 (deb / "usr/bin/pickerhub").symlink_to("/opt/pickerhub/PickerHub")
+                # The launcher's context menu also offers the envelope preview, which runs in a throwaway library.
                 (deb / "usr/share/applications/pickerhub.desktop").write_text(
                     "[Desktop Entry]\nType=Application\nName=PickerHub\nExec=/opt/pickerhub/PickerHub\n"
                     "TryExec=/opt/pickerhub/PickerHub\nIcon=pickerhub\nTerminal=false\nCategories=Graphics;Utility;\nStartupWMClass=pickerhub\n"
-                    f"X-PickerHub-Version={VERSION}\n")
+                    f"Actions=preview-envelope;\nX-PickerHub-Version={VERSION}\n\n"
+                    "[Desktop Action preview-envelope]\nName=Preview the daily envelope\nName[ar]=معاينة ظرف باقة اليوم\n"
+                    "Exec=/opt/pickerhub/PickerHub --preview-envelope\n", encoding="utf-8")
                 (deb / "DEBIAN/control").write_text(
                     f"Package: pickerhub\nVersion: {VERSION}\nArchitecture: amd64\nMaintainer: PickerHub contributors\nSection: graphics\n"
                     "Priority: optional\nDepends: libc6, libgcc-s1, libstdc++6, libx11-6, libgstreamer1.0-0, libgstreamer-plugins-base1.0-0, libice6, libsm6, libfontconfig1, libicu78 | libicu76 | libicu74 | libicu72 | libicu70, libssl3t64 | libssl3\n"
