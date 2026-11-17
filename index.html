@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marj Greenhouse Café</title>
+<meta name="description" content="A launch page for a fictional greenhouse café. Color system created in PickerHub.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Marj Greenhouse Café · Color system created in PickerHub">
+<meta property="og:description" content="Seven color roles in light and dark, contrast-checked and exported from PickerHub 1.0.0.">
+<meta property="og:image" content="https://hussamty.github.io/PickerHub/og.jpg">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:url" content="https://hussamty.github.io/PickerHub/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.png">
+<style>html{-webkit-text-size-adjust:100%}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a greenhouse arch beside the headline, then the campaign pieces in both themes, then how PickerHub made them.
+   Color system created in PickerHub 1.0.0: the seven roles of its palette of the day "Spring meadow",
+   light roles on :root and dark roles in the dark blocks, plus its monochrome harmony for the meadow. */
+:root {
+  --background: #F5F7F5; --surface: #FEFEFE; --primary: #3F7F34; --accent: #AB890D;
+  --text: #1D291A; --muted: #5F7458; --border: #D9E0D6;
+  --on-primary: #F5F7F5; --on-accent: #1D291A;
+  /* PickerHub's monochrome harmony of the primary green, used for the meadow */
+  --m1: #31552B; --m2: #4E8945; --m3: #6DBE60; --m4: #9CD393; --m5: #CCE8C7;
+  --display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --body: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --arabic: "Noto Kufi Arabic", "Geeza Pro", "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --background: #141813; --surface: #232921; --primary: #6DBE60; --accent: #F1CB41;
+  --text: #EFF1EF; --muted: #ABB3A8; --border: #414C3E; --on-primary: #141813; --on-accent: #141813; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --background: #141813; --surface: #232921; --primary: #6DBE60; --accent: #F1CB41;
+  --text: #EFF1EF; --muted: #ABB3A8; --border: #414C3E; --on-primary: #141813; --on-accent: #141813; color-scheme: dark }
+/* Pieces that always show one theme, whatever the viewer's. */
+.t-light { --background: #F5F7F5; --surface: #FEFEFE; --primary: #3F7F34; --accent: #AB890D; --text: #1D291A; --muted: #5F7458; --border: #D9E0D6; --on-primary: #F5F7F5; --on-accent: #1D291A; color: var(--text); }
+.t-dark { --background: #141813; --surface: #232921; --primary: #6DBE60; --accent: #F1CB41; --text: #EFF1EF; --muted: #ABB3A8; --border: #414C3E; --on-primary: #141813; --on-accent: #141813; color: var(--text); }
+
+* { box-sizing: border-box }
+body { background: var(--background); color: var(--text); font: 400 16px/1.6 var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 0; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+[lang="ar"] { font-family: var(--arabic); }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -.01em; }
+p { margin: 0; }
+.eyebrow { font: 600 12px/1 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.code { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+/* ---- Top line ---- */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 22px; }
+.brand { display: flex; align-items: baseline; gap: 12px; }
+.brand b { font: 600 26px/1 var(--display); }
+.brand span { font: 700 22px/1 var(--arabic); color: var(--primary); }
+.made { display: inline-flex; align-items: center; gap: 8px; font: 600 13px/1 var(--body); color: var(--text); border: 1px solid var(--border); border-radius: 999px; padding: 9px 14px; }
+.made i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); display: block; }
+
+/* ---- Hero ---- */
+.hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 48px; align-items: center; padding-block: 28px 72px; }
+.hero h1 { font-size: clamp(42px, 6vw, 78px); line-height: 1.02; }
+.hero h1 em { font-style: italic; color: var(--primary); }
+.hero .ar { font: 600 clamp(22px, 2.6vw, 30px)/1.7 var(--arabic); color: var(--muted); margin-top: 14px; }
+.hero .lede { max-width: 34em; margin-top: 22px; font-size: 18px; color: var(--muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+.btn { font: 600 15px/1 var(--body); border-radius: 999px; padding: 15px 24px; border: 1px solid transparent; cursor: pointer; }
+.btn.primary { background: var(--primary); color: var(--on-primary); }
+.btn.quiet { background: transparent; color: var(--text); border-color: var(--border); }
+.btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.facts { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 38px; }
+.facts div { display: grid; gap: 4px; }
+.facts strong { font: 600 22px/1 var(--display); }
+.facts span { font-size: 13px; color: var(--muted); }
+
+/* The greenhouse: an arched pane with the meadow growing inside it. */
+.arch { position: relative; aspect-ratio: 4 / 5; max-width: 100%; border-radius: 999px 999px 28px 28px; overflow: hidden; background: linear-gradient(var(--surface), var(--background)); border: 1px solid var(--border); }
+.arch canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.arch .mullion { position: absolute; inset: 0; pointer-events: none; background:
+  linear-gradient(90deg, transparent calc(50% - 1px), var(--border) calc(50% - 1px), var(--border) calc(50% + 1px), transparent calc(50% + 1px)),
+  linear-gradient(0deg, transparent calc(58% - 1px), var(--border) calc(58% - 1px), var(--border) calc(58% + 1px), transparent calc(58% + 1px)); opacity: .55; }
+.arch .tag { position: absolute; left: 20px; right: 20px; bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 12px 16px; }
+.arch .tag b { font: 600 15px/1.2 var(--body); }
+.arch .tag span { font-size: 13px; color: var(--muted); }
+.arch .tag .chip { background: var(--accent); color: var(--on-accent); font: 700 12px/1 var(--body); padding: 8px 10px; border-radius: 999px; white-space: nowrap; }
+
+/* ---- Campaign ---- */
+section { padding-block: 64px; border-top: 1px solid var(--border); }
+.head { display: grid; gap: 10px; max-width: 46em; margin-bottom: 36px; }
+.head h2 { font-size: clamp(30px, 3.6vw, 44px); line-height: 1.1; }
+.head p { color: var(--muted); }
+.pieces { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: start; }
+.piece { display: grid; gap: 12px; min-width: 0; }
+.piece figcaption { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.piece figcaption b { color: var(--text); font-weight: 600; }
+figure { margin: 0; }
+
+/* Poster (dark roles) */
+.poster { background: var(--background); border-radius: 22px; padding: 28px; aspect-ratio: 3 / 4; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; position: relative; border: 1px solid var(--border); }
+.poster .big { font: 700 clamp(84px, 11vw, 132px)/1 var(--arabic); color: var(--primary); position: relative; }
+.poster .sun { position: absolute; width: 46%; aspect-ratio: 1; border-radius: 50%; background: var(--accent); right: -10%; top: 9%; }
+.poster h3 { font-size: 26px; line-height: 1.15; position: relative; }
+.poster .row { display: flex; justify-content: space-between; align-items: end; gap: 12px; position: relative; }
+.poster .row span { font-size: 13px; color: var(--muted); }
+.poster .date { font: 600 13px/1.3 var(--body); text-align: right; }
+
+/* Menu (light roles) */
+.menu { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 26px; display: grid; gap: 18px; }
+.menu header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
+.menu header h3 { font-size: 24px; }
+.menu header span { font: 600 16px/1 var(--arabic); color: var(--primary); }
+.menu ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.menu li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 14px; }
+.menu li b { font-weight: 600; }
+.menu li .price { font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+.menu li small { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+.menu li small [lang="ar"] { font-size: 13px; }
+.menu .special { background: var(--accent); color: var(--on-accent); border-radius: 14px; padding: 12px 14px; font: 600 13px/1.4 var(--body); }
+
+/* Phone (dark roles) */
+.phone { background: var(--background); border: 1px solid var(--border); border-radius: 34px; padding: 14px; aspect-ratio: 9 / 14; max-width: 100%; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+.phone .bar { display: flex; justify-content: space-between; font: 600 12px/1 var(--body); color: var(--muted); padding: 6px 8px 0; }
+.phone .card { background: var(--surface); border-radius: 22px; padding: 16px; display: grid; gap: 10px; }
+.phone .thumb { height: 120px; border-radius: 16px; background:
+  radial-gradient(circle at 70% 35%, var(--accent) 0 15%, transparent 16%),
+  linear-gradient(170deg, var(--m4), var(--m2) 60%, var(--m1)); }
+.phone .card b { font: 600 18px/1.2 var(--display); }
+.phone .card span { font-size: 13px; color: var(--muted); }
+.phone .line { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+.phone .qty { display: inline-flex; align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; font-family: var(--mono); }
+.phone .go { margin-top: auto; background: var(--primary); color: var(--on-primary); border-radius: 999px; padding: 15px; text-align: center; font: 700 15px/1 var(--body); }
+
+/* ---- Process ---- */
+.steps { display: grid; gap: 56px; }
+.step { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 40px; align-items: start; }
+.step .num { font: 600 13px/1 var(--mono); color: var(--primary); }
+.step h3 { font-size: 28px; line-height: 1.15; margin-top: 10px; }
+.step .copy p { color: var(--muted); margin-top: 12px; max-width: 34em; }
+.shot { border-radius: 18px; border: 1px solid var(--border); overflow: hidden; background: #111; }
+.shot img { display: block; width: 100%; height: auto; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+
+.roles { width: 100%; border-collapse: collapse; font-size: 14px; }
+.roles th { text-align: left; font: 600 12px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 0 8px 12px; }
+.roles td { padding: 9px 8px; border-top: 1px solid var(--border); vertical-align: middle; }
+.sw { display: inline-flex; align-items: center; gap: 10px; }
+.sw i { width: 22px; height: 22px; border-radius: 7px; border: 1px solid var(--border); display: block; flex: none; }
+.sw small { color: var(--muted); font-size: 12px; display: block; }
+.scroll { overflow-x: auto; }
+
+.checks { display: grid; gap: 10px; }
+.check { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 10px 14px; }
+.check .sample { font: 700 15px/1 var(--body); border-radius: 9px; padding: 9px 11px; min-width: 52px; text-align: center; }
+.check .what { font-size: 14px; }
+.check .what small { display: block; color: var(--muted); font-size: 12px; }
+.check .ratio { font: 500 15px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.badge { font: 700 11px/1 var(--body); letter-spacing: .06em; border-radius: 999px; padding: 6px 9px; border: 1px solid var(--border); }
+.badge.pass { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+.badge.fail { color: var(--text); }
+
+.scale { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+.scale div { padding: 46px 10px 10px; font: 500 11px/1 var(--mono); }
+.scale-label { font: 600 13px/1 var(--body); margin: 18px 0 10px; }
+
+.tokens { position: relative; }
+.tokens pre { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 18px; overflow-x: auto; font: 500 13px/1.7 var(--mono); }
+.tokens button { position: absolute; top: 12px; right: 12px; font: 600 13px/1 var(--body); border-radius: 999px; padding: 9px 14px; background: var(--background); color: var(--text); border: 1px solid var(--border); cursor: pointer; }
+.tokens button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+footer { padding-block: 40px 56px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+
+@media (max-width: 900px) {
+  .hero, .step { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .pieces { grid-template-columns: minmax(0, 1fr); max-width: 440px; }
+  .arch { max-width: 440px; }
+}
+@media (max-width: 520px) {
+  .check { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .check .badge { grid-column: 3; }
+  .made { display: none; }
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><b>Marj</b><span lang="ar" dir="rtl">مرج</span></div>
+    <div class="made"><i aria-hidden="true"></i>Color system created in PickerHub</div>
+  </header>
+
+  <div class="hero">
+    <div>
+      <p class="eyebrow">Greenhouse café · Spring 2027</p>
+      <h1>Breakfast where the <em>meadow</em> grows.</h1>
+      <p class="ar" lang="ar" dir="rtl">فطورك حيث ينمو المرج.</p>
+      <p class="lede">Marj is a glass greenhouse with a kitchen in the middle. Herbs are cut at the table, honey comes from the hives on the roof, and every season the room changes color with the beds around it.</p>
+      <div class="actions">
+        <button class="btn primary" type="button" id="book">Book a table</button>
+        <button class="btn quiet" type="button" id="menu-link">See the spring menu</button>
+      </div>
+      <div class="facts">
+        <div><strong>42</strong><span>seats under glass</span></div>
+        <div><strong>3 hives</strong><span>on the roof</span></div>
+        <div><strong>7:00</strong><span>doors open daily</span></div>
+      </div>
+    </div>
+    <div class="arch" aria-label="A greenhouse window with grass and yellow flowers growing inside">
+      <canvas id="meadow"></canvas>
+      <div class="mullion"></div>
+      <div class="tag"><div><b>This week's beds</b><br><span>Mint, chamomile, wild thyme</span></div><span class="chip">In bloom</span></div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">The launch campaign</p>
+      <h2>One palette, both themes, three pieces.</h2>
+      <p>PickerHub exported Spring meadow as a light set and a dark set of the same seven roles. The poster and the order screen use the dark set; the menu uses the light set. This page itself follows your system theme with the same two sets.</p>
+    </div>
+    <div class="pieces">
+      <figure class="piece">
+        <div class="poster t-dark">
+          <div class="sun" aria-hidden="true"></div>
+          <div class="big" lang="ar" dir="rtl">مرج</div>
+          <div>
+            <h3>The greenhouse opens on the first day of spring.</h3>
+            <div class="row" style="margin-top:16px"><span>Marj · Greenhouse café</span><span class="date">21 March<br>7:00</span></div>
+          </div>
+        </div>
+        <figcaption><b>Opening poster</b><span>Dark roles</span></figcaption>
+      </figure>
+
+      <figure class="piece" id="menu">
+        <div class="menu t-light">
+          <header><h3>Spring menu</h3><span lang="ar" dir="rtl">قائمة الربيع</span></header>
+          <ul>
+            <li><b>Meadow eggs</b><span class="price">38</span><small>Soft eggs, green herb oil, toasted seeds · <span lang="ar" dir="rtl">بيض المرج</span></small></li>
+            <li><b>Rooftop honey toast</b><span class="price">29</span><small>Sourdough, whipped labneh, our own honey</small></li>
+            <li><b>Thyme &amp; lemon tea</b><span class="price">16</span><small>Cut from bed 4 when you order</small></li>
+            <li><b>Pea and mint soup</b><span class="price">34</span><small>With chamomile cream</small></li>
+          </ul>
+          <div class="special">Today only: chamomile honey cake, 22</div>
+        </div>
+        <figcaption><b>Table menu</b><span>Light roles</span></figcaption>
+      </figure>
+
+      <figure class="piece">
+        <div class="phone t-dark">
+          <div class="bar"><span>9:41</span><span>Marj</span></div>
+          <div class="card">
+            <div class="thumb" aria-hidden="true"></div>
+            <b>Rooftop honey toast</b>
+            <span>Sourdough, whipped labneh, honey from our hives</span>
+            <div class="line"><span class="qty" aria-label="Quantity 2"><span>−</span>2<span>+</span></span><span class="code">58</span></div>
+          </div>
+          <div class="card">
+            <div class="line"><span>Table</span><b style="font:600 15px var(--body)">Under the fig, 12</b></div>
+            <div class="line"><span>Ready in</span><b style="font:600 15px var(--body)">12 min</b></div>
+          </div>
+          <div class="go">Place order</div>
+        </div>
+        <figcaption><b>Order screen</b><span>Dark roles</span></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">Color system created in PickerHub</p>
+      <h2>Five steps in PickerHub 1.0.0</h2>
+      <p>Marj's color system, its roles, both themes, the contrast checks and the illustration greens, came from PickerHub 1.0.0 in the order below.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="copy">
+          <p class="num">01</p>
+          <h3>Open the palette of the day</h3>
+          <p>PickerHub deals one nature palette every 24 hours in a sealed envelope. Opening it dealt Spring meadow, "young grass and small yellow flowers", tagged vivid and natural.</p>
+        </div>
+        <div class="pair">
+          <div class="shot"><img src="app-envelope.jpg" alt="PickerHub's palette of the day page with the sealed yellow envelope"></div>
+          <div class="shot"><img src="app-opening.jpg" alt="The envelope opening, with the first card rising out of it and confetti"></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="copy">
+          <p class="num">02</p>
+          <h3>Seven roles, in light and dark</h3>
+          <p>The palette arrives as roles, not loose swatches: background, surface, primary, accent, text, muted text and border. PickerHub tunes each one separately for a light and a dark theme, and names every color.</p>
+        </div>
+        <div>
+          <div class="shot" style="margin-bottom:18px"><img src="app-daily.jpg" alt="PickerHub showing the Spring meadow cards: Background, Surface, Primary, Accent, Text, Muted text and Border"></div>
+          <div class="scroll">
+            <table class="roles">
+              <thead><tr><th>Role</th><th>Light</th><th>Dark</th></tr></thead>
+              <tbody id="roles"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="copy">
+          <p class="num">03</p>
+          <h3>Check every pair before using it</h3>
+          <p>PickerHub's contrast checker measured each text and fill pair against WCAG. One pair failed: the light theme’s background color on its accent, at 3.09:1. So the accent never carries light text here: in the light theme it holds the dark text color (4.56:1), and in the dark theme dark text on the accent reaches 11.42:1.</p>
+        </div>
+        <div class="checks" id="checks"></div>
+      </div>
+
+      <div class="step">
+        <div class="copy">
+          <p class="num">04</p>
+          <h3>Grow the meadow from a harmony</h3>
+          <p>The greenhouse illustration stays inside the system. Its grass is PickerHub's monochrome harmony of the primary green, five steps from shade to tint; the flowers are the accent. The order screen's thumbnail uses the same scale.</p>
+        </div>
+        <div>
+          <p class="scale-label">Monochrome harmony of #6DBE60</p>
+          <div class="scale" id="mono"></div>
+          <p class="scale-label">Analogous harmony, kept for the summer menu</p>
+          <div class="scale" id="analogous"></div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="copy">
+          <p class="num">05</p>
+          <h3>Export the roles as tokens</h3>
+          <p>"Export light and dark roles" gives both sets in one step. These are the exact values behind this page, written as CSS custom properties.</p>
+        </div>
+        <div class="tokens">
+          <button type="button" id="copy">Copy tokens</button>
+          <pre id="token-text"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <footer>
+    <span>Marj is a fictional brand, designed to show PickerHub at work.</span>
+    <span>Color system created in PickerHub 1.0.0 · Spring meadow</span>
+  </footer>
+</div>
+
+<script>
+// Data exactly as PickerHub's engine returned it for Spring meadow.
+const ROLES = [
+  ["Background", "background", "#F5F7F5", "#141813"], ["Surface", "surface", "#FEFEFE", "#232921"],
+  ["Primary", "primary", "#3F7F34", "#6DBE60"], ["Accent", "accent", "#AB890D", "#F1CB41"],
+  ["Text", "text", "#1D291A", "#EFF1EF"], ["Muted text", "muted", "#5F7458", "#ABB3A8"], ["Border", "border", "#D9E0D6", "#414C3E"]
+];
+const NAMES = {"#141813": "Black", "#232921": "Charcoal", "#6DBE60": "Emerald", "#F1CB41": "Gold", "#EFF1EF": "White smoke", "#ABB3A8": "Silver", "#414C3E": "Charcoal", "#F5F7F5": "White smoke", "#FEFEFE": "White", "#3F7F34": "Forest green", "#AB890D": "Olive", "#1D291A": "Black", "#5F7458": "Gray", "#D9E0D6": "Lavender"};
+const CHECKS = [
+  ["Text on background", "Dark", "#EFF1EF", "#141813", 15.81, "AAA"],
+  ["Muted text on background", "Dark", "#ABB3A8", "#141813", 8.33, "AAA"],
+  ["Background on primary (buttons)", "Dark", "#141813", "#6DBE60", 7.85, "AAA"],
+  ["Background on accent", "Dark", "#141813", "#F1CB41", 11.42, "AAA"],
+  ["Text on background", "Light", "#1D291A", "#F5F7F5", 14.09, "AAA"],
+  ["Muted text on background", "Light", "#5F7458", "#F5F7F5", 4.73, "AA"],
+  ["Background on primary (buttons)", "Light", "#F5F7F5", "#3F7F34", 4.54, "AA"],
+  ["Text on accent", "Light", "#1D291A", "#AB890D", 4.56, "AA"],
+  ["Background on accent", "Light", "#F5F7F5", "#AB890D", 3.09, "Fails AA"]
+];
+const MONO = ["#31552B", "#4E8945", "#6DBE60", "#9CD393", "#CCE8C7"];
+const ANALOGOUS = ["#BEB160", "#9CBE60", "#6DBE60", "#60BE82", "#60BEB1"];
+
+const sw = (hex) => `<span class="sw"><i style="background:${hex}"></i><span><span class="code">${hex}</span><small>${NAMES[hex] || ""}</small></span></span>`;
+document.getElementById("roles").innerHTML = ROLES.map(([name, , light, dark]) => `<tr><td>${name}</td><td>${sw(light)}</td><td>${sw(dark)}</td></tr>`).join("");
+document.getElementById("checks").innerHTML = CHECKS.map(([what, theme, fg, bg, ratio, level]) =>
+  `<div class="check"><span class="sample" style="color:${fg};background:${bg}">Aa</span><span class="what">${what}<small>${theme} theme · ${fg} on ${bg}</small></span><span class="ratio">${ratio.toFixed(2)}:1</span><span class="badge ${level.startsWith("Fails") ? "fail" : "pass"}">${level}</span></div>`).join("");
+const ink = (hex) => { const n = parseInt(hex.slice(1), 16), l = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; return l > .55 ? "#1D291A" : "#EFF1EF"; };
+for (const [id, list] of [["mono", MONO], ["analogous", ANALOGOUS]])
+  document.getElementById(id).innerHTML = list.map(h => `<div style="background:${h};color:${ink(h)}">${h}</div>`).join("");
+const tokens = ":root {\n" + ROLES.map(([, k, l]) => `  --${k}: ${l};`).join("\n") + "\n}\n@media (prefers-color-scheme: dark) {\n  :root {\n" + ROLES.map(([, k, , d]) => `    --${k}: ${d};`).join("\n") + "\n  }\n}";
+document.getElementById("token-text").textContent = tokens;
+const copy = document.getElementById("copy");
+copy.addEventListener("click", () => {
+  const done = () => { copy.textContent = "Copied"; setTimeout(() => copy.textContent = "Copy tokens", 1600); };
+  navigator.clipboard?.writeText(tokens).then(done, () => { const r = document.createRange(); r.selectNodeContents(document.getElementById("token-text")); getSelection().removeAllRanges(); getSelection().addRange(r); copy.textContent = "Selected, press Ctrl+C"; });
+});
+for (const id of ["menu-link", "book"]) document.getElementById(id).addEventListener("click", () => document.getElementById("menu").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }));
+
+// The meadow: blades from the monochrome harmony, flowers from the accent, swaying in a light wind.
+const canvas = document.getElementById("meadow"), ctx = canvas.getContext("2d");
+const still = matchMedia("(prefers-reduced-motion: reduce)");
+let blades = [], flowers = [], W = 0, H = 0;
+function seed() {
+  const dpr = Math.min(2, devicePixelRatio || 1), r = canvas.getBoundingClientRect();
+  W = r.width; H = r.height; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  let s = 7; const rand = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  blades = Array.from({ length: Math.round(W * 1.15) }, () => {
+    const depth = rand();
+    return { x: rand() * W, h: H * (0.16 + 0.42 * depth) * (0.6 + 0.4 * rand()), w: 2 + 4 * depth, tone: Math.min(4, Math.floor(depth * 3 + rand() * 2.2)), lean: (rand() - .5) * .5, phase: rand() * 6.28, depth };
+  }).sort((a, b) => a.depth - b.depth);
+  flowers = Array.from({ length: Math.round(W / 22) }, () => ({ x: rand() * W, y: H * (0.5 + 0.35 * rand()), r: 3 + 4 * rand(), phase: rand() * 6.28 }));
+}
+function colors() { const cs = getComputedStyle(document.documentElement); return { scale: ["--m1", "--m2", "--m3", "--m4", "--m5"].map(v => cs.getPropertyValue(v).trim()), accent: cs.getPropertyValue("--accent").trim() }; }
+function draw(t) {
+  const { scale, accent } = colors();
+  ctx.clearRect(0, 0, W, H);
+  const wind = still.matches ? 0 : Math.sin(t / 1400) * 0.06;
+  let flowerAt = 0;
+  for (const b of blades) {
+    const sway = b.lean + wind * (0.6 + b.depth) + (still.matches ? 0 : Math.sin(t / 900 + b.phase) * 0.03);
+    const base = H, tipX = b.x + sway * b.h, tipY = base - b.h;
+    ctx.beginPath(); ctx.moveTo(b.x - b.w / 2, base);
+    ctx.quadraticCurveTo(b.x + sway * b.h * 0.4, base - b.h * 0.55, tipX, tipY);
+    ctx.quadraticCurveTo(b.x + sway * b.h * 0.4 + b.w * 0.3, base - b.h * 0.5, b.x + b.w / 2, base);
+    ctx.fillStyle = scale[b.tone]; ctx.fill();
+    // flowers sit among the nearer blades
+    while (flowerAt < flowers.length && b.depth > 0.55 + flowerAt / flowers.length * 0.45) {
+      const f = flowers[flowerAt++], fx = f.x + wind * 40, fy = f.y + (still.matches ? 0 : Math.sin(t / 1100 + f.phase) * 2);
+      ctx.strokeStyle = scale[1]; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(f.x, H); ctx.lineTo(fx, fy); ctx.stroke();
+      ctx.fillStyle = accent; ctx.beginPath(); ctx.arc(fx, fy, f.r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
+function loop(t) { draw(t); if (!still.matches) requestAnimationFrame(loop); }
+seed(); requestAnimationFrame(loop);
+new ResizeObserver(() => { seed(); draw(performance.now()); }).observe(canvas);
+still.addEventListener?.("change", () => requestAnimationFrame(loop));
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => draw(performance.now()));
+new MutationObserver(() => draw(performance.now())).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>
+
+</body>
+</html>
