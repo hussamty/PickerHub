@@ -20,6 +20,7 @@ pub struct Theme {
     pub name: &'static str,
     pub english: &'static str,
     pub story: &'static str,
+    pub story_english: &'static str,
     pub moods: [&'static str; 2],
     pub primary: u32,
     pub accent: u32,
@@ -32,52 +33,53 @@ const fn theme(
     name: &'static str,
     english: &'static str,
     story: &'static str,
+    story_english: &'static str,
     moods: [&'static str; 2],
     primary: u32,
     accent: u32,
     hue: f64,
     tint: f64,
 ) -> Theme {
-    Theme { id, name, english, story, moods, primary, accent, hue, tint }
+    Theme { id, name, english, story, story_english, moods, primary, accent, hue, tint }
 }
 #[rustfmt::skip]
 pub const THEMES: &[Theme] = &[
-    theme("forest-after-rain", "غابة بعد المطر", "Forest after rain", "أوراق مبتلّة وتربة داكنة يلمع فوقها ضوء أخضر صافٍ.", ["natural", "calm"], 0x2E7D5B, 0xD9A441, 150., 0.12),
-    theme("desert-sunrise", "شروق الصحراء", "Desert sunrise", "رمال دافئة يلوّنها أول الضوء بالبرتقالي والوردي.", ["warm", "soft"], 0xC8693A, 0xE9B872, 28., 0.16),
-    theme("ocean-depths", "أعماق المحيط", "Ocean depths", "أزرق كثيف تتخلله ومضة مرجانية بعيدة.", ["cool", "deep"], 0x1F5E8C, 0xFF7A59, 212., 0.18),
-    theme("autumn-blooms", "زهور الخريف", "Autumn blooms", "بتلات نحاسية وأقحوان أصفر فوق أوراق جافة.", ["warm", "earthy"], 0xB5532E, 0xE3B23C, 22., 0.14),
-    theme("glacier-peaks", "الجبال الجليدية", "Glacier peaks", "جليد أزرق باهت وسماء عالية باردة.", ["cool", "calm"], 0x4A8FB8, 0x9AD4D6, 205., 0.14),
-    theme("sunset-shore", "شاطئ عند الغروب", "Shore at sunset", "رمل وردي وماء بنفسجي تحت شمس برتقالية.", ["warm", "vivid"], 0xD9603B, 0x7A5BA8, 18., 0.12),
-    theme("clay-and-wildflowers", "تربة الطين والنباتات البرية", "Clay and wild plants", "طين محمّر تنبت منه أعشاب خضراء باهتة.", ["earthy", "natural"], 0xA65A3A, 0x7A9A5B, 20., 0.14),
-    theme("olive-grove", "بستان الزيتون", "Olive grove", "فضّة الأوراق وخضرة الثمر في ظهيرة هادئة.", ["natural", "calm"], 0x6B7A3A, 0xC9B458, 75., 0.12),
-    theme("lavender-field", "حقل الخزامى", "Lavender field", "صفوف بنفسجية تمتد حتى أفق ذهبي.", ["soft", "calm"], 0x7B5EA7, 0xE0B354, 265., 0.12),
-    theme("coral-reef", "الشعاب المرجانية", "Coral reef", "مرجان وردي وأسماك فيروزية في ماء صافٍ.", ["vivid", "cool"], 0xE0605A, 0x2BA6A0, 185., 0.16),
-    theme("moss-and-stone", "طحلب وحجر", "Moss and stone", "حجر رمادي مبتلّ يكسوه طحلب مخملي.", ["natural", "deep"], 0x5E7F4F, 0xA8B0A2, 110., 0.08),
-    theme("night-oasis", "واحة الليل", "Oasis at night", "نخيل داكن ونجوم فوق ماء ساكن.", ["deep", "cool"], 0x2F6F73, 0xE6C36A, 190., 0.20),
-    theme("pomegranate-orchard", "بستان الرمّان", "Pomegranate orchard", "قشرة قرمزية وحبّات ياقوتية بين ورق أخضر.", ["vivid", "warm"], 0xB3263C, 0x4F8A5B, 350., 0.12),
-    theme("morning-mist", "ضباب الصباح", "Morning mist", "تلال رمادية زرقاء يذوب عنها الضباب.", ["calm", "soft"], 0x6F8FA6, 0xD9A88C, 210., 0.08),
-    theme("sandstone-canyon", "وادي الحجر الرملي", "Sandstone canyon", "طبقات حمراء وبرتقالية نحتتها الرياح.", ["warm", "earthy"], 0xC1502E, 0xE8A565, 16., 0.16),
-    theme("palm-shade", "ظل النخيل", "Palm shade", "سعف أخضر عميق وتمر ذهبي.", ["natural", "warm"], 0x2F7A4D, 0xC98A2B, 140., 0.12),
-    theme("saffron-dawn", "زعفران الفجر", "Saffron dawn", "خيوط زعفران حمراء فوق أرجوان الزهرة.", ["vivid", "warm"], 0xD4622A, 0x7D4E9E, 30., 0.14),
-    theme("pine-and-snow", "صنوبر وثلج", "Pine and snow", "إبر خضراء داكنة تحت ثلج نظيف.", ["cool", "natural"], 0x2D6A5A, 0xB8D8E0, 165., 0.10),
-    theme("wheat-field", "حقل القمح", "Wheat field", "سنابل ذهبية تتمايل تحت سماء زرقاء.", ["warm", "calm"], 0xC99A2E, 0x4E86B5, 45., 0.16),
-    theme("volcanic-rock", "صخر بركاني", "Volcanic rock", "بازلت أسود تشقّه خطوط حمم برتقالية.", ["deep", "vivid"], 0xE0562B, 0x8C8F94, 15., 0.06),
-    theme("turquoise-lagoon", "البحيرة الفيروزية", "Turquoise lagoon", "ماء فيروزي ضحل فوق رمل أبيض.", ["cool", "vivid"], 0x1FA3A3, 0xF2C879, 180., 0.16),
-    theme("fig-tree", "شجرة التين", "Fig tree", "ثمار بنفسجية ناضجة بين أوراق عريضة.", ["deep", "natural"], 0x6E3F6B, 0x7FA05A, 310., 0.10),
-    theme("jasmine-night", "ليل الياسمين", "Jasmine night", "زهر أبيض يضيء في عتمة خضراء.", ["soft", "deep"], 0x4F7F6A, 0xE3D3A0, 155., 0.12),
-    theme("fired-clay", "فخّار الطين", "Fired clay", "جرار محروقة بلون القرميد ونقوش زرقاء.", ["earthy", "warm"], 0xB4512F, 0x2F6E8E, 14., 0.14),
-    theme("spring-meadow", "مرج الربيع", "Spring meadow", "عشب فتيّ وزهور صفراء صغيرة.", ["vivid", "natural"], 0x4C9A3F, 0xF0C93A, 105., 0.14),
-    theme("storm-sea", "بحر العاصفة", "Storm sea", "موج رصاصي وزبد أبيض تحت غيم ثقيل.", ["deep", "cool"], 0x3D5A73, 0x9FB4C2, 215., 0.14),
-    theme("cedar-mountain", "جبل الأرز", "Cedar mountain", "خشب أرز محمّر وخضرة دائمة.", ["earthy", "natural"], 0x8A4B32, 0x3F7A57, 18., 0.12),
-    theme("rose-garden", "حديقة الورد", "Rose garden", "ورد جوري وأوراق خضراء ندية.", ["soft", "vivid"], 0xC7446B, 0x5E9469, 340., 0.10),
-    theme("amber-honey", "عسل وكهرمان", "Amber and honey", "عسل سائل يلتقط ضوء العصر.", ["warm", "soft"], 0xC9811F, 0x7A4A21, 35., 0.18),
-    theme("northern-lights", "الشفق القطبي", "Northern lights", "ستائر خضراء وبنفسجية فوق ثلج داكن.", ["vivid", "deep"], 0x2FBF8F, 0x8A63D2, 230., 0.20),
-    theme("salt-flats", "السبخة الملحية", "Salt flats", "أرض بيضاء متشققة وسماء وردية.", ["soft", "calm"], 0xB77A8C, 0x6FA3B5, 340., 0.06),
-    theme("mangrove", "غابة القرم", "Mangrove", "جذور متشابكة في ماء أخضر عكر.", ["natural", "earthy"], 0x4E7A54, 0xB08A4C, 130., 0.14),
-    theme("peacock-feather", "ريش الطاووس", "Peacock feather", "أزرق معدني وأخضر زمردي وعين ذهبية.", ["vivid", "cool"], 0x1E6FA8, 0x1FA37A, 200., 0.16),
-    theme("dunes-at-night", "كثبان الليل", "Dunes at night", "رمل بارد أزرق تحت قمر فضي.", ["calm", "deep"], 0x5A6FA0, 0xD9C9A3, 228., 0.16),
-    theme("citrus-grove", "بستان الحمضيات", "Citrus grove", "برتقال وليمون بين ورق لامع.", ["vivid", "warm"], 0xE07B1F, 0x5A9A3C, 40., 0.14),
-    theme("pearl-shell", "صدف اللؤلؤ", "Pearl shell", "بياض قزحي بلمسات وردية وزرقاء.", ["soft", "cool"], 0x8FA3C9, 0xE0A7B5, 220., 0.08),
+    theme("forest-after-rain", "غابة بعد المطر", "Forest after rain", "أوراق مبتلّة وتربة داكنة يلمع فوقها ضوء أخضر صافٍ.", "Wet leaves and dark soil under a clear green light.", ["natural", "calm"], 0x2E7D5B, 0xD9A441, 150., 0.12),
+    theme("desert-sunrise", "شروق الصحراء", "Desert sunrise", "رمال دافئة يلوّنها أول الضوء بالبرتقالي والوردي.", "Warm sand tinted orange and pink by the first light.", ["warm", "soft"], 0xC8693A, 0xE9B872, 28., 0.16),
+    theme("ocean-depths", "أعماق المحيط", "Ocean depths", "أزرق كثيف تتخلله ومضة مرجانية بعيدة.", "Deep blue, broken by a distant flash of coral.", ["cool", "deep"], 0x1F5E8C, 0xFF7A59, 212., 0.18),
+    theme("autumn-blooms", "زهور الخريف", "Autumn blooms", "بتلات نحاسية وأقحوان أصفر فوق أوراق جافة.", "Copper petals and yellow daisies over dry leaves.", ["warm", "earthy"], 0xB5532E, 0xE3B23C, 22., 0.14),
+    theme("glacier-peaks", "الجبال الجليدية", "Glacier peaks", "جليد أزرق باهت وسماء عالية باردة.", "Pale blue ice under a high, cold sky.", ["cool", "calm"], 0x4A8FB8, 0x9AD4D6, 205., 0.14),
+    theme("sunset-shore", "شاطئ عند الغروب", "Shore at sunset", "رمل وردي وماء بنفسجي تحت شمس برتقالية.", "Pink sand and violet water under an orange sun.", ["warm", "vivid"], 0xD9603B, 0x7A5BA8, 18., 0.12),
+    theme("clay-and-wildflowers", "تربة الطين والنباتات البرية", "Clay and wild plants", "طين محمّر تنبت منه أعشاب خضراء باهتة.", "Reddish clay with pale green grasses growing from it.", ["earthy", "natural"], 0xA65A3A, 0x7A9A5B, 20., 0.14),
+    theme("olive-grove", "بستان الزيتون", "Olive grove", "فضّة الأوراق وخضرة الثمر في ظهيرة هادئة.", "Silver leaves and green fruit on a quiet afternoon.", ["natural", "calm"], 0x6B7A3A, 0xC9B458, 75., 0.12),
+    theme("lavender-field", "حقل الخزامى", "Lavender field", "صفوف بنفسجية تمتد حتى أفق ذهبي.", "Violet rows that run to a golden horizon.", ["soft", "calm"], 0x7B5EA7, 0xE0B354, 265., 0.12),
+    theme("coral-reef", "الشعاب المرجانية", "Coral reef", "مرجان وردي وأسماك فيروزية في ماء صافٍ.", "Pink coral and turquoise fish in clear water.", ["vivid", "cool"], 0xE0605A, 0x2BA6A0, 185., 0.16),
+    theme("moss-and-stone", "طحلب وحجر", "Moss and stone", "حجر رمادي مبتلّ يكسوه طحلب مخملي.", "Wet grey stone under a coat of velvet moss.", ["natural", "deep"], 0x5E7F4F, 0xA8B0A2, 110., 0.08),
+    theme("night-oasis", "واحة الليل", "Oasis at night", "نخيل داكن ونجوم فوق ماء ساكن.", "Dark palms and stars above still water.", ["deep", "cool"], 0x2F6F73, 0xE6C36A, 190., 0.20),
+    theme("pomegranate-orchard", "بستان الرمّان", "Pomegranate orchard", "قشرة قرمزية وحبّات ياقوتية بين ورق أخضر.", "Crimson rind and ruby seeds among green leaves.", ["vivid", "warm"], 0xB3263C, 0x4F8A5B, 350., 0.12),
+    theme("morning-mist", "ضباب الصباح", "Morning mist", "تلال رمادية زرقاء يذوب عنها الضباب.", "Blue-grey hills as the mist lifts away.", ["calm", "soft"], 0x6F8FA6, 0xD9A88C, 210., 0.08),
+    theme("sandstone-canyon", "وادي الحجر الرملي", "Sandstone canyon", "طبقات حمراء وبرتقالية نحتتها الرياح.", "Red and orange layers carved by the wind.", ["warm", "earthy"], 0xC1502E, 0xE8A565, 16., 0.16),
+    theme("palm-shade", "ظل النخيل", "Palm shade", "سعف أخضر عميق وتمر ذهبي.", "Deep green fronds and golden dates.", ["natural", "warm"], 0x2F7A4D, 0xC98A2B, 140., 0.12),
+    theme("saffron-dawn", "زعفران الفجر", "Saffron dawn", "خيوط زعفران حمراء فوق أرجوان الزهرة.", "Red saffron threads on purple petals.", ["vivid", "warm"], 0xD4622A, 0x7D4E9E, 30., 0.14),
+    theme("pine-and-snow", "صنوبر وثلج", "Pine and snow", "إبر خضراء داكنة تحت ثلج نظيف.", "Dark green needles under clean snow.", ["cool", "natural"], 0x2D6A5A, 0xB8D8E0, 165., 0.10),
+    theme("wheat-field", "حقل القمح", "Wheat field", "سنابل ذهبية تتمايل تحت سماء زرقاء.", "Golden ears of wheat swaying under a blue sky.", ["warm", "calm"], 0xC99A2E, 0x4E86B5, 45., 0.16),
+    theme("volcanic-rock", "صخر بركاني", "Volcanic rock", "بازلت أسود تشقّه خطوط حمم برتقالية.", "Black basalt split by seams of orange lava.", ["deep", "vivid"], 0xE0562B, 0x8C8F94, 15., 0.06),
+    theme("turquoise-lagoon", "البحيرة الفيروزية", "Turquoise lagoon", "ماء فيروزي ضحل فوق رمل أبيض.", "Shallow turquoise water over white sand.", ["cool", "vivid"], 0x1FA3A3, 0xF2C879, 180., 0.16),
+    theme("fig-tree", "شجرة التين", "Fig tree", "ثمار بنفسجية ناضجة بين أوراق عريضة.", "Ripe purple figs among broad leaves.", ["deep", "natural"], 0x6E3F6B, 0x7FA05A, 310., 0.10),
+    theme("jasmine-night", "ليل الياسمين", "Jasmine night", "زهر أبيض يضيء في عتمة خضراء.", "White blossoms glowing in the green dark.", ["soft", "deep"], 0x4F7F6A, 0xE3D3A0, 155., 0.12),
+    theme("fired-clay", "فخّار الطين", "Fired clay", "جرار محروقة بلون القرميد ونقوش زرقاء.", "Brick-red fired jars with blue patterns.", ["earthy", "warm"], 0xB4512F, 0x2F6E8E, 14., 0.14),
+    theme("spring-meadow", "مرج الربيع", "Spring meadow", "عشب فتيّ وزهور صفراء صغيرة.", "Young grass and small yellow flowers.", ["vivid", "natural"], 0x4C9A3F, 0xF0C93A, 105., 0.14),
+    theme("storm-sea", "بحر العاصفة", "Storm sea", "موج رصاصي وزبد أبيض تحت غيم ثقيل.", "Lead-grey waves and white foam under heavy cloud.", ["deep", "cool"], 0x3D5A73, 0x9FB4C2, 215., 0.14),
+    theme("cedar-mountain", "جبل الأرز", "Cedar mountain", "خشب أرز محمّر وخضرة دائمة.", "Reddish cedar wood and evergreen branches.", ["earthy", "natural"], 0x8A4B32, 0x3F7A57, 18., 0.12),
+    theme("rose-garden", "حديقة الورد", "Rose garden", "ورد جوري وأوراق خضراء ندية.", "Damask roses and dewy green leaves.", ["soft", "vivid"], 0xC7446B, 0x5E9469, 340., 0.10),
+    theme("amber-honey", "عسل وكهرمان", "Amber and honey", "عسل سائل يلتقط ضوء العصر.", "Liquid honey catching the late afternoon light.", ["warm", "soft"], 0xC9811F, 0x7A4A21, 35., 0.18),
+    theme("northern-lights", "الشفق القطبي", "Northern lights", "ستائر خضراء وبنفسجية فوق ثلج داكن.", "Green and violet curtains above dark snow.", ["vivid", "deep"], 0x2FBF8F, 0x8A63D2, 230., 0.20),
+    theme("salt-flats", "السبخة الملحية", "Salt flats", "أرض بيضاء متشققة وسماء وردية.", "Cracked white ground under a pink sky.", ["soft", "calm"], 0xB77A8C, 0x6FA3B5, 340., 0.06),
+    theme("mangrove", "غابة القرم", "Mangrove", "جذور متشابكة في ماء أخضر عكر.", "Tangled roots in murky green water.", ["natural", "earthy"], 0x4E7A54, 0xB08A4C, 130., 0.14),
+    theme("peacock-feather", "ريش الطاووس", "Peacock feather", "أزرق معدني وأخضر زمردي وعين ذهبية.", "Metallic blue, emerald green and a golden eye.", ["vivid", "cool"], 0x1E6FA8, 0x1FA37A, 200., 0.16),
+    theme("dunes-at-night", "كثبان الليل", "Dunes at night", "رمل بارد أزرق تحت قمر فضي.", "Cool blue sand under a silver moon.", ["calm", "deep"], 0x5A6FA0, 0xD9C9A3, 228., 0.16),
+    theme("citrus-grove", "بستان الحمضيات", "Citrus grove", "برتقال وليمون بين ورق لامع.", "Oranges and lemons among glossy leaves.", ["vivid", "warm"], 0xE07B1F, 0x5A9A3C, 40., 0.14),
+    theme("pearl-shell", "صدف اللؤلؤ", "Pearl shell", "بياض قزحي بلمسات وردية وزرقاء.", "Iridescent white with touches of pink and blue.", ["soft", "cool"], 0x8FA3C9, 0xE0A7B5, 220., 0.08),
 ];
 fn mood_label(tag: &str) -> &'static str {
     match tag {
@@ -390,7 +392,7 @@ fn palette(state: &Value) -> Value {
     let vivid = state["current_adjust"]["vivid"].as_i64().unwrap_or(0).clamp(-3, 3);
     let (dark, pale) = (variant(theme, true, light, vivid), variant(theme, false, light, vivid));
     json!({
-        "id": theme.id, "name": theme.name, "english": theme.english, "story": theme.story,
+        "id": theme.id, "name": theme.name, "english": theme.english, "story": theme.story, "storyEnglish": theme.story_english,
         "serial": state["usage_index"], "createdAt": state["current_palette_created_at_utc"],
         "moods": theme.moods.iter().map(|m| json!({"tag": m, "label": mood_label(m)})).collect::<Vec<_>>(),
         "dark": dark.json(), "light": pale.json(), "accessible": dark.accessible() && pale.accessible(),
@@ -572,6 +574,12 @@ mod tests {
         ids.sort_unstable();
         ids.dedup();
         assert_eq!(ids.len(), THEMES.len(), "theme ids must be unique");
+        // Every theme reads in both languages; the English text is plain Latin, never a leftover of the Arabic.
+        for theme in THEMES {
+            for text in [theme.english, theme.story_english] {
+                assert!(!text.is_empty() && text.chars().all(|c| c.is_ascii()), "{}: {text}", theme.id);
+            }
+        }
         for theme in THEMES {
             for light in -3..=3 {
                 for vivid in -3..=3 {

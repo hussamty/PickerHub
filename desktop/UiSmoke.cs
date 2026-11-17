@@ -166,6 +166,21 @@ internal sealed partial class MainWindow
                 if (page == 1) SelfTests.Check(content.GetVisualDescendants().OfType<CheckBox>().Count() <= LibraryOps.PageSize + 2, "Library UI bounded at 2048 colors");
                 await Capture(L.Language + "-page-" + page);
             }
+            // Each language reads from its own side: the specimen's name and the first daily card sit where reading starts.
+            {
+                bool english = L.Language == "en";
+                page = 0; Render(); await Task.Delay(150);
+                var hex = content.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == state.Color);
+                var named = content.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == Core.Describe(state.Color).Text("name"));
+                SelfTests.Check(Locate(named).X < Locate(hex).X == english, "The specimen's name sits where reading starts");
+                page = DailyTool; Render(); await Task.Delay(300);
+                var cards = content.GetVisualDescendants().OfType<SwatchCard>().ToList();
+                SelfTests.Check(cards.Count == 7 && Locate(cards[0]).X < Locate(cards[^1]).X == english, "The first daily role sits where reading starts");
+                var role = cards[0].GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == cards[0].Spec.Label);
+                double lead = english ? Locate(role).X - Locate(cards[0]).X : Locate(cards[0]).Right - Locate(role).Right;
+                SelfTests.Check(lead < 24, $"Daily card labels align to the reading start: {lead:0}");
+                if (english) SelfTests.Check(!content.GetVisualDescendants().OfType<TextBlock>().Any(t => t.IsEffectivelyVisible && (t.Text ?? "").Any(c => c is >= '؀' and <= 'ۿ')), "English daily page shows no Arabic text");
+            }
             page = 5; state.ReduceMotion = false; Render(); await Task.Delay(100);
             var deck = content.GetVisualDescendants().OfType<Deck>().Single();
             var oldCard = historyCard; deck.Flip(); deck.Next(); await Task.Delay(280);

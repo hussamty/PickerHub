@@ -45,12 +45,16 @@ internal sealed partial class MainWindow
         var formats = c.GetProperty("formats");
         string ink = c.Text("ink");
 
-        // The specimen: the selected color at full size, labelled in its own readable ink.
-        var title = Col(Text(c.Text("name"), Typography.Display, true), Text(c.Text("base") + L.T("، ") + c.Text("shade"), Typography.Label)); title.Spacing = 0; title.VerticalAlignment = VerticalAlignment.Bottom; title.HorizontalAlignment = HorizontalAlignment.Right; title.FlowDirection = L.Flow;
-        var code = Mono(state.Color, Typography.Heading, true); code.VerticalAlignment = VerticalAlignment.Bottom; code.HorizontalAlignment = HorizontalAlignment.Left;
-        var english = Mono(c.Text("english").ToLowerInvariant(), Typography.Label); english.VerticalAlignment = VerticalAlignment.Top; english.HorizontalAlignment = HorizontalAlignment.Right; english.Opacity = .8;
+        // The specimen: the selected color at full size, labelled in its own readable ink. Its face is laid out
+        // left to right, so the name is placed at the reading start (right in Arabic, left in English) and the
+        // code and actions at the other end. In English the name already is the English name, so it is not repeated.
+        bool arabic = L.Language == "ar";
+        HorizontalAlignment start = arabic ? HorizontalAlignment.Right : HorizontalAlignment.Left, end = arabic ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+        var title = Col(Text(c.Text("name"), Typography.Display, true), Text(c.Text("base") + L.T("، ") + c.Text("shade"), Typography.Label)); title.Spacing = 0; title.VerticalAlignment = VerticalAlignment.Bottom; title.HorizontalAlignment = start; title.FlowDirection = L.Flow;
+        var code = Mono(state.Color, Typography.Heading, true); code.VerticalAlignment = VerticalAlignment.Bottom; code.HorizontalAlignment = end;
+        var english = Mono(c.Text("english").ToLowerInvariant(), Typography.Label); english.VerticalAlignment = VerticalAlignment.Top; english.HorizontalAlignment = start; english.Opacity = .8; english.IsVisible = arabic;
         var quick = Cluster(LiquidOn(ink, "copy", L.T("نسخ اللون"), () => Copy(PickValue(state, state.Color))), LiquidOn(ink, "download", L.T("تصدير اللون"), () => Export(new Palette { Name = c.Text("name"), Colors = [Swatch.From(state.Color)] })));
-        quick.HorizontalAlignment = HorizontalAlignment.Left; quick.VerticalAlignment = VerticalAlignment.Top; quick.FlowDirection = FlowDirection.LeftToRight;
+        quick.HorizontalAlignment = end; quick.VerticalAlignment = VerticalAlignment.Top; quick.FlowDirection = FlowDirection.LeftToRight;
         var face = new Panel { FlowDirection = FlowDirection.LeftToRight }; face.Children.AddRange([english, quick, title, code]);
         var specimen = new Border { Background = Paint(state.Color), CornerRadius = new CornerRadius(24), Padding = new Thickness(22), Height = 136, Child = face };
         specimen[!Border.BorderBrushProperty] = new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("Line"); specimen.BorderThickness = new Thickness(1);

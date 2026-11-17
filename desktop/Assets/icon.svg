@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- PickerHub mark: the letter P built from the eyedropper lens. The bowl is the lens well,
-       the square inside it is the picked pixel, and the stem tapers into the dropper's tip. -->
+  <!-- PickerHub mark: an eyedropper bent into the letter P. Its rubber bulb sits where the bowl meets the
+       stem, its glass body wraps the eyedropper's lens (the pixel grid, with the picked pixel at its centre),
+       and the stem narrows at a shoulder into the dropper's tip. -->
   <defs>
     <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#232321"/>
@@ -12,28 +13,32 @@
       <stop offset="1" stop-color="#FFFFFF" stop-opacity=".10"/>
     </linearGradient>
     <clipPath id="tile"><rect width="1024" height="1024" rx="232"/></clipPath>
-    <clipPath id="well"><rect x="388" y="272" width="308" height="308" rx="74"/></clipPath>
+    <clipPath id="well"><rect x="358" y="260" width="308" height="312" rx="74"/></clipPath>
   </defs>
   <g clip-path="url(#tile)">
     <rect width="1024" height="1024" fill="url(#ground)"/>
-    <g id="mark" transform="translate(-30 -12)">
+    <g id="mark">
       <!-- Neighbouring pixels seen through the lens; dropped at small sizes. -->
       <g id="detail" clip-path="url(#well)">
-        <rect x="388" y="272" width="308" height="308" fill="#161615"/>
-        <g>
-          <rect x="402" y="286" width="84" height="84" rx="14" fill="#2B2B28"/>
-          <rect x="500" y="286" width="84" height="84" rx="14" fill="#3A3A36"/>
-          <rect x="598" y="286" width="84" height="84" rx="14" fill="#2B2B28"/>
-          <rect x="402" y="384" width="84" height="84" rx="14" fill="#3A3A36"/>
-          <rect x="598" y="384" width="84" height="84" rx="14" fill="#4A4A45"/>
-          <rect x="402" y="482" width="84" height="84" rx="14" fill="#2B2B28"/>
-          <rect x="500" y="482" width="84" height="84" rx="14" fill="#4A4A45"/>
-          <rect x="598" y="482" width="84" height="84" rx="14" fill="#3A3A36"/>
-        </g>
-        <rect x="500" y="384" width="84" height="84" rx="14" fill="#FFFFFF"/>
+        <rect x="358" y="260" width="308" height="312" fill="#161615"/>
+        <rect x="380" y="274" width="80" height="80" rx="13" fill="#2B2B28"/>
+        <rect x="472" y="274" width="80" height="80" rx="13" fill="#3A3A36"/>
+        <rect x="564" y="274" width="80" height="80" rx="13" fill="#2B2B28"/>
+        <rect x="380" y="366" width="80" height="80" rx="13" fill="#3A3A36"/>
+        <rect x="564" y="366" width="80" height="80" rx="13" fill="#4A4A45"/>
+        <rect x="380" y="458" width="80" height="80" rx="13" fill="#2B2B28"/>
+        <rect x="472" y="458" width="80" height="80" rx="13" fill="#4A4A45"/>
+        <rect x="564" y="458" width="80" height="80" rx="13" fill="#3A3A36"/>
+        <rect x="472" y="366" width="80" height="80" rx="13" fill="#FFFFFF"/>
       </g>
-      <rect id="pixel" x="472" y="356" width="140" height="140" rx="30" fill="#FFFFFF" display="none"/>
-      <path fill="#FFF000" fill-rule="evenodd" d="M462 176 H622 A170 170 0 0 1 792 346 V506 A170 170 0 0 1 622 676 H388 V752 L366 846 Q361 868 340 868 Q319 868 314 846 L292 752 V346 A170 170 0 0 1 462 176 Z M462 272 A74 74 0 0 0 388 346 V580 H622 A74 74 0 0 0 696 506 V346 A74 74 0 0 0 622 272 Z"/>
+      <rect id="pixel" x="442" y="336" width="140" height="140" rx="30" fill="#FFFFFF" display="none"/>
+      <!-- The glass body: from the collar along the bowl, round the lens, down the stem, and through a
+           filleted shoulder into a slim tip that ends at (310, 850). -->
+      <path id="body" fill="#FFF000" d="M524 668 H592 A170 170 0 0 0 762 498 V334 A170 170 0 0 0 592 164 H432 A170 170 0 0 0 262 334 V692 Q262 700 266.4 706.7 L291.6 745.3 Q296 752 296 760 V836 A14 14 0 0 0 324 836 V760 Q324 752 328.4 745.3 L353.6 706.7 Q358 700 358 692 V334 A74 74 0 0 1 432 260 H592 A74 74 0 0 1 666 334 V498 A74 74 0 0 1 592 572 H524 Z"/>
+      <!-- The collar that holds the bulb on the glass. -->
+      <rect id="collar" x="500" y="550" width="28" height="140" rx="12" fill="#FFF000"/>
+      <!-- The rubber bulb, centred at (430, 620) on the joint of bowl and stem, with two grip grooves. -->
+      <path id="bulb" fill="#FFF000" fill-rule="evenodd" d="M470 556 Q486 556 486 572 V668 Q486 684 470 684 H438 A64 64 0 0 1 438 556 Z M446 555 h8 v130 h-8 Z M462 555 h8 v130 h-8 Z"/>
     </g>
   </g>
   <rect x="3" y="3" width="1018" height="1018" rx="229" fill="none" stroke="url(#rim)" stroke-width="6"/>

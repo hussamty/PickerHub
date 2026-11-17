@@ -58,7 +58,8 @@ internal sealed partial class MainWindow
     static TextBlock Label(string value)
     {
         var t = Of(Text(value, Typography.Label), "muted");
-        if (Workspace.Hex(value)) { t.FontFamily = Code; t.FlowDirection = FlowDirection.LeftToRight; t.HorizontalAlignment = HorizontalAlignment.Right; }
+        // A code keeps its own left-to-right order; in English it also sits at the left, where the line starts.
+        if (Workspace.Hex(value)) { t.FontFamily = Code; t.FlowDirection = FlowDirection.LeftToRight; t.HorizontalAlignment = L.Language == "ar" ? HorizontalAlignment.Right : HorizontalAlignment.Left; }
         return t;
     }
     static Control Field(string label, Control input) => Col(Label(label), input);

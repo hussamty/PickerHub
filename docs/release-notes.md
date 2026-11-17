@@ -10,7 +10,8 @@ New in 0.7.0:
 - Maximized windows now show a Restore button beside Minimize; Restore returns the window to its previous size.
 - A redesigned palette-of-the-day envelope with exact corners and edges, a perspective flap, a lined interior and the PickerHub seal.
 - `--preview-envelope` opens the envelope in a temporary library so it can be replayed at will (Linux launchers also offer it in the app's context menu).
-- A new PickerHub mark as the app icon, and a single-row top bar.
+- A new PickerHub mark, an eyedropper bent into the letter P, as the app icon, and a single-row top bar.
+- English layouts read left to right throughout, and every daily palette has an English story.
 - Short windows keep every navigation tool on screen; the minimum window size is 560 × 480.
 
 Image paste/drop, full-color cards and responsive scrolling from 0.6.0 are included.
