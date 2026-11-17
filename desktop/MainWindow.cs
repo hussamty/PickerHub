@@ -89,7 +89,7 @@ internal sealed partial class MainWindow : Window
             finally { flushing = false; }
         };
         if (startupError != null) ShowError(startupError);
-        Closed += (_, _) => { analysisCancellation?.Cancel(); if(Picker.UsesPortal)WaylandCapture.Stop();preview?.Dispose();  };
+        Closed += (_, _) => { analysisCancellation?.Cancel(); imageSampleRequest?.Cancel(); if(Picker.UsesPortal)WaylandCapture.Stop();preview?.Dispose();  };
         Render();
     }
     void MeasureFrame(string operation, long start)
@@ -241,6 +241,7 @@ internal sealed partial class MainWindow : Window
         if (undoButton != null) undoButton.IsEnabled = edits.CanUndo && !damaged;
         if (redoButton != null) redoButton.IsEnabled = edits.CanRedo && !damaged;
         refreshColor = null;
+        refreshImageSample = null;
         content.Children.Clear();
         if (page != shownPage) { shownPage = page; if (content.Parent is ScrollViewer scroll) scroll.Offset = default; Arrive(); }
         tools[page].Build();

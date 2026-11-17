@@ -1,3 +1,9 @@
+# 1.0.0 — contrast handoff and image pixel sampling
+
+- Send a swatch directly to the text or background input of Contrast Check. Save both colors as semantic roles in a palette, with confirmation when overwriting existing roles.
+- Sample original image pixels by clicking the preview or using the keyboard. Copy the sample, open it in the Color Editor, or send it to Contrast Check. Very large pasted bitmaps use the bounded preview and are labeled accordingly.
+- Include the distinct tray actions, reusable Wayland sharing session, decision focus, and compact palette layout introduced in 0.8.1.
+
 # 0.8.1 — tray actions, Wayland sharing and compact palettes
 
 - Pick and copy returns to the current tool and confirms the copied format. Pick and edit selects HEX in the Color Editor and preserves the clipboard. Quick Pick copies silently and keeps the workbench hidden.

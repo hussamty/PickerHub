@@ -63,7 +63,13 @@ internal sealed partial class MainWindow
                 Console.WriteLine("PASTE"); await Task.Run(Console.ReadLine);
                 for (int i = 0; (analyzing || preview == null) && i < 100; i++) await Task.Delay(20);
                 SelfTests.Check(recentImage.Contains("#123456") && preview != null, "Clipboard bitmap imports through the shared analyzer");
+                var sampler = content.GetVisualDescendants().OfType<ImageSampler>().Single();
+                sampler.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Enter });
+                for (int i = 0; imageSampleRequest != null && i < 100; i++) await Task.Delay(20);
+                SelfTests.Check(sampledColor == "#123456" && sampledPixel == new PixelPoint(8, 8),
+                    "Enter samples the original image at its center");
                 await PasteImage();
+                SelfTests.Check(sampledPixel == null && sampledColor == null, "New images clear the previous pixel selection");
                 SelfTests.Check(recentImage.Contains("#123456"), "Repeated image paste remains readable");
                 await Copy("ordinary text"); var before = preview;
                 await PasteImage();
@@ -320,7 +326,24 @@ internal sealed partial class MainWindow
             SelfTests.Check(exchange.Colors.Select(c => c.Hex).SequenceEqual(new[] { "#123456", "#112233" }), "Import preview merges only new hex values");
             await writer.FlushAsync();
             SelfTests.Check(Workspace.Load().Palettes.Last().Colors.Count == 2, "Merged palette persists");
+            var colorActions = ColorActions(exchange.Colors[0].Hex);
+            overlay.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetAutomationId(b) == "use-as-text")
+                .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            await colorActions;
+            SelfTests.Check(page == 2 && foreground == "#123456", "Color actions send a swatch to the contrast text input");
+            SetContrastColor(exchange.Colors[1].Hex, asText: false);
+            Edit(() => exchange.Roles["primary"] = "#87CEEB", false);
+            var saveRoles = SaveContrastRoles();
+            await Task.Delay(150);
+            overlay.GetVisualDescendants().OfType<Button>().Last(b => Equals(b.Content, L.T("اختيار")))
+                .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            await saveRoles;
+            await writer.FlushAsync();
+            var persistedRoles = Workspace.Load().Palettes.Last().Roles;
+            SelfTests.Check(persistedRoles["text"] == "#123456" && persistedRoles["background"] == "#112233" &&
+                persistedRoles["primary"] == "#87CEEB", "Saving a contrast pair persists both roles and preserves other roles");
             Edit(() => { state.Palettes.Remove(exchange); paletteId = firstPalette.Id; });
+            page = 1; Render();
             foreach (var (name, open) in new (string, Func<Task>)[] { ("choose", async () => { await SelectOption(L.T("إضافة إلى لوحة"), ["QA palette", "Another palette"]); }), ("roles", () => Roles(Current)), ("contrast", () => PaletteContrast(Current)), ("archive", DailyArchive) })
             {
                 var shown = open(); await Task.Delay(200);

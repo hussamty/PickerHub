@@ -165,6 +165,11 @@ internal sealed partial class MainWindow
         string format = dailyFormats[dailyFormat].ToLowerInvariant();
         var more = Cluster(Liquid("download", L.T("تصدير الباقة"), () => Export(Make())),
             Liquid("copy", L.T("نسخ كل الأكواد"), () => Copy(string.Join("\n", roles.Select(r => r.Text("role") + ": " + r.Text(format))))),
+            Liquid("dots", L.T("إجراءات اللون"), async () =>
+            {
+                var choice = await SelectOption(L.T("إجراءات اللون"), roles.Select(role => role.Text("label") + " · " + Isolate(role.Text("hex"))).ToArray());
+                if (choice != null) await ColorActions(roles[choice.Value].Text("hex"));
+            }),
             Liquid("x", dismissed ? L.T("استُبعدت") : L.T("لا تعجبني هذه الباقة"), () => { Core.Daily("dismiss"); status.Text = L.T("سنقلّل ظهور الباقات المشابهة"); Render(); }));
         var views = Line(8, Choose([L.T("داكن"), L.T("فاتح")], shade ? 0 : 1, i => { dailyDark = i == 0; Render(); }), Choose(dailyFormats, dailyFormat, i => { dailyFormat = i; Render(); }));
         ((Control)views.Children[0]).MinWidth = 104; ((Control)views.Children[1]).MinWidth = 104;

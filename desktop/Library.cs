@@ -111,7 +111,15 @@ internal sealed partial class MainWindow
         var (view, deck) = DeckView(items, paletteCard, i => paletteCard = i,
             Liquid("copy", L.T("نسخ اللون"), () => Copy(PickValue(state, Top().Hex))),
             Liquid("color-picker", L.T("فتح في الملتقط"), () => { page = 0; Select(Top().Hex); }),
-            Liquid("pencil", L.T("تسمية اللون"), async () => { var item = Top(); var n = await Prompt(L.T("اسم اللون"), item.Name); if (n != null) Edit(() => item.Name = n); }),
+            Liquid("dots", L.T("إجراءات اللون"), () =>
+            {
+                var item = Top();
+                return ColorActions(item.Hex, async () =>
+                {
+                    var name = await Prompt(L.T("اسم اللون"), item.Name);
+                    if (name != null) Edit(() => item.Name = name);
+                });
+            }),
             Liquid("arrow-up", L.T("تقديم"), () => Move(-1)),
             Liquid("arrow-down", L.T("تأخير"), () => Move(1)),
             Liquid("folder", L.T("نقل إلى لوحة"), async () =>
@@ -190,6 +198,7 @@ internal sealed partial class MainWindow
             Liquid("copy", L.T("نسخ اللون"), () => Copy(PickValue(state, Top()))),
             Liquid("color-picker", L.T("فتح في الملتقط"), () => { page = 0; Select(Top()); }),
             Liquid("plus", L.T("إضافة إلى لوحة"), () => AddToPalette([Top()])),
+            Liquid("dots", L.T("إجراءات اللون"), () => ColorActions(Top())),
             Liquid("trash", L.T("حذف من السجل"), () => { var h = Top(); Edit(() => state.History.Remove(h)); }));
         var clear = Of(Liquid("trash", L.T("مسح السجل"), async () => { if (await Confirm(L.T("مسح سجل الألوان؟"))) Edit(() => { state.History.Clear(); historyCard = 0; }); }), "still");
         content.Children.Add(Pair(view, Col(Sheet(L.T("كل الألوان"), items, deck, clear), HistoryLimit()), 1, 1));
@@ -219,9 +228,16 @@ internal sealed partial class MainWindow
         preview[!Border.BorderBrushProperty] = new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("Line");
         Avalonia.Controls.Documents.TextElement.SetForeground(preview, Paint(foreground));
         var swap = Of(Liquid("arrows-exchange", L.T("تبديل اللونين"), () => { (foreground, background) = (background, foreground); Render(); }), "still"); swap.VerticalAlignment = VerticalAlignment.Bottom;
-        var pick = Line(10, Field(L.T("لون النص"), EditHex(L.T("تعديل لون النص"), foreground, h => foreground = h)), swap, Field(L.T("الخلفية"), EditHex(L.T("تعديل لون الخلفية"), background, h => background = h)));
-        var use = Btn("color-picker", L.T("استخدام اللون المحدد للنص"), () => { foreground = state.Color; Render(); }); use.HorizontalAlignment = HorizontalAlignment.Left;
-        var controls = Col(preview, Surface(Col(pick, use)));
+        var textColor = EditHex(L.T("تعديل لون النص"), foreground, h => foreground = h);
+        var backgroundColor = EditHex(L.T("تعديل لون الخلفية"), background, h => background = h);
+        AutomationProperties.SetAutomationId(textColor, "contrast-text");
+        AutomationProperties.SetAutomationId(backgroundColor, "contrast-background");
+        var pick = Line(10, Field(L.T("لون النص"), textColor), swap, Field(L.T("الخلفية"), backgroundColor));
+        var useText = Btn(L.T("استخدام اللون المحدد للنص"), () => SetContrastColor(state.Color, asText: true));
+        var useBackground = Btn(L.T("استخدام اللون المحدد للخلفية"), () => SetContrastColor(state.Color, asText: false));
+        var save = Btn("device-floppy", L.T("حفظ دوري النص والخلفية"), SaveContrastRoles);
+        save.IsEnabled = !damaged;
+        var controls = Col(preview, Surface(Col(pick, Row(useText, useBackground), save)));
         var ratio = Mono(r.GetProperty("ratio").GetDouble().ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ":1", 50, true); ratio.HorizontalAlignment = HorizontalAlignment.Left;
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,10,*"), RowDefinitions = new RowDefinitions("Auto,10,Auto") };
         var levels = new[] { ("aa", "AA", L.T("نص عادي")), ("large", "AA", L.T("نص كبير")), ("aaa", "AAA", L.T("نص عادي")), ("aaaLarge", "AAA", L.T("نص كبير")) };

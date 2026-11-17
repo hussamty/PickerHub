@@ -21,8 +21,7 @@ internal sealed partial class MainWindow
         content.Children.Add(Surface(Col(hint, inputActions)));
         if (preview == null) { content.Children.Add(Empty(L.T("لوحة جديدة من صورة"), L.T("الصورة تبقى على جهازك. تُستخرج الألوان محلياً."), "photo")); return; }
         Palette Make() => new() { Name = imageName, Colors = recentImage.Select(Swatch.From).ToList() };
-        var picture = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = new Image { Source = preview, MaxHeight = 360, Stretch = Stretch.Uniform } };
-        var photo = Section(imageName, picture, Of(Liquid("upload", L.T("تغيير الصورة"), Analyze), "still"));
+        var photo = Section(imageName, ImageSamplingControls(), Of(Liquid("upload", L.T("تغيير الصورة"), Analyze), "still"));
         // Each bar is as long as that color's share of the image.
         var list = new StackPanel { Spacing = 6 };
         double widest = percentages.Length == 0 ? 1 : Math.Max(percentages.Max(), .1);
@@ -33,8 +32,10 @@ internal sealed partial class MainWindow
             var track = new Grid { ColumnDefinitions = new ColumnDefinitions(FormattableString.Invariant($"{share}*,{1 - share}*")) }; track.Children.Add(bar);
             var percent = Mono(percentages[i].ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "%", Typography.Label); percent.HorizontalAlignment = HorizontalAlignment.Left;
             var name = Text(Core.Describe(h).Text("name"), 12); name.TextWrapping = TextWrapping.NoWrap; name.TextTrimming = TextTrimming.CharacterEllipsis;
-            var line = new Grid { ColumnDefinitions = new ColumnDefinitions("96,10,*,10,52") };
+            var line = new Grid { ColumnDefinitions = new ColumnDefinitions("80,8,*,8,48,Auto") };
             line.Children.Add(name); Grid.SetColumn(track, 2); line.Children.Add(track); Grid.SetColumn(percent, 4); line.Children.Add(percent);
+            var use = Liquid("dots", L.T("إجراءات اللون"), () => ColorActions(h));
+            Grid.SetColumn(use, 5); line.Children.Add(use);
             list.Children.Add(line);
         }
         var save = Btn("device-floppy", L.T("حفظ كلوحة"), async () => { var p = Make(); var name = await Prompt(L.T("اسم اللوحة"), p.Name); if (name != null) { p.Name = name; Edit(() => { state.Palettes.Add(p); paletteId = p.Id; paletteCard = 0; }); } }, true);

@@ -109,7 +109,12 @@ internal sealed partial class MainWindow
                 if (state.LibraryView == "list") chip.Width = 44;
                 var star = Btn(color.Favorite ? "★" : "☆", () => Edit(() => color.Favorite = !color.Favorite));
                 AutomationProperties.SetName(star, L.T("تبديل المفضلة: ") + color.Name);
-                var actions = Line(4, star, Liquid("copy", L.T("نسخ اللون"), () => Copy(PickValue(state, color.Hex))), Liquid("pencil", L.T("تعديل الاسم"), async () => { var n = await Prompt(L.T("اسم اللون"), color.Name); if (n != null) Edit(() => color.Name = n); }));
+                var actions = Line(4, star, Liquid("copy", L.T("نسخ اللون"), () => Copy(PickValue(state, color.Hex))),
+                    Liquid("dots", L.T("إجراءات اللون"), () => ColorActions(color.Hex, async () =>
+                    {
+                        var name = await Prompt(L.T("اسم اللون"), color.Name);
+                        if (name != null) Edit(() => color.Name = name);
+                    })));
                 Control tile;
                 if (state.LibraryView == "list")
                 {

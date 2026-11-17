@@ -157,6 +157,20 @@ internal static class SelfTests
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         Reject(() => ImageAnalysis.Analyze(stream, cancelled.Token), "Cancelled analysis stops before decoding");
         Console.WriteLine($"1920x1080 image analysis: {watch.ElapsedMilliseconds} ms (local observation)");
+        var originalPixel = new Avalonia.PixelPoint(1536, 700);
+        var transparentPixel = new Avalonia.PixelPoint(1537, 700);
+        bitmap.SetPixel(originalPixel.X, originalPixel.Y, new SkiaSharp.SKColor(0x92, 0x17, 0x54));
+        bitmap.SetPixel(transparentPixel.X, transparentPixel.Y, SkiaSharp.SKColors.Transparent);
+        using var original = bitmap.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
+        var encoded = original.ToArray();
+        Check(ImageAnalysis.Sample(encoded, originalPixel, CancellationToken.None) == "#921754",
+            "Image sampling reads the requested original pixel at full resolution");
+        Check(ImageAnalysis.Sample(encoded, transparentPixel, CancellationToken.None) == null,
+            "Fully transparent pixels do not produce a swatch");
+        var fitted = ImageSampler.ImageBounds(new Avalonia.Size(420, 220), new Avalonia.Size(200, 200));
+        Check(ImageSampler.PixelAt(new Avalonia.Point(210, 110), fitted, new Avalonia.PixelSize(1920, 1920)) == new Avalonia.PixelPoint(960, 960) &&
+            ImageSampler.PixelAt(new Avalonia.Point(40, 110), fitted, new Avalonia.PixelSize(1920, 1920)) == null,
+            "Image pointer coordinates map to the source and exclude letterboxing");
         L.Language = "en"; Check(L.T("القطّارة") == "Eyedropper" && Core.Describe("#87CEEB").Text("name") == Core.Describe("#87CEEB").Text("english"), "English UI and color names");
         L.Language = "ar"; Check(L.T("القطّارة") == "القطّارة", "Arabic UI remains the default");
         Console.WriteLine("Phase 3: large libraries, bulk actions, cache bounds, image analysis and languages passed");

@@ -1,10 +1,11 @@
+using Avalonia;
 using SkiaSharp;
 
 namespace PickerHub;
 
 internal static class ImageAnalysis
 {
-    internal sealed record Result(byte[] Preview, string[] Colors, double[] Percentages);
+    internal sealed record Result(byte[] Preview, string[] Colors, double[] Percentages, PixelSize SourceSize);
     internal static Result Analyze(Stream stream, CancellationToken cancellation)
     {
         cancellation.ThrowIfCancellationRequested();
@@ -26,6 +27,23 @@ internal static class ImageAnalysis
         if (result.GetArrayLength() == 0) throw new InvalidDataException(L.T("الصورة شفافة بالكامل."));
         var colors = result.EnumerateArray().ToArray();
         using var image = SKImage.FromBitmap(small); using var png = image.Encode(SKEncodedImageFormat.Png, 100);
-        return new(png.ToArray(), colors.Select(c => c.Text("hex")).ToArray(), colors.Select(c => c.GetProperty("percent").GetDouble()).ToArray());
+        return new(png.ToArray(), colors.Select(c => c.Text("hex")).ToArray(),
+            colors.Select(c => c.GetProperty("percent").GetDouble()).ToArray(), new PixelSize(info.Width, info.Height));
+    }
+
+    internal static string? Sample(byte[] data, PixelPoint point, CancellationToken cancellation)
+    {
+        cancellation.ThrowIfCancellationRequested();
+        using var stream = new MemoryStream(data, writable: false);
+        using var codec = SKCodec.Create(stream) ?? throw new InvalidDataException(L.T("تعذّر قراءة الصورة."));
+        var info = codec.Info;
+        if (point.X < 0 || point.X >= info.Width || point.Y < 0 || point.Y >= info.Height)
+            throw new ArgumentOutOfRangeException(nameof(point));
+        using var srgb = SKColorSpace.CreateSrgb();
+        using var bitmap = SKBitmap.Decode(codec, new SKImageInfo(info.Width, info.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul, srgb))
+            ?? throw new InvalidDataException(L.T("الصورة تالفة."));
+        cancellation.ThrowIfCancellationRequested();
+        var pixel = bitmap.GetPixel(point.X, point.Y);
+        return pixel.Alpha == 0 ? null : $"#{pixel.Red:X2}{pixel.Green:X2}{pixel.Blue:X2}";
     }
 }

@@ -39,7 +39,11 @@ internal sealed partial class MainWindow
             // Snapshot borrowed drag pixels before the event's data transfer expires.
             if (e.DataTransfer.TryGetBitmap() is { } bitmap)
             {
-                try { var bytes = ImagePixels(bitmap); _ = Guard(() => ImportImage(() => Task.FromResult<Stream>(new MemoryStream(bytes)), L.T("صورة ملصقة"))); }
+                try
+                {
+                    var (bytes, previewOnly) = ImagePixels(bitmap);
+                    _ = Guard(() => ImportImage(() => Task.FromResult<Stream>(new MemoryStream(bytes)), L.T("صورة ملصقة"), previewOnly));
+                }
                 catch (Exception ex) { ShowError(ex.Message); }
             }
             else if (e.DataTransfer.TryGetFiles() is { Length: 1 } files && files[0] is IStorageFile file && ImageFile(file))
@@ -75,9 +79,10 @@ internal sealed partial class MainWindow
         if (data != null && await data.TryGetBitmapAsync() is { } bitmap)
         {
             byte[] bytes;
-            try { bytes = ImagePixels(bitmap); }
+            bool previewOnly;
+            try { (bytes, previewOnly) = ImagePixels(bitmap); }
             finally { if (local == null) bitmap.Dispose(); }
-            await ImportImage(() => Task.FromResult<Stream>(new MemoryStream(bytes)), L.T("صورة ملصقة"));
+            await ImportImage(() => Task.FromResult<Stream>(new MemoryStream(bytes)), L.T("صورة ملصقة"), previewOnly);
             return;
         }
         if (data != null && await data.TryGetFilesAsync() is { Length: 1 } files && files[0] is IStorageFile file && ImageFile(file))
@@ -85,17 +90,26 @@ internal sealed partial class MainWindow
         status.Text = L.T("لا توجد صورة في الحافظة. انسخ صورة أو ملف صورة أولاً.");
     }
 
-    static byte[] ImagePixels(Bitmap bitmap)
+    static (byte[] Data, bool PreviewOnly) ImagePixels(Bitmap bitmap)
     {
         var size = bitmap.PixelSize;
         if (size.Width < 1 || size.Height < 1 || (long)size.Width * size.Height > 40_000_000)
             throw new InvalidDataException(L.T("الحد الأقصى 40 مليون بكسل."));
+        using var bytes = new MemoryStream();
+        // Bound full-resolution clipboard snapshots by their uncompressed size.
+        if ((long)size.Width * size.Height <= (ImageByteLimit - 65536) / 4)
+        {
+            bitmap.Save(bytes);
+            if (bytes.Length <= ImageByteLimit) return (bytes.ToArray(), false);
+            bytes.SetLength(0);
+        }
         double scale = Math.Min(1, 768d / Math.Max(size.Width, size.Height));
         using var sample = bitmap.CreateScaledBitmap(new PixelSize(Math.Max(1, (int)(size.Width * scale)), Math.Max(1, (int)(size.Height * scale))), BitmapInterpolationMode.None);
-        using var bytes = new MemoryStream(); sample.Save(bytes); return bytes.ToArray();
+        sample.Save(bytes);
+        return (bytes.ToArray(), true);
     }
 
-    async Task ImportImage(Func<Task<Stream>> open, string name)
+    async Task ImportImage(Func<Task<Stream>> open, string name, bool previewOnly = false)
     {
         if (analyzing) return;
         analyzing = true;
@@ -122,6 +136,13 @@ internal sealed partial class MainWindow
             if (closed) return;
             using var png = new MemoryStream(result.Preview); var next = new Bitmap(png);
             var previous = preview; preview = next;
+            imageSampleRequest?.Cancel();
+            imageSampleRequest = null;
+            imageSource = bytes.ToArray();
+            imageSourceSize = result.SourceSize;
+            imagePreviewOnly = previewOnly;
+            sampledPixel = null;
+            sampledColor = null;
             recentImage = result.Colors; percentages = result.Percentages;
             imageName = Path.GetFileNameWithoutExtension(name); if (imageName.Length == 0) imageName = L.T("لوحة الصورة"); if (imageName.Length > 100) imageName = imageName[..100];
             if (page == 3) Render(); previous?.Dispose();
