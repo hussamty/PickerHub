@@ -14,7 +14,7 @@ internal sealed partial class MainWindow : Window
 {
     Workspace state = new();
     // The margin keeps pane rims and shadows clear of the scroll area's edges.
-    readonly StackPanel content = new() { Spacing = 18, Margin = new Thickness(18, 12, 18, 32) };
+    readonly StackPanel content = new() { Spacing = 20, Margin = new Thickness(20, 10, 20, 40) };
     readonly TextBlock status = new() { TextWrapping = TextWrapping.Wrap };
     readonly Button eyedropper;
     readonly WorkspaceWriter writer = new();
@@ -39,9 +39,10 @@ internal sealed partial class MainWindow : Window
     {
         Title = "PickerHub";
         using (var mascot = Avalonia.Platform.AssetLoader.Open(new Uri("avares://PickerHub/Assets/icon-256.png"))) Icon = new WindowIcon(mascot);
-        Width = 1120; Height = 820; MinWidth = 560; MinHeight = 400;
+        // The smallest window still shows every tool in the rail at a comfortable row height.
+        Width = 1120; Height = 820; MinWidth = 560; MinHeight = 480;
         FlowDirection = L.Flow;
-        FontFamily = new FontFamily("avares://PickerHub/Fonts#IBM Plex Sans Arabic, Segoe UI, sans-serif");
+        FontFamily = Typography.Face;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         try
         {
@@ -55,6 +56,7 @@ internal sealed partial class MainWindow : Window
         eyedropper = Btn("color-picker", L.T("القطّارة"), () => PickDesktop(), true);
         var startupError = damaged ? status.Text : Workspace.RecoveryNotice;
         BuildShell(); SetupQuickActions(); SetupImageInput(); ApplyLanguage();
+        if (App.Preview) { page = DailyTool; Title = "PickerHub · " + L.T("معاينة ظرف باقة اليوم"); }
         bool fitted = false;
         Opened += (_, _) =>
         {

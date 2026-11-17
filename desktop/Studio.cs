@@ -31,7 +31,7 @@ internal sealed partial class MainWindow
             var h = recentImage[i]; double share = Math.Clamp(percentages[i] / widest, .06, 1);
             var bar = Of(Chip(h, () => { page = 0; Select(h); }, ""), "flat"); bar.Height = 26; bar.MinHeight = 26; bar.CornerRadius = new CornerRadius(9); ToolTip.SetTip(bar, h);
             var track = new Grid { ColumnDefinitions = new ColumnDefinitions(FormattableString.Invariant($"{share}*,{1 - share}*")) }; track.Children.Add(bar);
-            var percent = Mono(percentages[i].ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "%", 12); percent.HorizontalAlignment = HorizontalAlignment.Left;
+            var percent = Mono(percentages[i].ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "%", Typography.Label); percent.HorizontalAlignment = HorizontalAlignment.Left;
             var name = Text(Core.Describe(h).Text("name"), 12); name.TextWrapping = TextWrapping.NoWrap; name.TextTrimming = TextTrimming.CharacterEllipsis;
             var line = new Grid { ColumnDefinitions = new ColumnDefinitions("96,10,*,10,52") };
             line.Children.Add(name); Grid.SetColumn(track, 2); line.Children.Add(track); Grid.SetColumn(percent, 4); line.Children.Add(percent);
@@ -51,7 +51,7 @@ internal sealed partial class MainWindow
     void Gradients()
     {
         var preview = new Border { Height = 190, CornerRadius = new CornerRadius(24), Background = GradientBrush(gradient) };
-        var code = Mono(Css(gradient), 12);
+        var code = Mono(Css(gradient), Typography.Label);
         void Refresh() { preview.Background = GradientBrush(gradient); code.Text = Css(gradient); }
         var copyCss = Of(Btn("", () => Copy("background: " + Css(gradient) + ";")), "row"); copyCss.Padding = new Thickness(12, 10); copyCss.CornerRadius = new CornerRadius(16);
         var css = new Grid { ColumnDefinitions = new ColumnDefinitions("*,12,Auto"), FlowDirection = FlowDirection.LeftToRight };
@@ -95,7 +95,7 @@ internal sealed partial class MainWindow
         {
             var open = Of(Btn("", () => { gradient = JsonSerializer.Deserialize<Gradient>(Serialize(g), Workspace.Json)!; Render(); }), "swatch"); open.Background = GradientBrush(g); open.Height = 92; open.CornerRadius = new CornerRadius(16); open.HorizontalAlignment = HorizontalAlignment.Stretch;
             AutomationProperties.SetName(open, L.T("فتح ") + g.Name); ToolTip.SetTip(open, L.T("فتح")); ToolTip.SetPlacement(open, PlacementMode.Top);
-            var title = Text(g.Name, 13, true); title.TextWrapping = TextWrapping.NoWrap; title.TextTrimming = TextTrimming.CharacterEllipsis;
+            var title = Text(g.Name, Typography.Control, true); title.TextWrapping = TextWrapping.NoWrap; title.TextTrimming = TextTrimming.CharacterEllipsis;
             var foot = new DockPanel(); var delete = Of(Liquid("trash", L.T("حذف التدرج"), async () => { if (await Confirm(L.T("حذف التدرج؟"))) Edit(() => state.Gradients.Remove(g)); }), "still");
             DockPanel.SetDock(delete, Dock.Right); foot.Children.Add(delete); foot.Children.Add(title);
             var tile = Col(open, foot); tile.Width = 190; tile.Margin = new Thickness(0, 0, 14, 14); shelf.Children.Add(tile);

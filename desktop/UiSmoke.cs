@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
@@ -12,6 +13,38 @@ internal sealed partial class MainWindow
     {
         var origin = this.PointToScreen(default); int width = (int)Math.Round(Bounds.Width * RenderScaling), height = (int)Math.Round(Bounds.Height * RenderScaling);
         Console.WriteLine($"FRAME {name} {origin.X} {origin.Y} {width} {height}"); await Task.Run(Console.ReadLine);
+    }
+    // Controls laid out past either side of the page viewport, where the scroll area would cut them off.
+    // Stages that clip or pose their own children (the envelope, the card deck) are judged by their own bounds.
+    string[] Overflowing(ScrollViewer scroller)
+    {
+        double width = scroller.Viewport.Width;
+        bool Exempt(Visual v) => v.GetVisualAncestors().TakeWhile(a => a != content).Any(a => a is PackStage or Deck || (a is Control c && c.ClipToBounds));
+        var found = new List<string>();
+        foreach (var c in content.GetVisualDescendants().OfType<Control>())
+        {
+            if (!c.IsEffectivelyVisible || c.Bounds.Width <= 0 || Exempt(c)) continue;
+            // Walk up by hand, as Locate does: a subtree whose direction flips is mirrored about its own centre.
+            double x0 = 0, x1 = c.Bounds.Width;
+            for (Visual? v = c; v != null && v != scroller; v = v.GetVisualParent())
+            {
+                if (v.GetVisualParent() is { } parent && v.FlowDirection != parent.FlowDirection) (x0, x1) = (v.Bounds.Width - x1, v.Bounds.Width - x0);
+                x0 += v.Bounds.X; x1 += v.Bounds.X;
+            }
+            if (x0 < -1 || x1 > width + 1) found.Add($"{c.GetType().Name} {x0:0}..{x1:0}/{width:0}");
+        }
+        return found.Distinct().Take(6).ToArray();
+    }
+    // Top bar actions that overlap one another or leave the window.
+    string[] TopBarCollisions()
+    {
+        var parts = new Control?[] { eyedropper, undoButton, redoButton, themeSwitch, minimizeWindow, maximizeWindow, closeWindow }
+            .OfType<Control>().Where(c => c.IsEffectivelyVisible).Select(c => (c, r: Locate(c))).ToArray();
+        var found = parts.Where(p => p.r.X < 0 || p.r.Right > ClientSize.Width).Select(p => (AutomationProperties.GetName(p.c) ?? p.c.GetType().Name) + " leaves the window").ToList();
+        for (int i = 0; i < parts.Length; i++)
+            for (int j = i + 1; j < parts.Length; j++)
+                if (parts[i].r.Intersects(parts[j].r)) found.Add((AutomationProperties.GetName(parts[i].c) ?? "?") + " overlaps " + (AutomationProperties.GetName(parts[j].c) ?? "?"));
+        return found.ToArray();
     }
     internal async Task Smoke()
     {
@@ -65,11 +98,16 @@ internal sealed partial class MainWindow
                 if (Environment.GetEnvironmentVariable("PICKERHUB_TEST_WM") == "1")
                 {
                     maximizeWindow!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); await Task.Delay(300);
-                    SelfTests.Check(WindowState == WindowState.Maximized && !maximizeWindow.IsVisible && ResizeEdge(new Point(2, 2)) == null, "Maximized chrome hides the resize action and disables resize grips");
+                    SelfTests.Check(WindowState == WindowState.Maximized && maximizeWindow.IsVisible && maximizeWindow.Tag as string == "restore" && minimizeWindow!.IsVisible && ResizeEdge(new Point(2, 2)) == null, "Maximized chrome offers restore beside minimize and disables resize grips");
                     await Capture(L.Language + "-maximized");
+                    // A real click on the restore action returns to the normal size; it must never minimize.
+                    var restorePoint = maximizeWindow.PointToScreen(new Point(maximizeWindow.Bounds.Width / 2, maximizeWindow.Bounds.Height / 2));
+                    Console.WriteLine($"CLICK {restorePoint.X} {restorePoint.Y}"); await Task.Run(Console.ReadLine); await Task.Delay(300);
+                    SelfTests.Check(WindowState == WindowState.Normal && maximizeWindow.Tag as string == "square", $"Restore returns the window to its normal size: {WindowState}");
+                    maximizeWindow.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); await Task.Delay(300);
                     var titlePoint = this.PointToScreen(new Point(Bounds.Width / 2, 28));
                     Console.WriteLine($"DOUBLECLICK {titlePoint.X} {titlePoint.Y}"); await Task.Run(Console.ReadLine); await Task.Delay(300);
-                    SelfTests.Check(WindowState == WindowState.Normal && maximizeWindow.IsVisible, "Titlebar double-click restores the window and the resize button");
+                    SelfTests.Check(WindowState == WindowState.Normal && maximizeWindow.IsVisible, "Titlebar double-click restores the window");
                     minimizeWindow!.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); await Task.Delay(200);
                     SelfTests.Check(WindowState == WindowState.Minimized, "Minimize works with a window manager");
                     BringForward(); await Task.Delay(200);
@@ -108,6 +146,14 @@ internal sealed partial class MainWindow
             state.ReduceMotion = true; state.Palettes[0].Name = "QA palette";
             for (int i = 0; i < 2048; i++) state.Palettes[0].Colors.Add(new Swatch { Name = "Sample " + i, Hex = "#" + ((i * 7919) & 0xffffff).ToString("X6"), Favorite = i % 5 == 0 });
             state.History = ["#87CEEB", "#112233", "#E97522"]; state.Save(); lastSaved = Serialize(state);
+            // Today's pack is still sealed: record the envelope in both themes before it is opened.
+            foreach (var theme in new[] { "dark", "light" })
+            {
+                state.Theme = theme; page = DailyTool; Render(); await Task.Delay(250);
+                SelfTests.Check(content.GetVisualDescendants().OfType<PackStage>().Any(s => !s.HasCards), "The daily page opens on a sealed envelope");
+                await Capture(L.Language + "-envelope-" + theme);
+            }
+            state.Theme = "dark";
             Core.Daily("reveal");
             page = 0; Render(); await Task.Delay(200);
             var spectrum = this.GetVisualDescendants().OfType<Spectrum>().Single(); spectrum.Focus();
@@ -147,6 +193,22 @@ internal sealed partial class MainWindow
                 var to = overlay.PointToScreen(new Point(thumbRect.Center.X, Locate(scroller).Y + thumb.Bounds.Height / 2 - 12));
                 Console.WriteLine($"DRAG {from.X} {from.Y} {from.X} {to.Y}"); await Task.Run(Console.ReadLine); await Task.Delay(100);
                 SelfTests.Check(scroller.Offset.Y < 12, $"Dragging the custom scrollbar returns to the top: {scroller.Offset.Y:0}");
+            }
+            // From the smallest window up, every page fits its width and the top bar keeps every action whole.
+            foreach (var size in new[] { new Size(560, 480), new Size(820, 620), new Size(1120, 820), new Size(1680, 1000) })
+            {
+                Width = size.Width; Height = size.Height; Position = new PixelPoint(20, 20); await Task.Delay(150);
+                var bar = TopBarCollisions();
+                SelfTests.Check(bar.Length == 0, $"Top bar fits a {size.Width} px window: {string.Join(", ", bar)}");
+                var rows = spine.GetVisualDescendants().OfType<Button>().Select(Locate).ToArray();
+                SelfTests.Check(rows.Length >= 9 && rows.All(r => r.Top >= 0 && r.Bottom <= ClientSize.Height - 4 && r.Height >= 30), $"Navigation keeps every tool on screen at {size.Height} px");
+                foreach (int index in new[] { 0, 1, 2, 3, 4, 5, 6 })
+                {
+                    page = index; Render(); await Task.Delay(160);
+                    var clipped = Overflowing((ScrollViewer)content.Parent!);
+                    SelfTests.Check(clipped.Length == 0, $"Page {index} fits a {size.Width} px window: {string.Join(", ", clipped)}");
+                    if (size.Width is 560 or 1680) await Capture(L.Language + "-fit-" + size.Width + "-" + index);
+                }
             }
             Width = 1120; Height = 820; Position = new PixelPoint(100, 40);
             foreach (var theme in new[] { "dark", "light" })

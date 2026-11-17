@@ -49,6 +49,35 @@ def windows():
     return subprocess.check_output(["xwininfo", "-root", "-tree"], text=True)
 
 
+def eyedropper(left, top, width):
+    """Centre of the main «القطّارة» button, found by its brand yellow rather than a fixed position.
+    The pill is 40 px tall and centred 36 px below the window top; 14 px above its centre it is solid
+    yellow, clear of its icon and label, and wider than any yellow in the mark beside the wordmark."""
+    x11.XDefaultRootWindow.restype = ctypes.c_ulong
+    x11.XGetImage.restype = ctypes.c_void_p
+    x11.XGetPixel.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
+    x11.XGetPixel.restype = ctypes.c_ulong
+    x11.XDestroyImage.argtypes = [ctypes.c_void_p]
+    span = min(width, 720)
+    image = x11.XGetImage(display, x11.XDefaultRootWindow(display), left, top + 22, span, 1, ctypes.c_ulong(-1), 2)
+    assert image
+    try:
+        runs, start = [], None
+        for x in range(span + 1):
+            pixel = x11.XGetPixel(image, x, 0) if x < span else 0
+            yellow = (pixel >> 16 & 255) > 200 and (pixel >> 8 & 255) > 190 and (pixel & 255) < 110
+            if yellow and start is None:
+                start = x
+            elif not yellow and start is not None:
+                runs.append((x - start, start))
+                start = None
+        length, start = max(runs, default=(0, 0))
+        assert length > 60, f"No eyedropper button in the top bar: {runs}"
+        return left + start + length // 2, top + 36
+    finally:
+        x11.XDestroyImage(image)
+
+
 def main():
     with tempfile.TemporaryDirectory() as home:
         env = dict(os.environ, HOME=home, XDG_DATA_HOME=home+"/data", XDG_CONFIG_HOME=home+"/config",
@@ -89,7 +118,7 @@ def main():
                     x11.XStoreName(display, target, b"External color reference")
                     x11.XMapRaised(display, target)
                     x11.XSync(display, False)
-                click(left+78, top+78)  # The main «القطّارة» button.
+                click(*eyedropper(left, top, width))  # The main «القطّارة» button.
                 if single_color:
                     def is_visible():
                         return "Map State: IsViewable" in subprocess.check_output(["xwininfo","-id",window], text=True)

@@ -361,5 +361,8 @@
   "استعادة حجم النافذة": "Restore window",
   "تكبير النافذة": "Maximize window",
   "إغلاق التطبيق": "Close app",
-  "انقر مرتين على شريط العنوان لاستعادة حجم النافذة": "Double-click the titlebar to restore the window"
+  "معاينة ظرف باقة اليوم": "Daily envelope preview",
+  "إعادة المعاينة": "Replay",
+  "الظرف مغلق من جديد": "The envelope is sealed again",
+  "معاينة: مكتبة مؤقتة تُحذف عند الإغلاق ولا تمسّ مكتبتك. R لإعادة المعاينة.": "Preview: a temporary library, deleted on close, that never touches yours. Press R to replay."
 }

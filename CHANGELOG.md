@@ -1,5 +1,13 @@
-# Unreleased
+# 0.7.0 — typography, window state and the daily envelope
 
+- Set the interface in Plus Jakarta Sans for Latin and Noto Kufi Arabic for Arabic, in place of IBM Plex Sans Arabic. Both are geometric, low in contrast and share a 536-unit x-height, so mixed lines read as one face. Each ships as Regular, Medium, SemiBold and Bold instances; Noto Kufi Arabic's line box is tightened to 1.08/0.52 em so Arabic sits centred in pills and buttons. `scripts/fonts.py` cuts the instances from the upstream variable fonts.
+- Put every size on one type scale (11, 12.5, 13, 14, 15, 17, 20, 24, 28), use SemiBold for headings and Medium for controls, set Arabic at 1.7 and Latin at 1.5 line height, and track large Latin headings in slightly. Arabic is never letter-spaced.
+- Even out spacing: 24-pixel pane padding, 20-pixel gaps between page sections, 12-pixel gaps inside them, and a clear rhythm between the page title and its content.
+- Fix the maximized window controls: the middle action now restores a maximized window to its previous size instead of disappearing, so Minimize is never mistaken for Restore. A real-pointer UI test clicks Restore and checks the window state.
+- Redesign the palette-of-the-day envelope with exact geometry: one corner radius for every outer corner, a filleted V mouth and flap tip, a flap that turns in perspective onto a pinstriped lining, a seal carrying the PickerHub mark, debossed type, real blurred shadows and dithered gradients. The envelope now sinks and fades instead of falling past the stage, so nothing is cut off at its edge.
+- Add `--preview-envelope` (and a launcher action on Linux) to open the envelope in a temporary library: replay it with the button or R, in either language or theme, without touching your own library.
+- Keep every tool in the navigation rail on screen in short windows: rows shrink to fit, down to 30 pixels, and the minimum window height is now 480. UI tests check that every page fits its width and that top-bar actions never overlap, from 560 to 1680 pixels wide in both languages.
+- Fix the native picker test, which still clicked where the eyedropper sat before the one-row top bar; it now finds the button by its brand yellow.
 - Replace the mascot with an original PickerHub mark: the letter P built from the eyedropper lens, with the picked pixel in its bowl and the dropper's tip as its stem. All PNG, ICO and ICNS sizes are regenerated.
 - Arrange the top bar as one row: identity, eyedropper and status on the leading side; undo, redo, theme and window actions on the trailing side. This returns 40 pixels of height to the page.
 - Give undo and redo curved-arrow icons that mirror with the language, and make the window actions borderless.
