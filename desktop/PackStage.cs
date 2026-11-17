@@ -153,14 +153,23 @@ internal sealed class EnvelopeArt(bool front) : Control
     // Closed, the envelope's top corners are the flap's and the back's together, rounded as one. Opened, two
     // rounded corners would pinch the fold into ears, so both square off while the flap stands past upright.
     static float Fold(double degrees) { double t = Math.Clamp((degrees - 90) / 60, 0, 1); return (float)(Corner * (1 - t * t * (3 - 2 * t))); }
-    // The PickerHub mark from the app icon: an eyedropper bent into a P. Its glass body wraps the lens, its collar
-    // and grooved rubber bulb sit where the bowl meets the stem, and the stem narrows into the tip.
-    static readonly SKPath[] Mark =
-    [
-        SKPath.ParseSvgPathData("M524 668 H592 A170 170 0 0 0 762 498 V334 A170 170 0 0 0 592 164 H432 A170 170 0 0 0 262 334 V692 Q262 700 266.4 706.7 L291.6 745.3 Q296 752 296 760 V836 A14 14 0 0 0 324 836 V760 Q324 752 328.4 745.3 L353.6 706.7 Q358 700 358 692 V334 A74 74 0 0 1 432 260 H592 A74 74 0 0 1 666 334 V498 A74 74 0 0 1 592 572 H524 Z"),
-        Build(p => p.AddRoundRect(new SKRect(500, 550, 528, 690), 12, 12)),
-        Build(p => { p.AddPath(SKPath.ParseSvgPathData("M470 556 Q486 556 486 572 V668 Q486 684 470 684 H438 A64 64 0 0 1 438 556 Z M446 555 h8 v130 h-8 Z M462 555 h8 v130 h-8 Z")); p.FillType = SKPathFillType.EvenOdd; }),
-    ];
+    // The PickerHub mark, read from the app icon's own source so the seal and the icon never drift apart:
+    // the stroke, the bulb and the drop, then the picked pixel drawn large as the small icon sizes draw it.
+    static readonly (SKPath Shape, SKColor Fill)[] Mark = ReadMark();
+    static (SKPath, SKColor)[] ReadMark()
+    {
+        using var stream = AssetLoader.Open(new Uri("avares://PickerHub/Assets/icon.svg"));
+        var parts = System.Xml.Linq.XDocument.Load(stream).Descendants().Where(e => e.Attribute("id") is { } id && id.Value is "body" or "bulb" or "drop" or "pixel").ToList();
+        var mark = new List<(SKPath, SKColor)>();
+        foreach (var e in parts.Where(e => e.Name.LocalName == "path"))
+            mark.Add((SKPath.ParseSvgPathData(e.Attribute("d")!.Value), SKColor.Parse(e.Attribute("fill")!.Value)));
+        if (parts.FirstOrDefault(e => e.Name.LocalName == "rect") is { } r)
+        {
+            float F(string name) => float.Parse(r.Attribute(name)!.Value, CultureInfo.InvariantCulture);
+            mark.Add((Build(p => p.AddRoundRect(new SKRect(F("x"), F("y"), F("x") + F("width"), F("y") + F("height")), F("rx"), F("rx"))), SKColor.Parse(r.Attribute("fill")!.Value)));
+        }
+        return mark.ToArray();
+    }
 
     // The flap turns about the hinge and is seen through the same lens as the cards, so its tip widens as it comes forward.
     static SKMatrix Hinge(double degrees)
@@ -228,10 +237,9 @@ internal sealed class EnvelopeArt(bool front) : Control
         using (var ring = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1, Color = new SKColor(0x99FFF000) })
             canvas.DrawCircle(x, y, SealR - 3.5f, ring);
         canvas.Save();
-        canvas.Translate(x, y); canvas.Scale(SealR * 1.08f / 686); canvas.Translate(-512, -507);   // the mark is 686 units tall, centred on (512, 507)
-        using (var mark = new SKPaint { IsAntialias = true, Color = new SKColor(0xFFFFF000) })
-            foreach (var part in Mark) canvas.DrawPath(part, mark);
-        using (var pixel = new SKPaint { IsAntialias = true, Color = SKColors.White }) canvas.DrawRoundRect(new SKRect(442, 336, 582, 476), 30, 30, pixel);
+        canvas.Translate(x, y); canvas.Scale(SealR * 1.1f / 726); canvas.Translate(-518, -534);   // the mark is 726 units tall, centred on (518, 534)
+        foreach (var (shape, fill) in Mark)
+            using (var paint = new SKPaint { IsAntialias = true, Color = fill }) canvas.DrawPath(shape, paint);
         canvas.Restore();
     }
 

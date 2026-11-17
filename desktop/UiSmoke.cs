@@ -181,6 +181,30 @@ internal sealed partial class MainWindow
                 SelfTests.Check(lead < 24, $"Daily card labels align to the reading start: {lead:0}");
                 if (english) SelfTests.Check(!content.GetVisualDescendants().OfType<TextBlock>().Any(t => t.IsEffectivelyVisible && (t.Text ?? "").Any(c => c is >= '؀' and <= 'ۿ')), "English daily page shows no Arabic text");
             }
+            // Switching language while the app runs turns every reading surface with it: the heading starts at
+            // the right in Arabic and at the left in English, and the toast rises from the matching corner.
+            string startLanguage = L.Language;
+            foreach (var language in new[] { startLanguage == "ar" ? "en" : "ar", startLanguage })
+            {
+                state.Language = language; ApplyLanguage(); page = 0; Render(); await Task.Delay(220);
+                bool arabic = language == "ar";
+                var area = Locate((Control)content.Parent!); var title = Locate(pageTitle);
+                double gap = arabic ? area.Right - title.Right : title.X - area.X;
+                SelfTests.Check(gap >= 0 && gap < 40, $"After switching to {language}, the heading starts at its reading edge: {gap:0}");
+                status.Text = L.T("نُسخت القيمة إلى الحافظة"); await Task.Delay(120);
+                var note = Locate(toast!);
+                SelfTests.Check(toast!.IsVisible && (arabic ? note.Right > ClientSize.Width * .6 : note.X < ClientSize.Width * .4) && note.Bottom > ClientSize.Height * .8, $"The {language} toast rises from its reading corner");
+                await Capture(language + "-toast-after-switch-" + startLanguage);
+                HideToast(); await Task.Delay(60);
+            }
+            // A toast leaves on its own after a few seconds, and the same news can be told again.
+            status.Text = L.T("نُسخت القيمة إلى الحافظة"); await Task.Delay(120);
+            SelfTests.Check(toast!.IsVisible, "A status message rises as a toast");
+            await Task.Delay(3900);
+            SelfTests.Check(!toast.IsVisible && status.Text == Idle, "The toast dismisses itself and rests the status line");
+            status.Text = L.T("نُسخت القيمة إلى الحافظة"); await Task.Delay(120);
+            SelfTests.Check(toast.IsVisible, "The same message can be told again");
+            HideToast();
             page = 5; state.ReduceMotion = false; Render(); await Task.Delay(100);
             var deck = content.GetVisualDescendants().OfType<Deck>().Single();
             var oldCard = historyCard; deck.Flip(); deck.Next(); await Task.Delay(280);

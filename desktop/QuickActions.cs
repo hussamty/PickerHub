@@ -25,7 +25,7 @@ internal sealed partial class MainWindow
         var errorText = Text(L.T(message), Typography.Body);
         var actions = Row(Btn(L.T("الإعدادات والاستعادة"), Settings), Btn(L.T("إغلاق الرسالة"), () => errorBanner.IsVisible = false));
         if (retry != null) actions.Children.Insert(0, Btn(L.T("إعادة المحاولة"), async () => { errorBanner.IsVisible = false; await retry(); }));
-        errorBanner.Child = Col(errorText, actions);
+        errorBanner.Child = Col(errorText, actions); errorBanner.FlowDirection = L.Flow;
         errorBanner.IsVisible = true;
         AutomationProperties.SetLiveSetting(errorText, AutomationLiveSetting.Assertive);
     }

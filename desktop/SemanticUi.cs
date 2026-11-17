@@ -102,11 +102,11 @@ internal sealed partial class MainWindow
                 var value = Mono(r.GetProperty("ratio").GetDouble().ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + (aa ? " ✓" : " ×"), Typography.Caption);
                 value.Foreground = Paint(Core.Describe(colors[j].Hex).Text("ink")); value.HorizontalAlignment = HorizontalAlignment.Center;
                 var tile = new Border { Background = Paint(colors[j].Hex), Child = value, Margin = new Thickness(1), CornerRadius = new CornerRadius(5) };
-                ToolTip.SetTip(tile, colors[i].Hex + " / " + colors[j].Hex + (aa ? " · AA" : " · AA fail")); Cell(tile, i + 1, j + 1);
+                ToolTip.SetTip(tile, colors[i].Hex + " / " + colors[j].Hex + (aa ? " · AA" : L.T(" · لا يحقق AA"))); Cell(tile, i + 1, j + 1);
             }
         }
         var simulation = new StackPanel { Spacing = 8 };
-        string[] modes = ["Protanopia", "Deuteranopia", "Tritanopia"];
+        string[] modes = [L.T("عمى الأحمر (Protanopia)"), L.T("عمى الأخضر (Deuteranopia)"), L.T("عمى الأزرق (Tritanopia)")];
         for (int kind = 0; kind < modes.Length; kind++)
         {
             var dots = new WrapPanel();
@@ -116,7 +116,7 @@ internal sealed partial class MainWindow
                 var swatch = new Border { Width = 34, Height = 34, Background = Paint(preview), CornerRadius = new CornerRadius(8), Margin = new Thickness(3) };
                 ToolTip.SetTip(swatch, color.Hex + " → " + preview); dots.Children.Add(swatch);
             }
-            simulation.Children.Add(Col(Mono(modes[kind], Typography.Label), dots));
+            simulation.Children.Add(Col(Text(modes[kind], Typography.Control, true), dots));
         }
         dialog.Content = Col(Text(L.T("مصفوفة التباين"), Typography.Heading, true), Label(L.T("أول 12 لوناً من التحديد أو اللوحة. ✓ يحقق AA للنص العادي.")),
             new ScrollViewer { Content = grid, HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto }, Label(L.T("محاكاة رؤية الألوان تقريبية. قياسات التباين للألوان الأصلية.")), simulation, Btn(L.T("إغلاق"), () => dialog.Close()));
