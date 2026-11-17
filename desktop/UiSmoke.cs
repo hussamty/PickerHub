@@ -327,6 +327,7 @@ internal sealed partial class MainWindow
             await writer.FlushAsync();
             SelfTests.Check(Workspace.Load().Palettes.Last().Colors.Count == 2, "Merged palette persists");
             var colorActions = ColorActions(exchange.Colors[0].Hex);
+            await Task.Delay(120);
             overlay.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetAutomationId(b) == "use-as-text")
                 .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
             await colorActions;
