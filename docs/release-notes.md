@@ -1,6 +1,6 @@
 Native color picker for Windows, Linux and macOS. Download the archive matching your computer below; you do not need .NET or Rust installed.
 
-**Windows 11 x64:** download `PickerHub-0.6.1-win-x64.zip`, choose Extract All, then open `PickerHub/PickerHub.exe`. Keep all files together. This is an **unsigned testing release**; Windows may display an unknown-publisher notice. No paid certificate or trusted publisher identity is bundled. Do not disable Windows security protections.
+**Windows 11 x64:** download `PickerHub-0.7.0-win-x64.zip`, choose Extract All, then open `PickerHub/PickerHub.exe`. Keep all files together. This is an **unsigned testing release**; Windows may display an unknown-publisher notice. No paid certificate or trusted publisher identity is bundled. Do not disable Windows security protections.
 
 **Linux:** use the `.deb` on Ubuntu/Debian or extract the `linux-x64.tar.gz` archive. **macOS:** choose `osx-arm64` for Apple Silicon or `osx-x64` for Intel. Mac preview builds are ad-hoc signed, not notarized.
 
