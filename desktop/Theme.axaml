@@ -35,6 +35,7 @@
           <BoxShadows x:Key="Glow">0 8 26 0 #47FFF000</BoxShadows>
           <BoxShadows x:Key="Float">0 16 44 0 #80000000</BoxShadows>
           <Color x:Key="GlassTint">#12FFFFFF</Color>
+          <Color x:Key="WorkbenchTint">#EA242422</Color>
           <Color x:Key="GlassRim">#57FFFFFF</Color>
           <Color x:Key="GlassShade">#73000000</Color>
           <Color x:Key="CardTint">#1CFFFFFF</Color>
@@ -80,6 +81,7 @@
           <BoxShadows x:Key="Glow">0 8 22 0 #70E6D800</BoxShadows>
           <BoxShadows x:Key="Float">0 14 40 0 #29111111</BoxShadows>
           <Color x:Key="GlassTint">#94FFFFFF</Color>
+          <Color x:Key="WorkbenchTint">#F2FFFFFF</Color>
           <Color x:Key="GlassRim">#FFFFFFFF</Color>
           <Color x:Key="GlassShade">#24111111</Color>
           <Color x:Key="CardTint">#8CFFFFFF</Color>
@@ -178,6 +180,9 @@
   <Style Selector="Button.ph:pressed"><Setter Property="RenderTransform" Value="scale(1.05,0.9)"/></Style>
   <Style Selector="Button.ph:disabled"><Setter Property="Opacity" Value="0.45"/></Style>
   <!-- Keyboard focus is drawn in the control's own shape: a ring in the signal color. -->
+  <Style Selector="local|Icon.sharing">
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentText}"/>
+  </Style>
   <Style Selector="Button.ph:focus-visible /template/ Border#body">
     <Setter Property="BorderBrush" Value="{DynamicResource AccentText}"/>
     <Setter Property="BorderThickness" Value="2"/>

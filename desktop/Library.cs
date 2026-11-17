@@ -85,16 +85,23 @@ internal sealed partial class MainWindow
     void Palettes()
     {
         var p = Current;
-        var manage = Line(8, Choose(state.Palettes.Select(a => (a.Collection.Length > 0 ? a.Collection + " / " : "") + a.Name), state.Palettes.IndexOf(p), i => { paletteId = state.Palettes[i].Id; paletteCard = 0; Render(); }),
-            Cluster(Liquid("plus", L.T("لوحة جديدة"), async () => { var name = await Prompt(L.T("اسم اللوحة"), ""); if (name != null) Edit(() => { var next = new Palette { Name = name }; state.Palettes.Add(next); paletteId = next.Id; paletteCard = 0; }); }),
-                Liquid("pencil", L.T("تسمية اللوحة"), async () => { var n = await Prompt(L.T("اسم اللوحة"), p.Name); if (n != null) Edit(() => p.Name = n); }),
-                Liquid("download", L.T("تصدير اللوحة"), () => Export(p)),
-                Liquid("trash", L.T("حذف اللوحة"), async () => { if (state.Palettes.Count == 1) throw new InvalidOperationException(L.T("احتفظ بلوحة واحدة على الأقل.")); if (await Confirm(L.T("حذف «") + p.Name + L.T("» بكل ألوانها؟"))) Edit(() => { state.Palettes.Remove(p); paletteCard = 0; }); })));
+        var chooser = Choose(state.Palettes.Select(a => (a.Collection.Length > 0 ? a.Collection + " / " : "") + a.Name), state.Palettes.IndexOf(p), i =>
+        {
+            paletteId = state.Palettes[i].Id; paletteCard = libraryPage = 0; Render();
+        });
+        chooser.Width = 172;
+        var create = Liquid("plus", L.T("لوحة جديدة"), async () =>
+        {
+            var name = await Prompt(L.T("اسم اللوحة"), "");
+            if (name != null)
+                Edit(() => { var next = new Palette { Name = name }; state.Palettes.Add(next); paletteId = next.Id; paletteCard = libraryPage = 0; });
+        });
         var add = Btn("plus", L.T("إضافة اللون المحدد"), () => Edit(() => { p.Colors.Add(Swatch.From(state.Color)); paletteCard = p.Colors.Count - 1; }), true);
         string[] views = ["grid", "list", "deck"];
         var viewChoice = Choose([L.T("شبكة"), L.T("قائمة"), L.T("بطاقات")], Array.IndexOf(views, state.LibraryView), i => Edit(() => state.LibraryView = views[i]));
-        var collection = Btn(L.T("المشروع: ") + (p.Collection.Length == 0 ? L.T("عام") : p.Collection), async () => { var name = await Prompt(L.T("اسم المشروع"), p.Collection); if (name != null) Edit(() => p.Collection = name); });
-        content.Children.Add(Row(manage, add, Btn(L.T("التقاط متعدد"), () => PickDesktop(null, true)), viewChoice, collection, Btn(L.T("أدوار الألوان"), () => Roles(p)), Btn(L.T("مصفوفة التباين"), () => PaletteContrast(p))));
+        content.Children.Add(Row(Line(6, chooser, create), add, Btn(L.T("التقاط متعدد"), () => PickDesktop(null, true)),
+            viewChoice, Cluster(Liquid("search", L.T("البحث في المشاريع"), FindInProjects),
+                Liquid("dots", L.T("أدوات اللوحة"), () => PaletteTools(p)))));
         if (state.LibraryView != "deck") { content.Children.Add(LibraryBrowser(p)); return; }
         if (p.Colors.Count == 0) { content.Children.Add(Empty(L.T("ابدأ لوحتك الأولى"), L.T("أضف اللون المحدد أو احفظ مجموعة من الملتقط."), "palette")); return; }
         paletteCard = Math.Clamp(paletteCard, 0, p.Colors.Count - 1);
@@ -114,6 +121,40 @@ internal sealed partial class MainWindow
             }),
             Liquid("trash", L.T("حذف اللون"), () => { var item = Top(); Edit(() => p.Colors.Remove(item)); }));
         content.Children.Add(Pair(view, Sheet(p.Name, items, deck), 1, 1));
+    }
+    async Task PaletteTools(Palette palette)
+    {
+        var dialog = Dialog(L.T("أدوات اللوحة"));
+        var delete = Btn(L.T("حذف اللوحة"), () => dialog.Close("delete"));
+        delete.IsEnabled = state.Palettes.Count > 1;
+        dialog.Content = Col(Text(L.T("أدوات اللوحة"), Typography.Heading, true),
+            Btn(L.T("المشروع: ") + (palette.Collection.Length == 0 ? L.T("عام") : palette.Collection), () => dialog.Close("project")),
+            Btn(L.T("تسمية اللوحة"), () => dialog.Close("rename")),
+            Btn(L.T("تصدير اللوحة"), () => dialog.Close("export")),
+            Btn(L.T("أدوار الألوان"), () => dialog.Close("roles")),
+            Btn(L.T("مصفوفة التباين"), () => dialog.Close("contrast")),
+            Btn(L.T("استيراد لوحة JSON"), () => dialog.Close("import")),
+            delete,
+            Choices(Btn(L.T("إغلاق"), () => dialog.Close())));
+        switch (await dialog.Show<string>())
+        {
+            case "project":
+                var name = await Prompt(L.T("اسم المشروع"), palette.Collection);
+                if (name != null) Edit(() => palette.Collection = name);
+                break;
+            case "roles": await Roles(palette); break;
+            case "contrast": await PaletteContrast(palette); break;
+            case "import": await ImportPalette(palette); break;
+            case "export": await Export(palette); break;
+            case "rename":
+                var label = await Prompt(L.T("اسم اللوحة"), palette.Name);
+                if (label != null) Edit(() => palette.Name = label);
+                break;
+            case "delete":
+                if (await Confirm(L.T("حذف «") + Isolate(palette.Name) + L.T("» بكل ألوانها؟")))
+                    Edit(() => { state.Palettes.Remove(palette); paletteCard = libraryPage = 0; });
+                break;
+        }
     }
     async Task Export(Palette p)
     {

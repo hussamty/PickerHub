@@ -3,14 +3,20 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 namespace PickerHub;
 
 internal static class LibraryOps
 {
-    public const int PageSize = 48;
-    public static Swatch[] Filter(Palette p, string query, bool favorites) => p.Colors.Where(c => (!favorites || c.Favorite) &&
-        (c.Name.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase) || c.Hex.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase))).ToArray();
+    public const int PageSize = 24;
+    public static Swatch[] Filter(Palette p, string query, bool favorites)
+    {
+        query = query.Trim();
+        return p.Colors.Where(c => (!favorites || c.Favorite) &&
+            (c.Name.Contains(query, StringComparison.OrdinalIgnoreCase) || c.Hex.Contains(query, StringComparison.OrdinalIgnoreCase))).ToArray();
+    }
     public static int Deduplicate(Palette p)
     {
         int count = p.Colors.Count; var seen = new Dictionary<string, Swatch>(StringComparer.OrdinalIgnoreCase);
@@ -21,7 +27,7 @@ internal static class LibraryOps
     {
         if (ReferenceEquals(source, target)) return;
         var colors = source.Colors.Where(c => ids.Contains(c.Id)).ToList();
-        if (target.Colors.Count + colors.Count > 2048) throw new InvalidOperationException(L.T("الحد الأقصى للوحة 2048 لوناً."));
+        if (target.Colors.Count + colors.Count > Palette.MaxColors) throw new InvalidOperationException(L.T("الحد الأقصى للوحة 2048 لوناً."));
         foreach (var c in colors) { if (target.Colors.Any(t => t.Id == c.Id)) c.Id = Guid.NewGuid().ToString("N"); }
         source.Colors.RemoveAll(c => colors.Contains(c)); target.Colors.AddRange(colors);
     }
@@ -37,12 +43,36 @@ internal sealed partial class MainWindow
         selectedSwatches.IntersectWith(p.Colors.Select(c => c.Id));
         var query = new TextBox { Text = libraryQuery, Watermark = L.T("ابحث بالاسم أو HEX"), MinWidth = 220, HorizontalAlignment = HorizontalAlignment.Stretch };
         AutomationProperties.SetName(query, L.T("البحث في ألوان اللوحة"));
+        AutomationProperties.SetAutomationId(query, "palette-search");
         var favorites = new CheckBox { Content = L.T("المفضلة فقط"), IsChecked = libraryFavorites };
         var results = new StackPanel { Spacing = 12 }; var count = Label("");
         var selectedCount = Label("");
         var batch = new WrapPanel();
+        var position = Mono("");
+        Swatch[] matches = LibraryOps.Filter(p, libraryQuery, libraryFavorites);
+        Swatch[] visible = [];
+        var visibleChecks = new List<CheckBox>();
+        var previous = Of(new Button { Content = L.T("السابق") }, "ph");
+        var next = Of(new Button { Content = L.T("التالي") }, "ph");
+        AutomationProperties.SetAutomationId(next, "palette-next-page");
+        var selectPage = Btn(L.T("تحديد الصفحة"), () =>
+        {
+            foreach (var check in visibleChecks) check.IsChecked = true;
+        });
+        previous.Click += (_, _) => { libraryPage--; Refresh(); };
+        next.Click += (_, _) => { libraryPage++; Refresh(); };
+        var clearSelection = Btn(L.T("إلغاء التحديد"), () =>
+        {
+            selectedSwatches.Clear();
+            foreach (var check in visibleChecks) check.IsChecked = false;
+            Sync();
+        });
         Swatch[] Selection() => p.Colors.Where(c => selectedSwatches.Contains(c.Id)).ToArray();
-        void Sync() { selectedCount.Text = L.T("المحدد: ") + selectedSwatches.Count; batch.IsVisible = selectedSwatches.Count > 0; }
+        void Sync()
+        {
+            selectedCount.Text = L.T("المحدد: ") + selectedSwatches.Count;
+            selectedCount.IsVisible = batch.IsVisible = selectedSwatches.Count > 0;
+        }
         batch.Children.Add(Btn(L.T("نسخ المحدد"), () => Copy(string.Join("\n", Selection().Select(c => PickValue(state, c.Hex))))));
         batch.Children.Add(Btn(L.T("تصدير المحدد"), () => Export(new Palette { Name = p.Name, Colors = Selection().ToList() })));
         batch.Children.Add(Btn(L.T("نقل المحدد"), async () =>
@@ -52,18 +82,23 @@ internal sealed partial class MainWindow
             if (to != null) Edit(() => { LibraryOps.Move(p, others[to.Value], selectedSwatches); selectedSwatches.Clear(); });
         }));
         batch.Children.Add(Btn(L.T("حذف المحدد"), async () => { if (await Confirm(L.T("حذف الألوان المحددة؟ يمكنك التراجع."))) Edit(() => { p.Colors.RemoveAll(c => selectedSwatches.Contains(c.Id)); selectedSwatches.Clear(); }); }));
+        batch.Children.Add(clearSelection);
         void Refresh()
         {
             results.Children.Clear();
-            var matches = LibraryOps.Filter(p, libraryQuery, libraryFavorites);
+            visibleChecks.Clear();
             int pages = Math.Max(1, (matches.Length + LibraryOps.PageSize - 1) / LibraryOps.PageSize);
             libraryPage = Math.Clamp(libraryPage, 0, pages - 1);
-            var visible = matches.Skip(libraryPage * LibraryOps.PageSize).Take(LibraryOps.PageSize).ToArray();
+            visible = matches.Skip(libraryPage * LibraryOps.PageSize).Take(LibraryOps.PageSize).ToArray();
             count.Text = matches.Length + " / " + p.Colors.Count; Sync();
+            position.Text = $"{libraryPage + 1} / {pages}";
+            previous.IsEnabled = libraryPage > 0; next.IsEnabled = libraryPage < pages - 1;
+            selectPage.IsEnabled = visible.Length > 0;
             var tiles = new WrapPanel(); var lines = new StackPanel { Spacing = 6 };
             foreach (var color in visible)
             {
                 var check = new CheckBox { Content = color.Name, IsChecked = selectedSwatches.Contains(color.Id), MaxWidth = 220 };
+                visibleChecks.Add(check);
                 AutomationProperties.SetName(check, L.T("تحديد ") + color.Name + " " + color.Hex);
                 check.IsCheckedChanged += (_, _) => { if (check.IsChecked == true) selectedSwatches.Add(color.Id); else selectedSwatches.Remove(color.Id); Sync(); };
                 var chip = Chip(color.Hex, () => { page = 0; Select(color.Hex); }, state.LibraryView == "list" ? "" : color.Hex);
@@ -79,37 +114,56 @@ internal sealed partial class MainWindow
                     check.Margin = new Thickness(10, 0); line.Children.Add(check); tile = line;
                 }
                 else { tile = Col(chip, check, actions); }
-                var ink = Core.Describe(color.Hex).Text("ink"); check.Foreground = Paint(ink);
+                var ink = Core.Describe(color.Hex).Text("ink");
+                var swatchFill = Paint(color.Hex);
+                var inkBrush = Paint(ink);
+                var checkOutline = Paint(ink, .8);
+                check.Foreground = inkBrush;
                 // Selection and hover must remain readable on the swatch, even
                 // when its contrast differs from the surrounding app theme.
                 foreach (var selected in new[] { "Unchecked", "Checked" })
                     foreach (var interaction in new[] { "", "PointerOver", "Pressed", "Disabled" })
                     {
                         string suffix = selected + interaction;
-                        check.Resources["CheckBoxForeground" + suffix] = Paint(ink);
-                        check.Resources["CheckBoxCheckBackgroundStroke" + suffix] = Paint(ink, .8);
-                        check.Resources["CheckBoxCheckBackgroundFill" + suffix] = selected == "Checked" ? Paint(ink) : Brushes.Transparent;
-                        check.Resources["CheckBoxCheckGlyphForeground" + suffix] = Paint(color.Hex);
+                        check.Resources["CheckBoxForeground" + suffix] = inkBrush;
+                        check.Resources["CheckBoxCheckBackgroundStroke" + suffix] = checkOutline;
+                        check.Resources["CheckBoxCheckBackgroundFill" + suffix] = selected == "Checked" ? inkBrush : Brushes.Transparent;
+                        check.Resources["CheckBoxCheckGlyphForeground" + suffix] = swatchFill;
                     }
+                var actionFill = Paint(ink, .10);
+                var actionOutline = Paint(ink, .22);
                 foreach (var action in actions.Children.OfType<Button>())
-                { action.Foreground = Paint(ink); action.Background = Paint(ink, .10); action.BorderBrush = Paint(ink, .22); }
-                var card = new Border { Background = Paint(color.Hex), CornerRadius = new CornerRadius(18), Padding = new Thickness(12),
+                { action.Foreground = inkBrush; action.Background = actionFill; action.BorderBrush = actionOutline; }
+                var card = new Border { Background = swatchFill, CornerRadius = new CornerRadius(18), Padding = new Thickness(12),
                     BorderBrush = Paint(ink, .18), BorderThickness = new Thickness(1), Child = tile };
                 if (state.LibraryView == "list") lines.Children.Add(card);
-                else { card.Width = 230; card.Margin = new Thickness(0, 0, 12, 12); tiles.Children.Add(card); }
+                else { card.Width = 174; card.Margin = new Thickness(0, 0, 10, 10); tiles.Children.Add(card); }
             }
             if (matches.Length == 0) results.Children.Add(Label(L.T("لا توجد ألوان مطابقة. جرّب بحثاً آخر.")));
             else results.Children.Add(state.LibraryView == "list" ? lines : tiles);
-            var prev = Btn(L.T("السابق"), () => { libraryPage--; Refresh(); }); prev.IsEnabled = libraryPage > 0;
-            var next = Btn(L.T("التالي"), () => { libraryPage++; Refresh(); }); next.IsEnabled = libraryPage < pages - 1;
-            results.Children.Add(Row(prev, Mono($"{libraryPage + 1} / {pages}"), next,
-                Btn(L.T("تحديد الصفحة"), () => { selectedSwatches.UnionWith(visible.Select(c => c.Id)); Refresh(); }),
-                Btn(L.T("إلغاء التحديد"), () => { selectedSwatches.Clear(); Refresh(); })));
         }
-        query.TextChanged += (_, _) => { libraryQuery = query.Text ?? ""; libraryPage = 0; Refresh(); };
-        favorites.IsCheckedChanged += (_, _) => { libraryFavorites = favorites.IsChecked == true; libraryPage = 0; Refresh(); };
+        bool refreshQueued = false;
+        long searchStart = 0;
+        void FilterResults()
+        {
+            searchStart = SupportLog.Measure();
+            if (refreshQueued) return;
+            refreshQueued = true;
+            Dispatcher.UIThread.Post(() =>
+            {
+                refreshQueued = false;
+                if (query.GetVisualRoot() == null) return;
+                matches = LibraryOps.Filter(p, libraryQuery, libraryFavorites);
+                libraryPage = 0; Refresh();
+                MeasureFrame("palette-search-to-frame", searchStart);
+            }, DispatcherPriority.Background);
+        }
+        query.TextChanged += (_, _) => { libraryQuery = query.Text ?? ""; FilterResults(); };
+        favorites.IsCheckedChanged += (_, _) => { libraryFavorites = favorites.IsChecked == true; FilterResults(); };
         Refresh();
-        return Section(L.T("ألوان اللوحة"), Col(Row(query, favorites, count), selectedCount, batch, results),
+        var filters = Col(Row(query, favorites, count), Row(previous, position, next, selectPage));
+        filters.Spacing = 4;
+        return Section(L.T("ألوان اللوحة"), Col(filters, selectedCount, batch, results),
             Btn(L.T("إزالة المكرر"), () => { int removed = 0; Edit(() => removed = LibraryOps.Deduplicate(p)); status.Text = L.T("أزيلت الألوان المكررة: ") + removed; }));
     }
 }

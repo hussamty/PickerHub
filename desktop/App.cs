@@ -9,10 +9,12 @@ internal class App : Application
     internal static SingleInstance? Instance;
     // --preview-envelope: the daily envelope in a throwaway library, ready to be opened again and again.
     internal static bool Preview;
+    internal static long LaunchTime { get; private set; }
     internal static string Version => typeof(App).Assembly.GetName().Version!.ToString(3);
     [STAThread]
     public static int Main(string[] args)
     {
+        LaunchTime = System.Diagnostics.Stopwatch.GetTimestamp();
         if (args.Length == 2 && args[0] == "--instance-probe")
         {
             Workspace.RootOverride = args[1];

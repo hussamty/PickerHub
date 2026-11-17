@@ -1,26 +1,18 @@
-Native color picker for Windows, Linux and macOS. Download the archive matching your computer below; you do not need .NET or Rust installed.
+PickerHub is an Arabic and English desktop color workbench for Linux, Windows, and macOS. Each archive includes its runtime.
 
-**Windows 11 x64:** download `PickerHub-0.7.0-win-x64.zip`, choose Extract All, then open `PickerHub/PickerHub.exe`. Keep all files together. This is an **unsigned testing release**; Windows may display an unknown-publisher notice. No paid certificate or trusted publisher identity is bundled. Do not disable Windows security protections.
+## New in 0.8.0
 
-**Linux:** use the `.deb` on Ubuntu/Debian or extract the `linux-x64.tar.gz` archive. **macOS:** choose `osx-arm64` for Apple Silicon or `osx-x64` for Intel. Mac preview builds are ad-hoc signed, not notarized.
+- Quick Pick copies a color through the tray or global shortcut while leaving the foreground application in focus. Capture confirmations show the copied color and format.
+- Wayland capture settings sit next to the eyedropper, with a sharing indicator, a stop action, and a system-picker fallback.
+- Compact windows keep HEX, copy, and save controls within reach. Palette search and paging sit above the swatches.
+- Search across projects, palettes, colors, favorites, and semantic roles. Preview PickerHub JSON palettes before creating a new palette or merging unique colors.
+- Gradient previews use the same geometry as the exported CSS. The specimen updates as you adjust hue and saturation.
+- Support reports include a build identifier and optional local timings for startup, picking, clipboard writes, and palette search.
 
-New in 0.7.0:
+## Downloads
 
-- New typography: Plus Jakarta Sans for Latin and Noto Kufi Arabic for Arabic on one type scale, with refined weights, line heights and spacing throughout.
-- Maximized windows now show a Restore button beside Minimize; Restore returns the window to its previous size.
-- A redesigned palette-of-the-day envelope with exact corners and edges, a perspective flap, a lined interior and the PickerHub seal.
-- `--preview-envelope` opens the envelope in a temporary library so it can be replayed at will (Linux launchers also offer it in the app's context menu).
-- A new PickerHub mark, an eyedropper written as one fluid stroke in the shape of a P, with a drop falling from its tip, and a single-row top bar.
-- Arabic reads from the right and English from the left throughout, including after switching language in Settings, and every daily palette has an English story.
-- Status messages appear as frosted-glass toasts in the bottom corner where reading starts, and leave on their own.
-- Short windows keep every navigation tool on screen; the minimum window size is 560 × 480.
+- **Linux x64:** use `pickerhub_0.8.0_amd64.deb` on Ubuntu or Debian, or extract `PickerHub-0.8.0-linux-x64.tar.gz` on other supported distributions.
+- **Windows x64:** extract `PickerHub-0.8.0-win-x64.zip` and open `PickerHub/PickerHub.exe`. Windows may show an unknown-publisher notice for this unsigned preview.
+- **macOS:** extract `PickerHub-0.8.0-osx-arm64.zip` for Apple Silicon or `PickerHub-0.8.0-osx-x64.zip` for Intel. The preview bundles are ad-hoc signed and have not been notarized.
 
-Image paste/drop, full-color cards and responsive scrolling from 0.6.0 are included.
-
-Included from 0.5.0: instant multi-pick count and swatches, responsive layout, single-instance activation, nonblocking clipboard completion, and optional local diagnostics. Arabic and English are included.
-
-F8 starts a single pick. Use Multi-pick from the palette page or tray; each click adds a color and Esc finishes. Quick Copy and copy format apply immediately in Settings.
-
-[Windows test guide](https://github.com/hussamty/PickerHub/blob/main/docs/windows-test.md) · [Install](https://github.com/hussamty/PickerHub/blob/main/docs/install.md)
-
-Automated checks do not replace testing on real Windows 11 hardware, mixed-DPI monitors, GPU drivers or assistive technology. Automatic installation of updates is not enabled; backups and manual rollback are supported. SHA-256 files detect download corruption and do not replace a publisher signature.
+[Install guide](https://github.com/hussamty/PickerHub/blob/main/docs/install.md) · [Changelog](https://github.com/hussamty/PickerHub/blob/main/CHANGELOG.md)

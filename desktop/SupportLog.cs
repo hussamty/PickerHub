@@ -14,6 +14,13 @@ internal static class SupportLog
     static readonly Channel<Entry> pending = Channel.CreateBounded<Entry>(new BoundedChannelOptions(64)
     { SingleReader = true, FullMode = BoundedChannelFullMode.DropOldest });
     static readonly Task worker = Task.Run(Write);
+    public static long Measure() => Enabled ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
+
+    public static void Measure(string operation, long start)
+    {
+        if (start != 0)
+            Record(operation, milliseconds: System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds);
+    }
     public static void Record(string operation, Exception? error = null, double? milliseconds = null)
     {
         if (!Enabled) return;

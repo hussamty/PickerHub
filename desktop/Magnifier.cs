@@ -13,6 +13,7 @@ internal sealed class MagnifierSession
     readonly TaskCompletionSource<string?> result = new(TaskCreationOptions.RunContinuationsAsynchronously);
     readonly Window owner;
     readonly Action<string>? collected;
+    readonly Action? firstSample;
     readonly byte[] previousPixels = new byte[(Radius * 2 + 1) * (Radius * 2 + 1) * 4];
     bool painted;
     readonly Window? lens;
@@ -29,9 +30,10 @@ internal sealed class MagnifierSession
     readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(16) };
     readonly bool portal = Picker.UsesPortal;
 
-    MagnifierSession(Window owner, Action<string>? collected)
+    MagnifierSession(Window owner, Action<string>? collected, Action? firstSample)
     {
         this.owner = owner; this.collected = collected;
+        this.firstSample = firstSample;
         view = new MagnifierView(pixels, Radius, owner.FontFamily, collected != null) { Width = MagnifierView.WidthDip, IsHitTestVisible = false };
         if (!portal) lens = new Window
         {
@@ -44,9 +46,9 @@ internal sealed class MagnifierSession
         timer.Tick += (_, _) => Run(Tick);
     }
 
-    public static async Task<string?> Start(Window owner, Action<string>? collected = null)
+    public static async Task<string?> Start(Window owner, Action<string>? collected = null, Action? firstSample = null)
     {
-        var session = new MagnifierSession(owner, collected);
+        var session = new MagnifierSession(owner, collected, firstSample);
         void OwnerClosed(object? sender, EventArgs e) => session.Cancel();
         owner.Closed += OwnerClosed;
         try
@@ -154,6 +156,7 @@ internal sealed class MagnifierSession
         bool read = portal ? WaylandCapture.Sample(owner, pointer, Radius, pixels)
             : NativePicker.pickerhub_sample(pointer.X, pointer.Y, Radius, pixels) != 0;
         if (!read) return false;
+        if (!painted) firstSample?.Invoke();
         hasSample = true;
         if (!painted || !pixels.AsSpan().SequenceEqual(previousPixels))
         {

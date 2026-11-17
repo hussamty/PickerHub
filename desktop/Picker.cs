@@ -28,7 +28,6 @@ internal static class Picker
         }
         else owner.Opacity=transparent?0:1;
     }
-    public static Task RequestPermissionAgain(){WaylandCapture.Stop();return Task.CompletedTask;}
     // An explicit session type is authoritative. Native libraries can probe or
     // populate WAYLAND_DISPLAY even in an X11 session; that must not switch capture.
     internal static bool WaylandSession(string? session, string? display) => session?.ToLowerInvariant() switch
@@ -39,7 +38,7 @@ internal static class Picker
     };
     public static bool UsesPortal => OperatingSystem.IsLinux() && WaylandSession(
         Environment.GetEnvironmentVariable("XDG_SESSION_TYPE"), Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"));
-    public static async Task<string?> Start(Window owner, bool useScreenSharing, Action<string>? collected = null)
+    public static async Task<string?> Start(Window owner, bool useScreenSharing, Action<string>? collected = null, Action? firstSample = null)
     {
         if (OperatingSystem.IsMacOS())
         {
@@ -54,7 +53,7 @@ internal static class Picker
             if (!await WaylandCapture.Prepare(owner)) return null;
         }
         owner.Hide();
-        return await MagnifierSession.Start(owner, collected);
+        return await MagnifierSession.Start(owner, collected, firstSample);
     }
 
 }

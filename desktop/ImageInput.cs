@@ -58,7 +58,7 @@ internal sealed partial class MainWindow
     async Task Analyze()
     {
         if (analyzing) return;
-        var files = await StorageProvider.OpenFilePickerAsync(new() { Title = L.T("اختيار صورة"), AllowMultiple = false,
+        var files = await OpenFiles(new() { Title = L.T("اختيار صورة"), AllowMultiple = false,
             FileTypeFilter = [new FilePickerFileType("PNG · JPG · WEBP") { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.webp"] }] });
         if (files.Count > 0) await ImportImage(files[0].OpenReadAsync, files[0].Name);
     }

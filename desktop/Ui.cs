@@ -101,7 +101,7 @@ internal sealed partial class MainWindow
         b[!BorderBrushProperty] = new DynamicResourceExtension("Line"); b.BorderThickness = new Thickness(1);
         ToolTip.SetTip(b, hex); ToolTip.SetPlacement(b, PlacementMode.Top); return b;
     }
-    static Glass Surface(Control child) => new() { Child = child, Padding = new Thickness(24, 22) };
+    static Glass Surface(Control child) => new("WorkbenchTint") { Child = child, Padding = new Thickness(24, 22) };
     static Control Section(string title, Control body, Control? actions = null)
     {
         var top = new DockPanel { Margin = new Thickness(0, 0, 0, 16), MinHeight = 40 };
@@ -147,7 +147,16 @@ internal sealed partial class MainWindow
         }, DispatcherPriority.Background);
     }
 
-    async Task Copy(string value) { if (Clipboard == null) throw new InvalidOperationException(L.T("الحافظة غير متاحة.")); await Clipboard.SetValueAsync(DataFormat.Text, value); status.Text = L.T("نُسخت القيمة إلى الحافظة"); }
+    async Task WriteClipboard(string value)
+    {
+        if (Clipboard == null) throw new InvalidOperationException(L.T("الحافظة غير متاحة."));
+        await Clipboard.SetValueAsync(DataFormat.Text, value);
+    }
+    async Task Copy(string value)
+    {
+        await WriteClipboard(value);
+        status.Text = L.T("نُسخت القيمة إلى الحافظة");
+    }
     static Control Choices(params Control[] buttons) { var row = Line(8, buttons); row.Margin = new Thickness(0, 8, 0, 0); return row; }
     async Task<string?> Prompt(string title, string initial, bool hex = false)
     {

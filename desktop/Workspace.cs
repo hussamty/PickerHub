@@ -13,6 +13,7 @@ internal class Swatch
 }
 internal class Palette
 {
+    public const int MaxColors = 2048;
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = "لوحتي الأولى";
     public List<Swatch> Colors { get; set; } = [];
@@ -28,6 +29,7 @@ internal class Gradient
 }
 internal class Workspace
 {
+    public const int MaxPalettes = 256;
     public int Version { get; set; } = 2;
     public string Color { get; set; } = "#87CEEB";
     public int Limit { get; set; } = 32;
@@ -43,6 +45,7 @@ internal class Workspace
     public bool HexUppercase { get; set; } = true;
     public bool HexPrefix { get; set; } = true;
     public bool GlobalShortcut { get; set; }
+    public bool QuickPick { get; set; }
     public string Shortcut { get; set; } = "Ctrl+Shift+P";
     public string Theme { get; set; } = "dark";
     public List<Discovery> Discoveries { get; set; } = [];
@@ -75,8 +78,8 @@ internal class Workspace
            w.Language is not ("ar" or "en") || w.LibraryView is not ("grid" or "list" or "deck") || w.Shortcut is not ("Ctrl+Shift+P" or "Ctrl+Alt+P" or "Ctrl+Shift+C") || w.Limit is < 1 or > 256 ||
            !SemanticPalette.Valid(w.BrandLocks) || w.Discoveries == null || w.Discoveries.Count > 90 ||
            !w.Discoveries.All(d => d != null && d.Id != null && d.Id.Length is > 0 and <= 160 && Name(d.Name) && DateTimeOffset.TryParse(d.CreatedAt, out _) && SemanticPalette.Valid(d.Light) && SemanticPalette.Valid(d.Dark)) ||
-           w.Discoveries.Select(d => d.Id).Distinct().Count() != w.Discoveries.Count || w.History == null || w.History.Count > w.Limit || !w.History.All(Hex) || w.Palettes == null || w.Palettes.Count is < 1 or > 256 ||
-           !w.Palettes.All(p => p != null && SemanticPalette.Valid(p.Roles) && p.Collection != null && p.Collection.Length <= 100 && Name(p.Name) && p.Colors != null && p.Colors.Count <= 2048 && p.Colors.All(c => c != null && Name(c.Name) && Hex(c.Hex)) && Ids(p.Colors.Select(c => c.Id))) ||
+           w.Discoveries.Select(d => d.Id).Distinct().Count() != w.Discoveries.Count || w.History == null || w.History.Count > w.Limit || !w.History.All(Hex) || w.Palettes == null || w.Palettes.Count is < 1 or > MaxPalettes ||
+           !w.Palettes.All(p => p != null && SemanticPalette.Valid(p.Roles) && p.Collection != null && p.Collection.Length <= 100 && Name(p.Name) && p.Colors != null && p.Colors.Count <= Palette.MaxColors && p.Colors.All(c => c != null && Name(c.Name) && Hex(c.Hex)) && Ids(p.Colors.Select(c => c.Id))) ||
            !Ids(w.Palettes.Select(p => p.Id)) || w.Gradients == null || w.Gradients.Count > 512 ||
            !w.Gradients.All(g => g != null && Name(g.Name) && g.Type is "linear" or "radial" && g.Angle is >= 0 and <= 360 && g.Stops != null && g.Stops.Count is >= 2 and <= 32 && g.Stops.All(s => s != null && Hex(s.Hex) && s.Pos is >= 0 and <= 100)) ||
            !Ids(w.Gradients.Select(g => g.Id))) throw new InvalidDataException("بيانات المكتبة غير صالحة.");

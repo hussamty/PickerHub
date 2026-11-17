@@ -34,7 +34,15 @@ internal sealed class WaylandCapture : IDisposable
     string peer="";
     public static void ClearPending(){if(current!=null&&!current.ended)foreach(var s in current.sources)s.capture.Drain();}
     public static bool IsSharing => current is { ended: false };
-    public static void Stop(){var old=current;current=null;old?.Dispose();}
+    public static event Action? SharingChanged;
+    public static void Stop()
+    {
+        var old = current;
+        current = null;
+        if (old == null) return;
+        old.Dispose();
+        SharingChanged?.Invoke();
+    }
     public static async Task<bool> Prepare(Window owner)
     {
         if (current?.ended == true) Stop();
@@ -56,6 +64,7 @@ internal sealed class WaylandCapture : IDisposable
         }
         current.monitors = screens.Select(s => s.Bounds).Zip(current.sources.OrderBy(s => s.x).ThenBy(s => s.y),
             (bounds, source) => (bounds, source.capture)).ToDictionary(pair => pair.bounds, pair => pair.capture);
+        SharingChanged?.Invoke();
         return true;
     }
     Dictionary<PixelRect, GstCapture> monitors = [];
@@ -107,7 +116,12 @@ internal sealed class WaylandCapture : IDisposable
         if(created==null)return false;
         var path=new ObjectPath((string)created["session_handle"]);
         session=connection.CreateProxy<ICastSession>(Service,path);
-        closed=await session.WatchClosedAsync(_=>ended=true,_=>ended=true);
+        void SessionEnded()
+        {
+            ended = true;
+            SharingChanged?.Invoke();
+        }
+        closed=await session.WatchClosedAsync(_=>SessionEnded(),_=>SessionEnded());
         var selected=await Request(options=>{options["types"]=1u;options["multiple"]=true;options["cursor_mode"]=1u;return cast.SelectSourcesAsync(path,options);});
         if(selected==null)return false;
         var handle=owner.TryGetPlatformHandle();

@@ -11,20 +11,45 @@ namespace PickerHub;
 // The spectrum is an interactive editor, rendered with the toolkit's sRGB brushes.
 internal sealed class Spectrum : Control
 {
+    static Spectrum() => AffectsRender<Spectrum>(IsFocusedProperty);
     public HsvColor Value { get; set; }
     public event Action<string>? Selected;
+    public event Action<string>? PreviewChanged;
     public Spectrum(string hex)
     {
         Value = Color.Parse(hex).ToHsv(); Height = 120; MinWidth = 150; Cursor = new Cursor(StandardCursorType.Cross);
         FlowDirection = FlowDirection.LeftToRight; Focusable = true; AutomationProperties.SetName(this, L.T("تشبع اللون وسطوعه"));
-        PointerPressed += (_, e) => { e.Pointer.Capture(this); Update(e.GetPosition(this)); };
+        PointerPressed += (_, e) =>
+        {
+            if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+            Focus(); e.Pointer.Capture(this); Update(e.GetPosition(this));
+        };
         PointerMoved += (_, e) => { if (e.Pointer.Captured == this) Update(e.GetPosition(this)); };
-        PointerReleased += (_, e) => { if (e.Pointer.Captured == this) { e.Pointer.Capture(null); Selected?.Invoke(Hex()); } };
-        KeyDown += (_, e) => { double s = Value.S, v = Value.V; switch (e.Key) { case Key.Left: s -= .01; break; case Key.Right: s += .01; break; case Key.Up: v += .01; break; case Key.Down: v -= .01; break; default: return; } e.Handled = true; Value = HsvColor.FromHsv(Value.H, Math.Clamp(s, 0, 1), Math.Clamp(v, 0, 1)); InvalidateVisual(); };
-        KeyUp += (_, e) => { if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down) { e.Handled = true; Selected?.Invoke(Hex()); } };
+        PointerReleased += (_, e) => { if (e.Pointer.Captured == this) e.Pointer.Capture(null); };
+        PointerCaptureLost += (_, _) => Selected?.Invoke(CurrentHex());
+        KeyDown += (_, e) =>
+        {
+            double s = Value.S, v = Value.V;
+            switch (e.Key)
+            {
+                case Key.Left: s -= .01; break;
+                case Key.Right: s += .01; break;
+                case Key.Up: v += .01; break;
+                case Key.Down: v -= .01; break;
+                default: return;
+            }
+            e.Handled = true;
+            Value = HsvColor.FromHsv(Value.H, Math.Clamp(s, 0, 1), Math.Clamp(v, 0, 1));
+            InvalidateVisual(); PreviewChanged?.Invoke(CurrentHex());
+        };
+        KeyUp += (_, e) => { if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down) { e.Handled = true; Selected?.Invoke(CurrentHex()); } };
     }
-    string Hex() { var c = Value.ToRgb(); return $"#{c.R:X2}{c.G:X2}{c.B:X2}"; }
-    void Update(Point p) { Value = HsvColor.FromHsv(Value.H, Math.Clamp(p.X / Bounds.Width, 0, 1), 1 - Math.Clamp(p.Y / Bounds.Height, 0, 1)); InvalidateVisual(); }
+    public string CurrentHex() { var c = Value.ToRgb(); return $"#{c.R:X2}{c.G:X2}{c.B:X2}"; }
+    void Update(Point p)
+    {
+        Value = HsvColor.FromHsv(Value.H, Math.Clamp(p.X / Bounds.Width, 0, 1), 1 - Math.Clamp(p.Y / Bounds.Height, 0, 1));
+        InvalidateVisual(); PreviewChanged?.Invoke(CurrentHex());
+    }
     public override void Render(DrawingContext ctx)
     {
         var rect = new Rect(Bounds.Size);
@@ -33,6 +58,11 @@ internal sealed class Spectrum : Control
         ctx.DrawRectangle(new LinearGradientBrush { StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative), GradientStops = [new(Colors.Transparent, 0), new(Colors.Black, 1)] }, null, rect);
         var pt = new Point(Value.S * Bounds.Width, (1 - Value.V) * Bounds.Height);
         ctx.DrawEllipse(null, new Pen(Brushes.Black, 4), pt, 6, 6); ctx.DrawEllipse(null, new Pen(Brushes.White, 2), pt, 6, 6);
+        if (IsFocused)
+        {
+            ctx.DrawRectangle(null, new Pen(Brushes.Black, 3), rect.Deflate(3), 11, 11);
+            ctx.DrawRectangle(null, new Pen(Brushes.White, 1), rect.Deflate(3), 11, 11);
+        }
     }
 }
 
@@ -59,6 +89,21 @@ internal sealed partial class MainWindow
         var specimen = new Border { Background = Paint(state.Color), CornerRadius = new CornerRadius(24), Padding = new Thickness(22), Height = 136, Child = face };
         specimen[!Border.BorderBrushProperty] = new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("Line"); specimen.BorderThickness = new Thickness(1);
         Avalonia.Controls.Documents.TextElement.SetForeground(specimen, Paint(ink));
+        void PreviewSpecimen(string value)
+        {
+            var color = Core.Describe(value);
+            var textInk = color.Text("ink");
+            ((TextBlock)title.Children[0]).Text = color.Text("name");
+            ((TextBlock)title.Children[1]).Text = color.Text("base") + L.T("، ") + color.Text("shade");
+            code.Text = value;
+            english.Text = color.Text("english").ToLowerInvariant();
+            specimen.Background = Paint(value);
+            Avalonia.Controls.Documents.TextElement.SetForeground(specimen, Paint(textInk));
+            foreach (var b in quick.Children.OfType<Button>())
+            {
+                b.Foreground = Paint(textInk); b.Background = Paint(textInk, .16); b.BorderBrush = Paint(textInk, .28);
+            }
+        }
 
         var hex = new TextBox { Text = state.Color, MaxLength = 7, FlowDirection = FlowDirection.LeftToRight, FontFamily = Code, FontSize = 17, MinHeight = 44, VerticalContentAlignment = VerticalAlignment.Center };
         AutomationProperties.SetAutomationId(hex, "hex-input"); AutomationProperties.SetName(hex, L.T("قيمة HEX"));
@@ -69,18 +114,29 @@ internal sealed partial class MainWindow
         input.Children.Add(hex);
         var apply = Of(Liquid("check", L.T("اعتماد HEX"), Apply), "still"); Grid.SetColumn(apply, 2); input.Children.Add(apply);
 
-        var spectrum = new Spectrum(state.Color) { Height = 120 }; spectrum.Selected += h => _ = Guard(() => { Select(h, false); return Task.CompletedTask; });
+        var spectrum = new Spectrum(state.Color) { Height = 120 };
+        spectrum.PreviewChanged += PreviewSpecimen;
+        void Commit(string value)
+        {
+            if (value == state.Color) return;
+            _ = Guard(() => { Select(value, false); return Task.CompletedTask; });
+        }
+        spectrum.Selected += Commit;
         var hue = new Slider { Height = 40, MinHeight = 40, Minimum = 0, Maximum = 359.99, Value = spectrum.Value.H, FlowDirection = FlowDirection.LeftToRight };
         AutomationProperties.SetName(hue, L.T("درجة اللون"));
         var hueBrush = new LinearGradientBrush { StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative), EndPoint = new RelativePoint(1, 0, RelativeUnit.Relative) };
         for (int i = 0; i <= 6; i++) hueBrush.GradientStops.Add(new GradientStop(HsvColor.FromHsv(i * 60 % 360, 1, 1).ToRgb(), i / 6d));
         hue.Background = hueBrush;
-        void Commit() { var rgb = spectrum.Value.ToRgb(); var h = $"#{rgb.R:X2}{rgb.G:X2}{rgb.B:X2}"; if (h != state.Color) _ = Guard(() => { Select(h, false); return Task.CompletedTask; }); }
-        hue.ValueChanged += (_, _) => { spectrum.Value = HsvColor.FromHsv(hue.Value, spectrum.Value.S, spectrum.Value.V); spectrum.InvalidateVisual(); };
-        hue.PointerCaptureLost += (_, _) => Commit();
-        hue.KeyUp += (_, _) => Commit();
+        hue.ValueChanged += (_, _) =>
+        {
+            spectrum.Value = HsvColor.FromHsv(hue.Value, spectrum.Value.S, spectrum.Value.V);
+            spectrum.InvalidateVisual(); PreviewSpecimen(spectrum.CurrentHex());
+        };
+        hue.PointerCaptureLost += (_, _) => Commit(spectrum.CurrentHex());
+        hue.KeyUp += (_, _) => Commit(spectrum.CurrentHex());
         var save = Btn("plus", L.T("إضافة إلى لوحة"), () => AddToPalette([state.Color]), true); save.HorizontalAlignment = HorizontalAlignment.Stretch;
-        var editor = Col(new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = spectrum }, hue, Field("HEX", input), error, save);
+        AutomationProperties.SetAutomationId(save, "add-editor-color");
+        var editor = Col(Field("HEX", input), error, save, new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = spectrum }, hue);
 
         // Every format is one click away from the clipboard.
         var rows = new StackPanel { Spacing = 2 };
@@ -111,11 +167,9 @@ internal sealed partial class MainWindow
         var block = Col(Line(10, Label(L.T("الألوان الأخيرة")), Btn(L.T("عرض السجل"), () => Go(5))), recent); block.Margin = new Thickness(6, 0); side.Children.Add(block);
         refreshColor = () =>
         {
-            c = Core.Describe(state.Color); formats = c.GetProperty("formats"); ink = c.Text("ink");
-            ((TextBlock)title.Children[0]).Text = c.Text("name"); ((TextBlock)title.Children[1]).Text = c.Text("base") + L.T("، ") + c.Text("shade");
-            code.Text = hex.Text = state.Color; english.Text = c.Text("english").ToLowerInvariant();
-            specimen.Background = Paint(state.Color); Avalonia.Controls.Documents.TextElement.SetForeground(specimen, Paint(ink));
-            foreach (var b in quick.Children.OfType<Button>()) { b.Foreground = Paint(ink); b.Background = Paint(ink, .16); b.BorderBrush = Paint(ink, .28); }
+            c = Core.Describe(state.Color); formats = c.GetProperty("formats");
+            hex.Text = state.Color;
+            PreviewSpecimen(state.Color);
             foreach (var (key, row) in formatRows) { row.Value.Text = formats.Text(key); AutomationProperties.SetName(row.Button, L.T("نسخ ") + key + " " + formats.Text(key)); }
             strip.Children.Clear();
             var colorsNow = Core.Harmony(state.Color, harmony);

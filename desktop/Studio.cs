@@ -42,17 +42,37 @@ internal sealed partial class MainWindow
         content.Children.Add(Pair(photo, Section(L.T("ألوان الصورة"), list)));
     }
     static string Css(Gradient g) => (g.Type == "linear" ? $"linear-gradient({g.Angle}deg, " : "radial-gradient(circle, ") + string.Join(", ", g.Stops.OrderBy(s => s.Pos).Select(s => $"{s.Hex} {s.Pos}%")) + ")";
-    static IBrush GradientBrush(Gradient g)
+    internal static (RelativePoint Start, RelativePoint End) CssGradientLine(double degrees, Size size)
     {
-        var stops = new GradientStops(); foreach (var s in g.Stops.OrderBy(s => s.Pos)) stops.Add(new GradientStop(Avalonia.Media.Color.Parse(s.Hex), s.Pos / 100d));
-        double angle = g.Angle * Math.PI / 180, dx = Math.Sin(angle) / 2, dy = -Math.Cos(angle) / 2;
-        return g.Type == "linear" ? new LinearGradientBrush { StartPoint = new RelativePoint(.5 - dx, .5 - dy, RelativeUnit.Relative), EndPoint = new RelativePoint(.5 + dx, .5 + dy, RelativeUnit.Relative), GradientStops = stops } : new RadialGradientBrush { GradientStops = stops };
+        double radians = degrees * Math.PI / 180;
+        var direction = new Vector(Math.Sin(radians), -Math.Cos(radians));
+        var center = new Point(size.Width / 2, size.Height / 2);
+        double halfLength = (Math.Abs(direction.X) * size.Width + Math.Abs(direction.Y) * size.Height) / 2;
+        var offset = direction * halfLength;
+        return (new RelativePoint(center - offset, RelativeUnit.Absolute), new RelativePoint(center + offset, RelativeUnit.Absolute));
+    }
+    static IBrush GradientBrush(Gradient g, Size size)
+    {
+        var stops = new GradientStops();
+        foreach (var stop in g.Stops.OrderBy(s => s.Pos))
+            stops.Add(new GradientStop(Avalonia.Media.Color.Parse(stop.Hex), stop.Pos / 100d));
+        if (g.Type == "linear")
+        {
+            var (start, end) = CssGradientLine(g.Angle, size);
+            return new LinearGradientBrush { StartPoint = start, EndPoint = end, GradientStops = stops };
+        }
+
+        // CSS's default circle reaches the farthest corner of the preview.
+        double radius = Math.Sqrt(size.Width * size.Width + size.Height * size.Height) / 2;
+        var length = new RelativeScalar(radius, RelativeUnit.Absolute);
+        return new RadialGradientBrush { RadiusX = length, RadiusY = length, GradientStops = stops };
     }
     void Gradients()
     {
-        var preview = new Border { Height = 190, CornerRadius = new CornerRadius(24), Background = GradientBrush(gradient) };
+        var preview = new Border { Height = 190, CornerRadius = new CornerRadius(24), FlowDirection = FlowDirection.LeftToRight };
         var code = Mono(Css(gradient), Typography.Label);
-        void Refresh() { preview.Background = GradientBrush(gradient); code.Text = Css(gradient); }
+        void Refresh() { preview.Background = GradientBrush(gradient, preview.Bounds.Size); code.Text = Css(gradient); }
+        preview.SizeChanged += (_, _) => Refresh();
         var copyCss = Of(Btn("", () => Copy("background: " + Css(gradient) + ";")), "row"); copyCss.Padding = new Thickness(12, 10); copyCss.CornerRadius = new CornerRadius(16);
         var css = new Grid { ColumnDefinitions = new ColumnDefinitions("*,12,Auto"), FlowDirection = FlowDirection.LeftToRight };
         css.Children.Add(code); var copyIcon = Tone(new Icon("copy", 15), "Muted"); Grid.SetColumn(copyIcon, 2); css.Children.Add(copyIcon);
@@ -93,7 +113,10 @@ internal sealed partial class MainWindow
         var shelf = new WrapPanel();
         foreach (var g in state.Gradients)
         {
-            var open = Of(Btn("", () => { gradient = JsonSerializer.Deserialize<Gradient>(Serialize(g), Workspace.Json)!; Render(); }), "swatch"); open.Background = GradientBrush(g); open.Height = 92; open.CornerRadius = new CornerRadius(16); open.HorizontalAlignment = HorizontalAlignment.Stretch;
+            var open = Of(Btn("", () => { gradient = JsonSerializer.Deserialize<Gradient>(Serialize(g), Workspace.Json)!; Render(); }), "swatch");
+            open.Height = 92; open.CornerRadius = new CornerRadius(16);
+            open.HorizontalAlignment = HorizontalAlignment.Stretch; open.FlowDirection = FlowDirection.LeftToRight;
+            open.SizeChanged += (_, _) => open.Background = GradientBrush(g, open.Bounds.Size);
             AutomationProperties.SetName(open, L.T("فتح ") + g.Name); ToolTip.SetTip(open, L.T("فتح")); ToolTip.SetPlacement(open, PlacementMode.Top);
             var title = Text(g.Name, Typography.Control, true); title.TextWrapping = TextWrapping.NoWrap; title.TextTrimming = TextTrimming.CharacterEllipsis;
             var foot = new DockPanel(); var delete = Of(Liquid("trash", L.T("حذف التدرج"), async () => { if (await Confirm(L.T("حذف التدرج؟"))) Edit(() => state.Gradients.Remove(g)); }), "still");

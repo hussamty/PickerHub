@@ -38,7 +38,7 @@ internal sealed partial class MainWindow
     // Top bar actions that overlap one another or leave the window.
     string[] TopBarCollisions()
     {
-        var parts = new Control?[] { eyedropper, undoButton, redoButton, themeSwitch, minimizeWindow, maximizeWindow, closeWindow }
+        var parts = new Control?[] { eyedropper, captureMode, undoButton, redoButton, themeSwitch, minimizeWindow, maximizeWindow, closeWindow }
             .OfType<Control>().Where(c => c.IsEffectivelyVisible).Select(c => (c, r: Locate(c))).ToArray();
         var found = parts.Where(p => p.r.X < 0 || p.r.Right > ClientSize.Width).Select(p => (AutomationProperties.GetName(p.c) ?? p.c.GetType().Name) + " leaves the window").ToList();
         for (int i = 0; i < parts.Length; i++)
@@ -222,9 +222,9 @@ internal sealed partial class MainWindow
                 Console.WriteLine($"TIMING viewport-{size.Width} extent={scroller.Extent.Height:0} viewport={scroller.Viewport.Height:0} offset={scroller.Offset.Y:0}");
                 SelfTests.Check(scroller.Extent.Height > scroller.Viewport.Height && scroller.Offset.Y > 100, "Wheel input scrolls the actual library viewport");
                 SelfTests.Check(Math.Abs(scroller.Offset.Y + scroller.Viewport.Height - scroller.Extent.Height) < 3, "Library bottom is reachable by scrolling");
-                var bottomAction = content.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, L.T("إلغاء التحديد")));
-                var bottom = bottomAction.TranslatePoint(new Point(0, bottomAction.Bounds.Height), this)!.Value.Y;
-                SelfTests.Check(bottom <= ClientSize.Height - 12, $"Bottom actions are actually visible: {bottom} / {ClientSize.Height}");
+                var lastColor = content.GetVisualDescendants().OfType<CheckBox>().Single(b => Equals(b.Content, "Sample " + (LibraryOps.PageSize - 1)));
+                var bottom = lastColor.TranslatePoint(new Point(0, lastColor.Bounds.Height), this)!.Value.Y;
+                SelfTests.Check(bottom <= ClientSize.Height - 12, $"The last color is visible: {bottom} / {ClientSize.Height}");
                 await Capture(L.Language + "-scroll-" + size.Width);
                 var thumb = scroller.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.Thumb>().Single(t => t.Name == "scrollThumb" && t.IsEffectivelyVisible);
                 var thumbRect = Locate(thumb);
@@ -246,6 +246,16 @@ internal sealed partial class MainWindow
                     page = index; Render(); await Task.Delay(160);
                     var clipped = Overflowing((ScrollViewer)content.Parent!);
                     SelfTests.Check(clipped.Length == 0, $"Page {index} fits a {size.Width} px window: {string.Join(", ", clipped)}");
+                    if (size.Width == 560 && index is 0 or 1)
+                    {
+                        string[] visibleIds = index == 0 ? ["hex-input", "add-editor-color"] : ["palette-search", "palette-next-page"];
+                        foreach (var id in visibleIds)
+                        {
+                            var control = content.GetVisualDescendants().OfType<Control>().Single(c => AutomationProperties.GetAutomationId(c) == id);
+                            double end = Locate(control).Bottom;
+                            SelfTests.Check(end <= overlay.Bounds.Height, $"{id} is visible without scrolling at the minimum size ({end:0}/{overlay.Bounds.Height:0})");
+                        }
+                    }
                     if (size.Width is 560 or 1680) await Capture(L.Language + "-fit-" + size.Width + "-" + index);
                 }
             }
@@ -255,7 +265,7 @@ internal sealed partial class MainWindow
                 page = 1; state.Theme = theme; state.ReduceTransparency = false; Render(); ((ScrollViewer)content.Parent!).Offset = default; await Task.Delay(150);
                 content.GetVisualDescendants().OfType<CheckBox>().First(c => c.Content is string name && name == "Sample 0").IsChecked = true;
                 var action = content.GetVisualDescendants().OfType<Button>().First(b => b.Classes.Contains("goo") && b.IsEffectivelyEnabled);
-                var position = action.PointToScreen(new Point(action.Bounds.Width / 2, action.Bounds.Height / 2));
+                var position = overlay.PointToScreen(Locate(action).Center);
                 Console.WriteLine($"HOVER {position.X} {position.Y}"); await Task.Run(Console.ReadLine); await Task.Delay(150);
                 SelfTests.Check(action.IsPointerOver, "Real pointer reaches the liquid action");
                 await Capture(L.Language + "-liquid-" + theme);
@@ -268,6 +278,44 @@ internal sealed partial class MainWindow
             }
             page = 1; state.Theme = "light"; state.ReduceTransparency = true; Width = 680; Height = 600; Render(); await Task.Delay(200);
             await Capture(L.Language + "-compact");
+            var search = FindInProjects();
+            await Task.Delay(150);
+            var searchInput = overlay.GetVisualDescendants().OfType<TextBox>().Last();
+            searchInput.Text = "Sample 1001";
+            searchInput.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Enter });
+            await search;
+            SelfTests.Check(libraryQuery == Current.Colors[1001].Hex && !OverlayOpen, "Enter opens the selected project search result in its palette");
+            libraryQuery = ""; Render();
+            SupportLog.Enabled = true;
+            try
+            {
+                var paletteSearch = content.GetVisualDescendants().OfType<TextBox>().Single(t => AutomationProperties.GetAutomationId(t) == "palette-search");
+                paletteSearch.Text = "Sample 1";
+                await Task.Delay(260);
+                var duration = SupportLog.Snapshot().LastOrDefault(e => e.Operation == "palette-search-to-frame")?.Milliseconds;
+                SelfTests.Check(duration.HasValue, "Opt-in diagnostics record a palette search frame marker");
+                Console.WriteLine($"TIMING palette-search-to-frame {duration:0.0}ms");
+            }
+            finally { SupportLog.Enabled = state.DiagnosticsEnabled; }
+            libraryQuery = ""; Render();
+            var firstPalette = Current;
+            var exchange = new Palette { Name = "Import preview", Colors = [new() { Name = "Imported color", Hex = "#123456" }] };
+            var importPreview = PreviewPaletteImport(exchange, firstPalette);
+            await Task.Delay(160);
+            var createImport = overlay.GetVisualDescendants().OfType<Button>().Single(b => Equals(b.Content, L.T("إنشاء لوحة جديدة")));
+            createImport.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            await importPreview;
+            SelfTests.Check(Current == exchange && exchange.Colors.Count == 1, "Import preview creates a new palette");
+            var mergeSource = new Palette { Name = "Merge preview", Colors = [new() { Name = "Duplicate", Hex = "#123456" }, new() { Name = "New color", Hex = "#112233" }] };
+            importPreview = PreviewPaletteImport(mergeSource, exchange);
+            await Task.Delay(160);
+            var mergeImport = overlay.GetVisualDescendants().OfType<Button>().Last(b => Equals(b.Content, L.T("دمج في اللوحة الحالية")));
+            mergeImport.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            await importPreview;
+            SelfTests.Check(exchange.Colors.Select(c => c.Hex).SequenceEqual(new[] { "#123456", "#112233" }), "Import preview merges only new hex values");
+            await writer.FlushAsync();
+            SelfTests.Check(Workspace.Load().Palettes.Last().Colors.Count == 2, "Merged palette persists");
+            Edit(() => { state.Palettes.Remove(exchange); paletteId = firstPalette.Id; });
             foreach (var (name, open) in new (string, Func<Task>)[] { ("choose", async () => { await SelectOption(L.T("إضافة إلى لوحة"), ["QA palette", "Another palette"]); }), ("roles", () => Roles(Current)), ("contrast", () => PaletteContrast(Current)), ("archive", DailyArchive) })
             {
                 var shown = open(); await Task.Delay(200);
@@ -277,6 +325,8 @@ internal sealed partial class MainWindow
             }
             // Change settings through the actual controls, in this process.
             var settings = Settings(); await Task.Delay(100);
+            overlay.Children.Last().RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.F8 });
+            SelfTests.Check(!picking && OverlayOpen, "F8 cannot start a desktop pick from a modal");
             Width = 760; Height = 480; await Task.Delay(150);
             var settingsPane = overlay.GetVisualDescendants().OfType<Glass>().First();
             SelfTests.Check(settingsPane.Bounds.Bottom <= overlay.Bounds.Height && settingsPane.Bounds.Right <= overlay.Bounds.Width, "Open settings reflow inside the resized viewport");
@@ -301,6 +351,9 @@ internal sealed partial class MainWindow
             Edit(() => state.AutoCopy = true, false);
             Console.WriteLine("SINGLEPICK"); await PickDesktop();
             SelfTests.Check(await Clipboard!.TryGetTextAsync() == PickValue(state, state.Color), "Enabled Quick Copy uses RGB on the next pick without restart");
+            await pickCopies;
+            SelfTests.Check(status.Text == string.Format(L.T("نُسخ {0} بصيغة {1}"), Isolate(state.Color), Isolate("RGB")),
+                "Copy confirmation names the saved color and requested clipboard format");
             var clipboardRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             pickClipboard = async value => { await clipboardRelease.Task; await Copy(value); };
             var returnTime = System.Diagnostics.Stopwatch.StartNew();
@@ -309,6 +362,11 @@ internal sealed partial class MainWindow
                 "Slow clipboard ownership never delays restoring the workbench");
             SelfTests.Check(returnTime.ElapsedMilliseconds < 1500, "Picker returns before clipboard acknowledgement timeout");
             clipboardRelease.SetResult(); await pickCopies; pickClipboard = null;
+            Console.WriteLine("FOCUS_REFERENCE"); await Task.Run(Console.ReadLine); await Task.Delay(100);
+            Console.WriteLine("SINGLEPICK"); await PickDesktop(true, returnToWorkbench: false);
+            await pickCopies;
+            SelfTests.Check(await Clipboard!.TryGetTextAsync() == PickValue(state, state.Color), "Quick Pick copies the chosen color");
+            Console.WriteLine("CHECK_REFERENCE_FOCUS"); await Task.Run(Console.ReadLine);
             await writer.FlushAsync();
             var time = System.Diagnostics.Stopwatch.StartNew();
             for (int i = 0; i < 12; i++) { Travel(false); Travel(true); }
@@ -326,6 +384,8 @@ internal sealed partial class MainWindow
             SelfTests.Check(spine.Width == Spine.Closed, "Picker return leaves navigation collapsed");
             var copied = await Clipboard!.TryGetTextAsync();
             SelfTests.Check(copied == PickValue(state, target.Colors[^1].Hex), $"Multi pick uses the current copy format: {copied ?? "null"} expected {PickValue(state, target.Colors[^1].Hex)}");
+            SelfTests.Check(status.Text.Contains(L.T("الألوان الملتقطة: ") + 8) && status.Text.Contains(Isolate(target.Colors[^1].Hex)),
+                "Multi-pick confirmation preserves the count and identifies the last copied color");
             await writer.FlushAsync();
             SelfTests.Check(Workspace.Load().Palettes.Last().Colors.Count == 8, "All multi picks persisted");
             Travel(false); SelfTests.Check(Current.Colors.Count == 7, "One undo removes exactly one pick");

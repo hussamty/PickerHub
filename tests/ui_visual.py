@@ -108,6 +108,15 @@ for language in ('ar','en'):
                 xt.XTestFakeMotionEvent(d, 0, int(mx), int(my), 0); x.XFlush(d)
                 time.sleep(.1)
                 process.stdin.write('\n'); process.stdin.flush()
+            elif line.startswith('FOCUS_REFERENCE'):
+                x.XRaiseWindow(d, C.c_ulong(reference))
+                x.XSetInputFocus(d, C.c_ulong(reference), 1, 0); x.XSync(d, False)
+                process.stdin.write('\n'); process.stdin.flush()
+            elif line.startswith('CHECK_REFERENCE_FOCUS'):
+                focused, revert = C.c_ulong(), C.c_int()
+                x.XGetInputFocus(d, C.byref(focused), C.byref(revert))
+                assert focused.value == reference, f"Quick Pick changed external focus to {focused.value:#x}"
+                process.stdin.write('\n'); process.stdin.flush()
             elif line.startswith('SINGLEPICK'):
                 until(lens)
                 xt.XTestFakeMotionEvent(d, 0, 20, 20, 0); x.XFlush(d); time.sleep(.2)

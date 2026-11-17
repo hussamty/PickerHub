@@ -22,7 +22,7 @@ internal sealed partial class MainWindow : Window
     string[] modes = [L.T("متجاورة"), L.T("متكاملة"), L.T("ثلاثية"), L.T("متكاملة منقسمة"), L.T("أحادية اللون"), L.T("عالية التباين")];
     int page, harmony, shownPage = -1, paletteCard, historyCard;
     string? paletteId;
-    bool picking, damaged;
+    bool picking, damaged, nativeDialogOpen;
     string foreground = "#172D46", background = "#FFFFFF";
     Gradient gradient = new();
     string[] recentImage = [];
@@ -68,6 +68,7 @@ internal sealed partial class MainWindow : Window
             MinWidth = Math.Min(MinWidth, availableWidth); MinHeight = Math.Min(MinHeight, availableHeight);
             Width = Math.Clamp(Width, MinWidth, availableWidth);
             Height = Math.Clamp(Height, MinHeight, availableHeight);
+            MeasureFrame("launch-to-workbench", SupportLog.Enabled ? App.LaunchTime : 0);
         };
         writer.Failed += ex => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
@@ -86,8 +87,12 @@ internal sealed partial class MainWindow : Window
         };
         if (startupError != null) ShowError(startupError);
         Closed += (_, _) => { analysisCancellation?.Cancel(); if(Picker.UsesPortal)WaylandCapture.Stop();preview?.Dispose();  };
-        KeyDown += (_, ev) => { if (ev.Key == Avalonia.Input.Key.F8 && !picking) { ev.Handled = true; _ = Guard(() => PickDesktop()); } };
         Render();
+    }
+    void MeasureFrame(string operation, long start)
+    {
+        if (start != 0)
+            RequestAnimationFrame(_ => RequestAnimationFrame(_ => SupportLog.Measure(operation, start)));
     }
     async Task Guard(Func<Task> action) { try { await action(); } catch (Exception ex) { SupportLog.Record("action", ex); Console.Error.WriteLine(ex); if (!closed) ShowError(ex.Message); } }
     internal void BringForward()
@@ -108,15 +113,25 @@ internal sealed partial class MainWindow : Window
         Edit(() => { state.Color = h.ToUpperInvariant(); state.History.RemoveAll(x => x.Equals(h, StringComparison.OrdinalIgnoreCase)); state.History.Insert(0, state.Color); state.History = state.History.Take(state.Limit).ToList(); }, render);
         if (!render) refreshColor?.Invoke();
     }
-    async Task PickDesktop(bool? copy = null, bool collect = false)
+    async Task PickDesktop(bool? copy = null, bool collect = false, bool systemPicker = false, bool returnToWorkbench = true)
     {
-        if (picking) return;
-        if (collect && Picker.UsesPortal && !state.UseWaylandScreenSharing) throw new InvalidOperationException(L.T("الالتقاط المتعدد يحتاج العدسة الحية. فعّلها من الإعدادات."));
-        picking = true; eyedropper.IsEnabled = false; spine.Collapse();
+        if (picking || OverlayOpen || nativeDialogOpen || closed) return;
+        bool share = Picker.UsesPortal && state.UseWaylandScreenSharing && !systemPicker;
+        if (collect && Picker.UsesPortal && !share)
+        {
+            await CaptureOptions(true, copy);
+            return;
+        }
+        long session = ++pickSession;
+        long captureStart = SupportLog.Measure();
+        string lensTiming = share
+            ? (WaylandCapture.IsSharing ? "live-warm-first-sample" : "live-fresh-first-sample")
+            : "native-first-sample";
+        picking = true; eyedropper.IsEnabled = false; captureMode.IsEnabled = false; spine.Collapse();
         status.Text = L.T("انقر على البكسل المطلوب · Esc للإلغاء");
         var previousState = WindowState;
         var previousOpacity = Opacity;
-        bool share = Picker.UsesPortal && state.UseWaylandScreenSharing;
+        bool restoreWindow = returnToWorkbench;
         int pickedCount = 0;
         try
         {
@@ -127,6 +142,8 @@ internal sealed partial class MainWindow : Window
             await Task.Delay(60);
             void Accept(string h)
             {
+                bool autoCopy = copy ?? state.AutoCopy;
+                long copyStart = autoCopy ? SupportLog.Measure() : 0;
                 // One transaction per selection; no hidden page rebuild or lens restart.
                 page = collect ? 1 : 0;
                 Edit(() =>
@@ -138,27 +155,51 @@ internal sealed partial class MainWindow : Window
                     if (collect) Current.Colors.Add(Swatch.From(h));
                 }, false);
                 pickedCount++;
-                if (copy ?? state.AutoCopy) QueuePickCopy(PickValue(state, h));
-                status.Text = L.T("تم التقاط ") + Isolate(h);
+                status.Text = collect ? L.T("الألوان الملتقطة: ") + pickedCount : L.T("تم التقاط ") + Isolate(h);
+                if (autoCopy) QueuePickCopy(session, h, copyStart, collect ? pickedCount : 0);
             }
-            var selected = await Picker.Start(this, share, collect ? Accept : null);
+            var selected = await Picker.Start(this, share, collect ? Accept : null,
+                captureStart == 0 ? null : () => SupportLog.Measure(lensTiming, captureStart));
+            if (selected != null && (Picker.UsesPortal && !share || OperatingSystem.IsMacOS()))
+                SupportLog.Measure("system-picker-selection", captureStart);
             if (!collect && selected != null) Accept(selected);
-            if (selected == null) status.Text = pickedCount == 0 ? L.T("أُلغي الالتقاط") : L.T("الألوان الملتقطة: ") + pickedCount;
+            if (selected == null && pickedCount == 0)
+                status.Text = share && !WaylandCapture.IsSharing
+                    ? L.T("لم تبدأ المشاركة. يمكنك اختيار منتقي النظام من وضع الالتقاط.")
+                    : L.T("أُلغي الالتقاط");
             // Clipboard ownership is independent of capture. Never hold the hidden
             // main window or the next shortcut hostage to a clipboard manager.
 
         }
-        catch (Exception ex) { Console.Error.WriteLine(ex); ShowError(ex.Message, () => PickDesktop(copy, collect)); }
+        catch (Exception ex)
+        {
+            restoreWindow = true;
+            SupportLog.Record(share ? "capture-live" : "capture", ex);
+            Console.Error.WriteLine(ex);
+            var fallback = share || collect && Picker.UsesPortal
+                ? Btn(L.T("التقاط لون بمنتقي النظام"), async () =>
+                {
+                    errorBanner.IsVisible = false;
+                    await PickDesktop(copy, systemPicker: true);
+                })
+                : null;
+            ShowError(ex.Message, () => PickDesktop(copy, collect, systemPicker), fallback, share ? L.T("إعادة محاولة العدسة الحية") : null);
+        }
         finally
         {
-            picking = false; eyedropper.IsEnabled = true;
+            picking = false; eyedropper.IsEnabled = true; captureMode.IsEnabled = true;
             try { if (share) Picker.SetPortalParentTransparent(this, false); }
             finally
             {
                 if (!closed)
                 {
-                    Opacity = previousOpacity; if (content.Parent is ScrollViewer scroll) scroll.Offset = default; Render(); Show(); WindowState = previousState; Activate();
-                    eyedropper.Focus(); spine.Collapse();
+                    Opacity = previousOpacity; if (content.Parent is ScrollViewer scroll) scroll.Offset = default; Render();
+                    bool activateOnShow = ShowActivated;
+                    ShowActivated = restoreWindow;
+                    try { Show(); WindowState = previousState; }
+                    finally { ShowActivated = activateOnShow; }
+                    if (restoreWindow) { Activate(); eyedropper.Focus(); }
+                    spine.Collapse();
                 }
             }
         }
@@ -178,12 +219,21 @@ internal sealed partial class MainWindow : Window
     }
     async Task WriteFile(string name, string text)
     {
-        var f = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions { Title = L.T("حفظ الملف"), SuggestedFileName = name, DefaultExtension = Path.GetExtension(name).TrimStart('.') });
+        IStorageFile? f;
+        nativeDialogOpen = true;
+        try { f = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions { Title = L.T("حفظ الملف"), SuggestedFileName = name, DefaultExtension = Path.GetExtension(name).TrimStart('.') }); }
+        finally { nativeDialogOpen = false; }
         if (f == null) return; await using var s = await f.OpenWriteAsync(); if (s.CanSeek) s.SetLength(0); await using var w = new StreamWriter(s, new UTF8Encoding(false)); await w.WriteAsync(text); status.Text = L.T("حُفظ الملف");
+    }
+    async Task<IReadOnlyList<IStorageFile>> OpenFiles(FilePickerOpenOptions options)
+    {
+        nativeDialogOpen = true;
+        try { return await StorageProvider.OpenFilePickerAsync(options); }
+        finally { nativeDialogOpen = false; }
     }
     async Task<byte[]?> ReadFile(string title, string[] patterns, int limit)
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new() { Title = title, FileTypeFilter = [new FilePickerFileType(title) { Patterns = patterns }] }); if (files.Count == 0) return null;
+        var files = await OpenFiles(new() { Title = title, FileTypeFilter = [new FilePickerFileType(title) { Patterns = patterns }] }); if (files.Count == 0) return null;
         await using var s = await files[0].OpenReadAsync(); if (s.CanSeek && s.Length > limit) throw new InvalidDataException(L.T("الملف أكبر من الحد المسموح."));
         using var m = new MemoryStream(); var buf = new byte[65536]; int n; while ((n = await s.ReadAsync(buf)) > 0) { if (m.Length + n > limit) throw new InvalidDataException(L.T("الملف أكبر من الحد المسموح.")); m.Write(buf, 0, n); }
         return m.ToArray();

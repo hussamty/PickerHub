@@ -83,14 +83,18 @@ internal sealed partial class MainWindow
 
         // One row, read in order: who this is and the one global action, then free space to move the
         // window by, then the quieter controls for history and theme, then the window itself.
-        var lead = Line(16, Line(9, mark, wordmark), eyedropper); lead.VerticalAlignment = VerticalAlignment.Center;
+        var lead = Line(12, Line(9, mark, wordmark), Line(5, eyedropper, BuildCaptureMode())); lead.VerticalAlignment = VerticalAlignment.Center;
         var trail = Line(12, history, themeSwitch); trail.VerticalAlignment = VerticalAlignment.Center;
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto"), Height = 56, Background = Brushes.Transparent, FlowDirection = FlowDirection.LeftToRight };
         lead.Margin = new Thickness(14, 0, 0, 0); header.Children.Add(lead);
         Grid.SetColumn(trail, 2); header.Children.Add(trail);
         var titlebar = BuildTitlebar(header, 3);
         // A narrow window drops the name; the actions always stay.
-        header.SizeChanged += (_, _) => wordmark.IsVisible = header.Bounds.Width >= 640;
+        header.SizeChanged += (_, _) =>
+        {
+            wordmark.IsVisible = header.Bounds.Width >= 640;
+            captureModeText.IsVisible = header.Bounds.Width >= 800;
+        };
         Closed += (_, _) => (mark.Source as IDisposable)?.Dispose();
 
         for (int i = 0; i < tools.Length; i++)
@@ -146,7 +150,7 @@ internal sealed partial class MainWindow
             Of(new Border { VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = "F8", FontSize = Typography.Caption, FontFamily = Code } }, "keycap"));
         AutomationProperties.SetName(eyedropper, L.T("القطّارة"));
         modes = [L.T("متجاورة"), L.T("متكاملة"), L.T("ثلاثية"), L.T("متكاملة منقسمة"), L.T("أحادية اللون"), L.T("عالية التباين")];
-        status.Text = Idle; PlaceToast();
+        status.Text = Idle; PlaceToast(); RefreshCaptureMode();
         DirectHistory(); ToolTip.SetTip(themeSwitch, L.T("المظهر"));
         // Everything that reads takes the language's direction: the page column (and its heading), the error banner and the toast.
         if (content.Parent is ScrollViewer scroll && scroll.Parent is Grid work) work.FlowDirection = L.Flow;
@@ -171,6 +175,7 @@ internal sealed partial class MainWindow
         UpdateWindowChrome();
         spine.Motion = Motion; spine.Activate(page);
         themeSwitch.Motion = Motion; themeSwitch.Sync(!dark);
+        RefreshCaptureMode();
     }
     async Task Settings()
     {
@@ -189,39 +194,34 @@ internal sealed partial class MainWindow
         opaque.IsCheckedChanged += (_, _) => _ = Guard(() => { Edit(() => state.ReduceTransparency = opaque.IsChecked == true); return Task.CompletedTask; });
         var system = new CheckBox { Content = L.T("اتباع مظهر النظام"), IsChecked = state.FollowSystemTheme };
         system.IsCheckedChanged += (_, _) => _ = Guard(() => { Edit(() => state.FollowSystemTheme = system.IsChecked == true); return Task.CompletedTask; });
-        panel.Children.Add(Col(Label(L.T("المظهر والحركة")), calm, opaque, system));
+        panel.Children.Add(Col(Text(L.T("المظهر والحركة"), Typography.Body, true), calm, opaque, system));
         if (Picker.UsesPortal)
         {
             var mode = new CheckBox { Content = L.T("استخدام عدسة PickerHub عبر مشاركة الشاشة"), IsChecked = state.UseWaylandScreenSharing, IsEnabled = !damaged };
             Button? stop = null;
-            mode.IsCheckedChanged += async (_, _) => await Guard(() =>
+            mode.IsCheckedChanged += (_, _) => _ = Guard(() =>
             {
-                Edit(() => state.UseWaylandScreenSharing = mode.IsChecked == true);
-                if (!state.UseWaylandScreenSharing)
-                {
-                    WaylandCapture.Stop();
-                    if (stop != null) stop.IsVisible = false;
-                }
+                SetCaptureMode(mode.IsChecked == true);
+                if (stop != null) stop.IsVisible = WaylandCapture.IsSharing;
                 return Task.CompletedTask;
             });
-            var section = Col(Label(L.T("القطّارة")), mode, Label(L.T("تستخدم القطّارة العادية منتقي ألوان النظام. فعّل المشاركة للعدسة الحيّة والتبديل بين النوافذ أثناء الالتقاط.")));
-            if (WaylandCapture.IsSharing) section.Children.Add(stop = Btn(L.T("إنهاء مشاركة الشاشة"), async () =>
+            var section = Col(Text(L.T("وضع الالتقاط"), Typography.Body, true), mode, Label(L.T("تستخدم القطّارة العادية منتقي ألوان النظام. فعّل المشاركة للعدسة الحيّة والتبديل بين النوافذ أثناء الالتقاط.")));
+            if (WaylandCapture.IsSharing) section.Children.Add(stop = Btn(L.T("إنهاء مشاركة الشاشة"), () =>
             {
-                await Picker.RequestPermissionAgain();
                 d.Close();
-                status.Text = L.T("توقفت مشاركة الشاشة.");
+                StopSharing();
             }));
             panel.Children.Add(section);
         }
-        panel.Children.Add(Col(Label(L.T("المكتبة المحلية")),
+        panel.Children.Add(Col(Text(L.T("المكتبة المحلية"), Typography.Body, true),
             Btn("download", L.T("تنزيل نسخة احتياطية"), async () => { d.Close(); await WriteFile("PickerHub-backup.json", BackupBundle.Export(state)); }),
             Btn("upload", L.T("استعادة نسخة احتياطية"), async () => { d.Close(); await Restore(); })));
-        var diagnostic = new CheckBox { Content = L.T("تسجيل أخطاء محلي اختياري"), IsChecked = state.DiagnosticsEnabled };
+        var diagnostic = new CheckBox { Content = L.T("تسجيل الأخطاء والتوقيتات محلياً"), IsChecked = state.DiagnosticsEnabled };
         diagnostic.IsCheckedChanged += (_, _) => _ = Guard(() => { Edit(() => state.DiagnosticsEnabled = diagnostic.IsChecked == true, false); SupportLog.Enabled = state.DiagnosticsEnabled; return Task.CompletedTask; });
-        panel.Children.Add(diagnostic);
-        panel.Children.Add(Label(L.T("يبقى السجل على جهازك؛ لا تُرسل أي بيانات تلقائياً.")));
-        panel.Children.Add(Btn(L.T("تنزيل تقرير الدعم"), async () => { d.Close(); await WriteFile("PickerHub-diagnostics.json", Diagnostics()); }));
-        panel.Children.Add(Label(L.T("تقرير الدعم لا يتضمن ألوانك أو صورك أو مسارات ملفاتك.")));
+        panel.Children.Add(Col(Text(L.T("الدعم والتشخيص"), Typography.Body, true), diagnostic,
+            Label(L.T("يبقى السجل على جهازك؛ لا تُرسل أي بيانات تلقائياً.")),
+            Btn(L.T("تنزيل تقرير الدعم"), async () => { d.Close(); await WriteFile("PickerHub-diagnostics.json", Diagnostics()); }),
+            Label(L.T("تقرير الدعم لا يتضمن ألوانك أو صورك أو مسارات ملفاتك."))));
         panel.Children.Add(Choices(Btn(L.T("إغلاق"), () => d.Close())));
         foreach (var group in panel.Children.OfType<StackPanel>()) foreach (var b in group.Children.OfType<Button>()) b.HorizontalAlignment = HorizontalAlignment.Stretch;
         d.Content = panel;

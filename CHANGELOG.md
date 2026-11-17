@@ -1,3 +1,12 @@
+# 0.8.0 — quicker picking, compact palettes and project search
+
+- Add Quick Pick to the tray and global shortcut settings. It copies the selected color and leaves the foreground window in focus. Copy confirmations show the color and format, and multi-pick confirmations include the count.
+- Show the Wayland capture mode and active sharing beside the eyedropper. Change mode, stop sharing, or switch to the system picker after a live-capture error. Capture shortcuts respect open dialogs.
+- Correct linear and radial gradient preview geometry to match the generated CSS. Preview hue and spectrum changes while editing the color.
+- Keep HEX, copy, and add-to-palette actions visible at compact sizes. Move search and paging above the swatches and render 24 swatches at a time.
+- Search across projects, palettes, favorites, colors, and semantic roles. Import PickerHub JSON palettes with a preview, either as a new palette or by merging and skipping duplicate colors.
+- Add a build identifier to diagnostics and record startup, capture, clipboard, and search timings when local logging is enabled.
+
 # 0.7.0 — typography, window state and the daily envelope
 
 - Set the interface in Plus Jakarta Sans for Latin and Noto Kufi Arabic for Arabic, in place of IBM Plex Sans Arabic. Both are geometric, low in contrast and share a 536-unit x-height, so mixed lines read as one face. Each ships as Regular, Medium, SemiBold and Bold instances; Noto Kufi Arabic's line box is tightened to 1.08/0.52 em so Arabic sits centred in pills and buttons. `scripts/fonts.py` cuts the instances from the upstream variable fonts.

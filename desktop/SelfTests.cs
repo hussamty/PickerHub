@@ -20,6 +20,26 @@ internal static class SelfTests
             Check(!Picker.WaylandSession("x11", "wayland-0"), "Explicit X11 wins over a stale or probed Wayland display");
             Check(Picker.WaylandSession("wayland", null), "Wayland session requires the portal even without a display hint");
             Check(Picker.WaylandSession(null, "wayland-0") && !Picker.WaylandSession(null, ""), "Unknown sessions use the display hint");
+            foreach (var size in new[] { new Avalonia.Size(1000, 190), new Avalonia.Size(190, 1000), new Avalonia.Size(300, 300) })
+            {
+                var (start, end) = MainWindow.CssGradientLine(45, size);
+                var axis = end.Point - start.Point;
+                Check(Math.Abs(axis.X + axis.Y) < .001 && Math.Abs(axis.X - (size.Width + size.Height) / 2) < .001,
+                    "The CSS gradient keeps a 45° angle and projects opposite corners to its endpoints");
+            }
+            var imported = PaletteExchange.Parse(System.Text.Encoding.UTF8.GetBytes(
+                """{"name":"New palette","colors":[{"name":"Accent","hex":"#87ceeb"},{"name":"Duplicate","hex":"#87CEEB"},{"name":"Text","hex":"#111111"}]}"""));
+            Check(imported.Colors.Count == 3 && imported.Colors[0].Hex == "#87CEEB", "Palette JSON preserves names and normalizes hex");
+            var unique = PaletteExchange.UniqueAgainst(imported, [new Swatch { Hex = "#87ceeb" }]);
+            Check(unique.Length == 1 && unique[0].Name == "Text", "Palette merge skips destination and incoming duplicates case-insensitively");
+            Reject(() => PaletteExchange.Parse(System.Text.Encoding.UTF8.GetBytes("""{"name":"Invalid","colors":[{"name":"Nope","hex":"red"}]}""")), "Palette import rejects malformed swatches");
+            imported.Collection = "Studio Website";
+            imported.Colors[0].Favorite = true;
+            imported.Roles["primary"] = "#111111";
+            Check(ProjectSearch.Find([imported], " website ", false).Single().Palette == imported &&
+                ProjectSearch.Find([imported], "87ce", true).Single().Color == imported.Colors[0] &&
+                ProjectSearch.Find([imported], "primary", false).Single().Role == "primary",
+                "Project search finds project names, favorite hex values and semantic roles");
             InstanceChecks().GetAwaiter().GetResult(); Phase1(); Phase2(); Phase3(); Phase4(); WriterChecks().GetAwaiter().GetResult();
             Console.WriteLine($"PASS: {checks} desktop checks"); return 0;
         }
