@@ -43,9 +43,11 @@ internal sealed class SwatchCard : Border
         BoxShadow = new BoxShadows(new BoxShadow { OffsetY = 14, Blur = 30, Color = Color.Parse("#59000000") });
         AutomationProperties.SetName(this, spec.Label + " " + spec.Code);
         var ink = new SolidColorBrush(Color.Parse(spec.Ink));
-        var role = new TextBlock { Text = spec.Label, FontSize = 16, FontWeight = FontWeight.Bold, FlowDirection = L.Flow, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(14, 12) };
-        var name = new TextBlock { Text = spec.Name, FontSize = 11, Opacity = .78, FlowDirection = L.Flow, HorizontalAlignment = HorizontalAlignment.Right };
-        var value = new TextBlock { Text = spec.Code, FontSize = spec.Code.Length > 9 ? 10.5 : 13, FontWeight = FontWeight.Bold, FontFamily = code, FlowDirection = FlowDirection.LeftToRight, HorizontalAlignment = HorizontalAlignment.Right };
+        // The stage is laid out left to right, so the reading start is named outright: right for Arabic, left for English.
+        var start = L.Language == "ar" ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+        var role = new TextBlock { Text = spec.Label, FontSize = Typography.Lead, FontWeight = FontWeight.SemiBold, FlowDirection = L.Flow, HorizontalAlignment = start, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(14, 12) };
+        var name = new TextBlock { Text = spec.Name, FontSize = Typography.Caption, Opacity = .78, FlowDirection = L.Flow, HorizontalAlignment = start };
+        var value = new TextBlock { Text = spec.Code, FontSize = spec.Code.Length > 9 ? 10.5 : 13, FontWeight = FontWeight.Bold, FontFamily = code, FlowDirection = FlowDirection.LeftToRight, HorizontalAlignment = start };
         var foot = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(14, 12) }; foot.Children.Add(name); foot.Children.Add(value);
         // A band of light that crosses the card as it turns.
         shine = new Border
@@ -151,12 +153,14 @@ internal sealed class EnvelopeArt(bool front) : Control
     // Closed, the envelope's top corners are the flap's and the back's together, rounded as one. Opened, two
     // rounded corners would pinch the fold into ears, so both square off while the flap stands past upright.
     static float Fold(double degrees) { double t = Math.Clamp((degrees - 90) / 60, 0, 1); return (float)(Corner * (1 - t * t * (3 - 2 * t))); }
-    // The PickerHub mark from the app icon: the P whose bowl is the eyedropper's lens, and the picked pixel in it.
-    static readonly SKPath Mark = Build(p =>
-    {
-        p.AddPath(SKPath.ParseSvgPathData("M462 176 H622 A170 170 0 0 1 792 346 V506 A170 170 0 0 1 622 676 H388 V752 L366 846 Q361 868 340 868 Q319 868 314 846 L292 752 V346 A170 170 0 0 1 462 176 Z M462 272 A74 74 0 0 0 388 346 V580 H622 A74 74 0 0 0 696 506 V346 A74 74 0 0 0 622 272 Z"));
-        p.FillType = SKPathFillType.EvenOdd;
-    });
+    // The PickerHub mark from the app icon: an eyedropper bent into a P. Its glass body wraps the lens, its collar
+    // and grooved rubber bulb sit where the bowl meets the stem, and the stem narrows into the tip.
+    static readonly SKPath[] Mark =
+    [
+        SKPath.ParseSvgPathData("M524 668 H592 A170 170 0 0 0 762 498 V334 A170 170 0 0 0 592 164 H432 A170 170 0 0 0 262 334 V692 Q262 700 266.4 706.7 L291.6 745.3 Q296 752 296 760 V836 A14 14 0 0 0 324 836 V760 Q324 752 328.4 745.3 L353.6 706.7 Q358 700 358 692 V334 A74 74 0 0 1 432 260 H592 A74 74 0 0 1 666 334 V498 A74 74 0 0 1 592 572 H524 Z"),
+        Build(p => p.AddRoundRect(new SKRect(500, 550, 528, 690), 12, 12)),
+        Build(p => { p.AddPath(SKPath.ParseSvgPathData("M470 556 Q486 556 486 572 V668 Q486 684 470 684 H438 A64 64 0 0 1 438 556 Z M446 555 h8 v130 h-8 Z M462 555 h8 v130 h-8 Z")); p.FillType = SKPathFillType.EvenOdd; }),
+    ];
 
     // The flap turns about the hinge and is seen through the same lens as the cards, so its tip widens as it comes forward.
     static SKMatrix Hinge(double degrees)
@@ -224,9 +228,10 @@ internal sealed class EnvelopeArt(bool front) : Control
         using (var ring = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1, Color = new SKColor(0x99FFF000) })
             canvas.DrawCircle(x, y, SealR - 3.5f, ring);
         canvas.Save();
-        canvas.Translate(x, y); canvas.Scale(SealR * 1.08f / 692); canvas.Translate(-542, -522);   // the mark is 692 units tall
-        using (var mark = new SKPaint { IsAntialias = true, Color = new SKColor(0xFFFFF000) }) canvas.DrawPath(Mark, mark);
-        using (var pixel = new SKPaint { IsAntialias = true, Color = SKColors.White }) canvas.DrawRoundRect(new SKRect(472, 356, 612, 496), 30, 30, pixel);
+        canvas.Translate(x, y); canvas.Scale(SealR * 1.08f / 686); canvas.Translate(-512, -507);   // the mark is 686 units tall, centred on (512, 507)
+        using (var mark = new SKPaint { IsAntialias = true, Color = new SKColor(0xFFFFF000) })
+            foreach (var part in Mark) canvas.DrawPath(part, mark);
+        using (var pixel = new SKPaint { IsAntialias = true, Color = SKColors.White }) canvas.DrawRoundRect(new SKRect(442, 336, 582, 476), 30, 30, pixel);
         canvas.Restore();
     }
 
@@ -517,7 +522,8 @@ internal sealed class PackStage : Panel
     }
 
     // ---- Layout: cards are arranged at their resting places and posed away from them. ----
-    int Place(int card) => cards.Count - 1 - card;                       // first role on the right, as Arabic reads
+    // The first role sits where reading starts: on the right in Arabic, on the left in English.
+    int Place(int card) => L.Language == "ar" ? cards.Count - 1 - card : card;
     double Step => StepFor(Bounds.Width);
     double Mid => (cards.Count - 1) / 2d;
     double StepFor(double width) => cards.Count < 2 ? 0 : Math.Min(SwatchCard.W + 14, (width - 24 - SwatchCard.W) / (cards.Count - 1));

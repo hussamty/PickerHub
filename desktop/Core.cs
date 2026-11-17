@@ -52,6 +52,7 @@ internal static class Core
     public static string Text(this JsonElement e, string key)
     {
         if (L.Language == "en" && key == "name" && e.TryGetProperty("english", out var english)) return english.GetString()!;
+        if (L.Language == "en" && key == "story" && e.TryGetProperty("storyEnglish", out var story)) return story.GetString()!;
         return L.T(e.GetProperty(key).GetString()!);
     }
 }

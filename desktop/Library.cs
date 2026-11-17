@@ -68,7 +68,9 @@ internal sealed partial class MainWindow
         void Sync(int i) { moved(i); name.Text = items[i].Name; position.Text = (i + 1).ToString("00") + " / " + items.Count.ToString("00"); }
         deck.Changed += Sync; Sync(start);
         var caption = Col(name, position); caption.Spacing = 0; caption.Width = 150; caption.VerticalAlignment = VerticalAlignment.Center;
-        var pager = Line(8, Of(Liquid("chevron-right", L.T("اللون السابق"), deck.Previous), "still"), caption, Of(Liquid("chevron-left", L.T("اللون التالي"), deck.Next), "still"));
+        // Previous points back along the reading direction: right in Arabic, left in English.
+        bool arabic = L.Language == "ar";
+        var pager = Line(8, Of(Liquid(arabic ? "chevron-right" : "chevron-left", L.T("اللون السابق"), deck.Previous), "still"), caption, Of(Liquid(arabic ? "chevron-left" : "chevron-right", L.T("اللون التالي"), deck.Next), "still"));
         var tools = Cluster([Liquid("refresh", L.T("قلب البطاقة"), deck.Flip), .. actions]);
         var view = Col(deck, pager, tools); view.Spacing = 12; view.HorizontalAlignment = HorizontalAlignment.Center;
         foreach (var child in view.Children) child.HorizontalAlignment = HorizontalAlignment.Center;

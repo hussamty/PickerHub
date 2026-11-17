@@ -11,10 +11,10 @@ from PIL import Image
 ASSETS = Path(__file__).resolve().parents[1] / "desktop" / "Assets"
 SOURCE = (ASSETS / "icon.svg").read_text(encoding="utf-8")
 # At small sizes the neighbouring pixels in the lens would blur into noise: the mark is drawn
-# larger, with the picked pixel alone in the lens.
+# larger about its own centre (512, 507), with the picked pixel alone in the lens.
 SMALL = SOURCE.replace('<g id="detail"', '<g id="detail" display="none"', 1) \
               .replace(' fill="#FFFFFF" display="none"/>', ' fill="#FFFFFF"/>', 1) \
-              .replace('transform="translate(-30 -12)"', 'transform="translate(512 512) scale(1.1) translate(-542 -522)"', 1)
+              .replace('<g id="mark">', '<g id="mark" transform="translate(512 507) scale(1.1) translate(-512 -507)">', 1)
 
 
 def render(svg, size):
