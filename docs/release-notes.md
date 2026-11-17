@@ -10,8 +10,9 @@ New in 0.7.0:
 - Maximized windows now show a Restore button beside Minimize; Restore returns the window to its previous size.
 - A redesigned palette-of-the-day envelope with exact corners and edges, a perspective flap, a lined interior and the PickerHub seal.
 - `--preview-envelope` opens the envelope in a temporary library so it can be replayed at will (Linux launchers also offer it in the app's context menu).
-- A new PickerHub mark, an eyedropper bent into the letter P, as the app icon, and a single-row top bar.
-- English layouts read left to right throughout, and every daily palette has an English story.
+- A new PickerHub mark, an eyedropper written as one fluid stroke in the shape of a P, with a drop falling from its tip, and a single-row top bar.
+- Arabic reads from the right and English from the left throughout, including after switching language in Settings, and every daily palette has an English story.
+- Status messages appear as frosted-glass toasts in the bottom corner where reading starts, and leave on their own.
 - Short windows keep every navigation tool on screen; the minimum window size is 560 × 480.
 
 Image paste/drop, full-color cards and responsive scrolling from 0.6.0 are included.

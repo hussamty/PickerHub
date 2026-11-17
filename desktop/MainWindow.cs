@@ -139,7 +139,7 @@ internal sealed partial class MainWindow : Window
                 }, false);
                 pickedCount++;
                 if (copy ?? state.AutoCopy) QueuePickCopy(PickValue(state, h));
-                status.Text = L.T("تم التقاط ") + h;
+                status.Text = L.T("تم التقاط ") + Isolate(h);
             }
             var selected = await Picker.Start(this, share, collect ? Accept : null);
             if (!collect && selected != null) Accept(selected);

@@ -364,5 +364,9 @@
   "معاينة ظرف باقة اليوم": "Daily envelope preview",
   "إعادة المعاينة": "Replay",
   "الظرف مغلق من جديد": "The envelope is sealed again",
-  "معاينة: مكتبة مؤقتة تُحذف عند الإغلاق ولا تمسّ مكتبتك. R لإعادة المعاينة.": "Preview: a temporary library, deleted on close, that never touches yours. Press R to replay."
+  "معاينة: مكتبة مؤقتة تُحذف عند الإغلاق ولا تمسّ مكتبتك. R لإعادة المعاينة.": "Preview: a temporary library, deleted on close, that never touches yours. Press R to replay.",
+  "عمى الأحمر (Protanopia)": "Protanopia (red-blind)",
+  "عمى الأخضر (Deuteranopia)": "Deuteranopia (green-blind)",
+  "عمى الأزرق (Tritanopia)": "Tritanopia (blue-blind)",
+  " · لا يحقق AA": " · fails AA"
 }

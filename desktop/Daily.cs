@@ -64,7 +64,7 @@ internal sealed partial class MainWindow
 
     PackStage? pack;
     string packKey = "";
-    static string PackKey(JsonElement p, bool shade, int format) => $"{p.Text("id")}|{p.GetProperty("serial").GetInt64()}|{shade}|{format}|{p.GetProperty("adjust").GetProperty("light").GetInt64()}|{p.GetProperty("adjust").GetProperty("vivid").GetInt64()}";
+    static string PackKey(JsonElement p, bool shade, int format) => $"{L.Language}|{p.Text("id")}|{p.GetProperty("serial").GetInt64()}|{shade}|{format}|{p.GetProperty("adjust").GetProperty("light").GetInt64()}|{p.GetProperty("adjust").GetProperty("vivid").GetInt64()}";
     IEnumerable<CardSpec> Cards(JsonElement p, bool shade)
     {
         string key = dailyFormats[dailyFormat].ToLowerInvariant();
@@ -107,7 +107,7 @@ internal sealed partial class MainWindow
         words.IsHitTestVisible = false;
         if (Motion) words.Transitions = [new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(220) }];
         words.Opacity = 0;
-        packKey = PackKey(p, shade, dailyFormat); status.Text = L.T("فُتحت باقة اليوم: ") + p.Text("name");
+        packKey = PackKey(p, shade, dailyFormat); status.Text = L.T("فُتحت باقة اليوم: ") + Isolate(p.Text("name"));
         await stage.Open(Cards(p, shade));
         dailyStaged = Motion;
         if (page == DailyTool) Render();
@@ -124,7 +124,7 @@ internal sealed partial class MainWindow
         // The cards that flew out of the envelope are the ones shown here; later visits build them at rest.
         string key = PackKey(p, shade, dailyFormat);
         if (pack == null || packKey != key || !pack.HasCards || pack.Opening) { pack = PackStage.Resting(Motion, Cards(p, shade)); packKey = key; }
-        pack.Copied = card => _ = Guard(async () => { await Copy(card.Code); status.Text = L.T("نُسخ ") + card.Label + ": " + card.Code; });
+        pack.Copied = card => _ = Guard(async () => { await Copy(card.Code); status.Text = L.T("نُسخ ") + Isolate(card.Label) + ": " + Isolate(card.Code); });
         content.Children.Add(pack);
 
         // The story: what this palette is, and when the next one comes.
@@ -159,7 +159,7 @@ internal sealed partial class MainWindow
         var apply = Btn(applied ? "check" : "plus", applied ? L.T("أُضيفت إلى اللوحة الحالية") : L.T("تطبيق على اللوحة الحالية"), () =>
         {
             var target = Current;
-            Edit(() => target.Colors.AddRange(Make().Colors)); Core.Daily("apply"); Render(); status.Text = L.T("أُضيفت ألوان الباقة إلى «") + target.Name + "»";
+            Edit(() => target.Colors.AddRange(Make().Colors)); Core.Daily("apply"); Render(); status.Text = L.T("أُضيفت ألوان الباقة إلى «") + Isolate(target.Name) + "»";
         });
         save.IsEnabled = !saved; apply.IsEnabled = !applied;
         string format = dailyFormats[dailyFormat].ToLowerInvariant();

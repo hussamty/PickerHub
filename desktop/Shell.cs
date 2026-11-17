@@ -15,7 +15,6 @@ internal sealed partial class MainWindow
     readonly Spine spine = new();
     readonly TextBlock pageTitle = Text("", Typography.Display, true);
     readonly TextBlock pageDescription = Label("");
-    readonly Border currentDot = new() { Width = 14, Height = 14, CornerRadius = new CornerRadius(7), VerticalAlignment = VerticalAlignment.Center };
     readonly ThemeSwitch themeSwitch = new() { VerticalAlignment = VerticalAlignment.Center };
     readonly Backdrop backdrop = new();
     StackPanel history = new();
@@ -64,14 +63,9 @@ internal sealed partial class MainWindow
         eyedropper.FlowDirection = L.Flow;
         AutomationProperties.SetName(eyedropper, L.T("القطّارة"));
 
-        status.Text = Idle; status.FontSize = Typography.Label;
-        // A message is news for a few seconds, then the line goes back to rest.
-        var settle = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-        settle.Tick += (_, _) => { settle.Stop(); if (!picking) status.Text = Idle; };
-        status.PropertyChanged += (_, change) => { if (change.Property == TextBlock.TextProperty) { settle.Stop(); if (status.Text != Idle) settle.Start(); } }; status.TextWrapping = TextWrapping.NoWrap; status.TextTrimming = TextTrimming.CharacterEllipsis;
-        Tone(status, "Muted"); status.FlowDirection = L.Flow;
-        AutomationProperties.SetLiveSetting(status, AutomationLiveSetting.Polite);
-        var notice = Of(new Border { Child = status, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(12, 0) }, "status");
+        // Status news no longer lives in the top bar: it rises as a toast (Toast.cs).
+        status.Text = Idle;
+        var toasts = BuildToast();
 
         // The wordmark follows the TrineHub rule: only the capital H takes the signal color.
         var wordmark = new TextBlock { FontSize = Typography.Title, FontWeight = FontWeight.Bold, LetterSpacing = -.2, VerticalAlignment = VerticalAlignment.Center };
@@ -87,21 +81,16 @@ internal sealed partial class MainWindow
         var mark = new Image { Source = new Avalonia.Media.Imaging.Bitmap(portrait), Width = 26, Height = 26, VerticalAlignment = VerticalAlignment.Center };
         Avalonia.Media.RenderOptions.SetBitmapInterpolationMode(mark, Avalonia.Media.Imaging.BitmapInterpolationMode.HighQuality);
 
-        // One row, read in order: who this is, the one global action and what it last did,
-        // then the quieter controls for history and theme, then the window itself.
+        // One row, read in order: who this is and the one global action, then free space to move the
+        // window by, then the quieter controls for history and theme, then the window itself.
         var lead = Line(16, Line(9, mark, wordmark), eyedropper); lead.VerticalAlignment = VerticalAlignment.Center;
         var trail = Line(12, history, themeSwitch); trail.VerticalAlignment = VerticalAlignment.Center;
         var header = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto"), Height = 56, Background = Brushes.Transparent, FlowDirection = FlowDirection.LeftToRight };
         lead.Margin = new Thickness(14, 0, 0, 0); header.Children.Add(lead);
-        Grid.SetColumn(notice, 1); header.Children.Add(notice); Grid.SetColumn(trail, 2); header.Children.Add(trail);
+        Grid.SetColumn(trail, 2); header.Children.Add(trail);
         var titlebar = BuildTitlebar(header, 3);
-        notice.Child = null;
-        var statusRow = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*"), FlowDirection = L.Flow };
-        currentDot.Margin = new Thickness(0, 0, 8, 0); statusRow.Children.Add(currentDot);
-        Grid.SetColumn(status, 1); statusRow.Children.Add(status); notice.Child = statusRow;
-        notice.HorizontalAlignment = HorizontalAlignment.Left; notice.MaxWidth = 360;
-        // A narrow window drops the status first, then the name; the actions always stay.
-        header.SizeChanged += (_, _) => { notice.IsVisible = header.Bounds.Width >= 820; wordmark.IsVisible = header.Bounds.Width >= 640; };
+        // A narrow window drops the name; the actions always stay.
+        header.SizeChanged += (_, _) => wordmark.IsVisible = header.Bounds.Width >= 640;
         Closed += (_, _) => (mark.Source as IDisposable)?.Dispose();
 
         for (int i = 0; i < tools.Length; i++)
@@ -115,7 +104,8 @@ internal sealed partial class MainWindow
 
         // Title and its one-line purpose share a row, so the page keeps the height for its tools.
         pageDescription.VerticalAlignment = VerticalAlignment.Bottom; pageDescription.Margin = new Thickness(0, 0, 0, 9); pageDescription.TextWrapping = TextWrapping.Wrap;
-        var heading = new WrapPanel { Orientation = Orientation.Horizontal, FlowDirection = L.Flow }; heading.Children.Add(pageTitle); pageDescription.Margin = new Thickness(16, 8, 0, 6); heading.Children.Add(pageDescription); heading.Margin = new Thickness(22, 2, 22, 10);
+        // The heading takes its direction from the page column, so it follows every change of language.
+        var heading = new WrapPanel { Orientation = Orientation.Horizontal }; heading.Children.Add(pageTitle); pageDescription.Margin = new Thickness(16, 8, 0, 6); heading.Children.Add(pageDescription); heading.Margin = new Thickness(22, 2, 22, 10);
         var work = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), FlowDirection = L.Flow,
             Margin = new Thickness(10, 0, Spine.Closed + 4, 0), MaxWidth = 1336 };
         work.Children.Add(heading);
@@ -130,6 +120,7 @@ internal sealed partial class MainWindow
         var room = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), FlowDirection = FlowDirection.LeftToRight };
         Grid.SetRowSpan(backdrop, 2); room.Children.Add(backdrop); room.Children.Add(titlebar);
         Grid.SetRow(shell, 1); room.Children.Add(shell); Grid.SetRow(overlay, 1); room.Children.Add(overlay);
+        Grid.SetRow(toasts, 1); room.Children.Add(toasts);
         Content = room;
     }
     // Changing tool answers at once: the marker moves on this frame and the page is built on the next.
@@ -155,9 +146,11 @@ internal sealed partial class MainWindow
             Of(new Border { VerticalAlignment = VerticalAlignment.Center, Child = new TextBlock { Text = "F8", FontSize = Typography.Caption, FontFamily = Code } }, "keycap"));
         AutomationProperties.SetName(eyedropper, L.T("القطّارة"));
         modes = [L.T("متجاورة"), L.T("متكاملة"), L.T("ثلاثية"), L.T("متكاملة منقسمة"), L.T("أحادية اللون"), L.T("عالية التباين")];
-        status.FlowDirection = L.Flow; status.Text = Idle;
+        status.Text = Idle; PlaceToast();
         DirectHistory(); ToolTip.SetTip(themeSwitch, L.T("المظهر"));
+        // Everything that reads takes the language's direction: the page column (and its heading), the error banner and the toast.
         if (content.Parent is ScrollViewer scroll && scroll.Parent is Grid work) work.FlowDirection = L.Flow;
+        errorBanner.FlowDirection = L.Flow;
         SetTrayMenu();
     }
     // Undo points back along the reading direction, so the pair mirrors with the language.
@@ -176,7 +169,6 @@ internal sealed partial class MainWindow
         pageTitle.Text = tools[page].Title; pageDescription.Text = tools[page].About; pageTitle.LetterSpacing = Typography.Tracking(pageTitle.Text, Typography.Display);
         pageTitle.LineHeight = Typography.Leading(Typography.Display); pageDescription.LineHeight = Typography.Leading(Typography.Label);
         UpdateWindowChrome();
-        currentDot.Background = Paint(state.Color); ToolTip.SetTip(currentDot, state.Color);
         spine.Motion = Motion; spine.Activate(page);
         themeSwitch.Motion = Motion; themeSwitch.Sync(!dark);
     }
