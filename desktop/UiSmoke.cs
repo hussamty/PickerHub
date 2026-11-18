@@ -46,6 +46,68 @@ internal sealed partial class MainWindow
                 if (parts[i].r.Intersects(parts[j].r)) found.Add((AutomationProperties.GetName(parts[i].c) ?? "?") + " overlaps " + (AutomationProperties.GetName(parts[j].c) ?? "?"));
         return found.ToArray();
     }
+    // A picture with distinct areas: the guide marks each color inside its own area, its leaders draw out
+    // over time and never cross, its labels never overlap, and it reads in both themes.
+    async Task GuideScenario()
+    {
+        byte[] png;
+        using (var picture = new SkiaSharp.SKBitmap(480, 320))
+        using (var canvas = new SkiaSharp.SKCanvas(picture))
+        using (var paint = new SkiaSharp.SKPaint { IsAntialias = false })
+        {
+            void Fill(uint color, Action<SkiaSharp.SKPaint> draw) { paint.Color = new SkiaSharp.SKColor(color); draw(paint); }
+            Fill(0xFF8EC9F0, p => canvas.DrawRect(0, 0, 480, 200, p));                       // sky
+            Fill(0xFFF4C430, p => canvas.DrawCircle(390, 70, 38, p));                         // sun
+            Fill(0xFFFFFFFF, p => canvas.DrawOval(120, 60, 60, 22, p));                       // cloud
+            Fill(0xFF4C9A3F, p => canvas.DrawRect(0, 200, 480, 120, p));                      // meadow
+            Fill(0xFF2E5E2A, p => canvas.DrawRect(40, 120, 36, 90, p));                       // tree
+            Fill(0xFFC8553D, p => canvas.DrawRect(250, 140, 110, 80, p));                     // house
+            Fill(0xFF3B2A20, p => canvas.DrawRect(290, 180, 26, 40, p));                      // door
+            Fill(0xFF7B5EA7, p => canvas.DrawRect(0, 290, 480, 30, p));                       // lavender row
+            using var image = SkiaSharp.SKImage.FromBitmap(picture); using var data = image.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
+            png = data.ToArray();
+        }
+        state.ReduceMotion = false; page = 3;
+        await ImportImage(() => Task.FromResult<Stream>(new MemoryStream(png)), "meadow-guide.png");
+        await Task.Delay(120);
+        var guide = content.GetVisualDescendants().OfType<ColorGuide>().Single();
+        SelfTests.Check(guide.Labels.Count == recentImage.Length && recentImage.Length >= 6, $"The guide labels every color: {recentImage.Length}");
+        SelfTests.Check(!guide.Settled && guide.Labels.Any(l => l.Opacity < 1), "Leaders draw out over time rather than appearing at once");
+        await Task.Delay(2600);
+        SelfTests.Check(guide.Settled && guide.Labels.All(l => l.Opacity == 1) && Enumerable.Range(0, guide.Placements.Length).All(i => guide.LeaderProgress(i) == 1), "The guide settles with every leader drawn");
+        var placed = guide.Placements;
+        for (int i = 0; i < placed.Length; i++)
+            for (int j = i + 1; j < placed.Length; j++)
+            {
+                SelfTests.Check(!Callouts.Collide(placed[i], placed[j]), "Guide leaders never cross");
+                SelfTests.Check(!placed[i].Label.Intersects(placed[j].Label), "Guide labels never overlap");
+            }
+        SelfTests.Check(placed.All(p => guide.FrameRect.Deflate(12).Contains(p.Mark) && !guide.FrameRect.Contains(p.Tip)), "Every leader runs from inside the picture to outside its frame");
+        // Each mark sits on a pixel nearer its own color than any other listed color.
+        using (var decoded = SkiaSharp.SKBitmap.Decode(png))
+        {
+            var inner = guide.FrameRect.Deflate(12);
+            double Apart(SkiaSharp.SKColor a, string hex) { var b = Avalonia.Media.Color.Parse(hex); return Math.Pow(a.Red - b.R, 2) + Math.Pow(a.Green - b.G, 2) + Math.Pow(a.Blue - b.B, 2); }
+            for (int i = 0; i < placed.Length; i++)
+            {
+                var px = decoded.GetPixel(Math.Clamp((int)((placed[i].Mark.X - inner.X) / inner.Width * decoded.Width), 0, decoded.Width - 1), Math.Clamp((int)((placed[i].Mark.Y - inner.Y) / inner.Height * decoded.Height), 0, decoded.Height - 1));
+                int nearest = Enumerable.Range(0, recentImage.Length).OrderBy(k => Apart(px, recentImage[k])).First();
+                SelfTests.Check(nearest == i, $"The mark for {recentImage[i]} sits on its own color (found {px})");
+            }
+        }
+        // The lavender row is named for its hue, as every label is: by the engine's perceptual classifier.
+        {
+            var lavender = guide.Entries.FirstOrDefault(e => Core.Describe(e.Hex).GetProperty("family").GetString() is "Purple" or "Violet");
+            SelfTests.Check(lavender != null && lavender.Name == Core.Describe(lavender.Hex).Text("name") && lavender.Name != Core.Describe("#808080").Text("name"),
+                $"The lavender row is labelled as a purple, not gray: {string.Join(", ", guide.Entries.Select(e => e.Hex + " " + e.Name))}");
+        }
+        foreach (var theme in new[] { "dark", "light" })
+        {
+            state.Theme = theme; Render(); await Task.Delay(250);
+            await Capture(L.Language + "-guide-" + theme);
+        }
+        state.Theme = "dark"; Render();
+    }
     internal async Task Smoke()
     {
         try
@@ -68,6 +130,9 @@ internal sealed partial class MainWindow
                 for (int i = 0; imageSampleRequest != null && i < 100; i++) await Task.Delay(20);
                 SelfTests.Check(sampledColor == "#123456" && sampledPixel == new PixelPoint(8, 8),
                     "Enter samples the original image at its center");
+                SelfTests.Check(content.GetVisualDescendants().OfType<WrapPanel>().Any(row =>
+                        row.Children.OfType<TextBlock>().Any(t => t.Text == "#123456") && row.Children.OfType<TextBlock>().Any(t => t.IsVisible && t.Text == Core.Describe("#123456").Text("name"))),
+                    "The sampled pixel is shown with its name");
                 await PasteImage();
                 SelfTests.Check(sampledPixel == null && sampledColor == null, "New images clear the previous pixel selection");
                 SelfTests.Check(recentImage.Contains("#123456"), "Repeated image paste remains readable");
@@ -98,6 +163,7 @@ internal sealed partial class MainWindow
                 SelfTests.Check(preview == before && !analyzing, "Canceled analysis preserves the previous result and releases the input gate");
                 File.Delete(filePath);
             }
+            await GuideScenario();
             if (CustomChrome)
             {
                 SelfTests.Check(SystemDecorations == SystemDecorations.None && ResizeEdge(new Point(2, 2)) == WindowEdge.NorthWest && ResizeEdge(new Point(100, 100)) == null, "Custom chrome preserves corner resize targets");

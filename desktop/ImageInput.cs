@@ -143,7 +143,7 @@ internal sealed partial class MainWindow
             imagePreviewOnly = previewOnly;
             sampledPixel = null;
             sampledColor = null;
-            recentImage = result.Colors; percentages = result.Percentages;
+            recentImage = result.Colors; percentages = result.Percentages; imagePoints = result.Points; imageGuideRevision++;
             imageName = Path.GetFileNameWithoutExtension(name); if (imageName.Length == 0) imageName = L.T("لوحة الصورة"); if (imageName.Length > 100) imageName = imageName[..100];
             if (page == 3) Render(); previous?.Dispose();
             status.Text = L.T("استُخرجت ألوان الصورة");

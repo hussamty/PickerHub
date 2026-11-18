@@ -21,26 +21,18 @@ internal sealed partial class MainWindow
         content.Children.Add(Surface(Col(hint, inputActions)));
         if (preview == null) { content.Children.Add(Empty(L.T("لوحة جديدة من صورة"), L.T("الصورة تبقى على جهازك. تُستخرج الألوان محلياً."), "photo")); return; }
         Palette Make() => new() { Name = imageName, Colors = recentImage.Select(Swatch.From).ToList() };
-        var photo = Section(imageName, ImageSamplingControls(), Of(Liquid("upload", L.T("تغيير الصورة"), Analyze), "still"));
-        // Each bar is as long as that color's share of the image.
-        var list = new StackPanel { Spacing = 6 };
-        double widest = percentages.Length == 0 ? 1 : Math.Max(percentages.Max(), .1);
-        for (int i = 0; i < recentImage.Length; i++)
-        {
-            var h = recentImage[i]; double share = Math.Clamp(percentages[i] / widest, .06, 1);
-            var bar = Of(Chip(h, () => { page = 0; Select(h); }, ""), "flat"); bar.Height = 26; bar.MinHeight = 26; bar.CornerRadius = new CornerRadius(9); ToolTip.SetTip(bar, h);
-            var track = new Grid { ColumnDefinitions = new ColumnDefinitions(FormattableString.Invariant($"{share}*,{1 - share}*")) }; track.Children.Add(bar);
-            var percent = Mono(percentages[i].ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "%", Typography.Label); percent.HorizontalAlignment = HorizontalAlignment.Left;
-            var name = Text(Core.Describe(h).Text("name"), 12); name.TextWrapping = TextWrapping.NoWrap; name.TextTrimming = TextTrimming.CharacterEllipsis;
-            var line = new Grid { ColumnDefinitions = new ColumnDefinitions("80,8,*,8,48,Auto") };
-            line.Children.Add(name); Grid.SetColumn(track, 2); line.Children.Add(track); Grid.SetColumn(percent, 4); line.Children.Add(percent);
-            var use = Liquid("dots", L.T("إجراءات اللون"), () => ColorActions(h));
-            Grid.SetColumn(use, 5); line.Children.Add(use);
-            list.Children.Add(line);
-        }
+        // The colors are shown where they are: a mark on each one in the picture, and a leader out to its label.
+        var (picture, sampling) = ImageSamplingControls();
+        var entries = recentImage.Select((h, i) => new ColorGuide.Entry(h, Core.Describe(h).Text("name"), i < percentages.Length ? percentages[i] : 0,
+            i < imagePoints.Length ? imagePoints[i] : new Point(.5, .5))).ToArray();
+        // Leaders draw out once for each new picture; a page rebuilt for a theme or language change shows them at rest.
+        bool fresh = imageGuideShown != imageGuideRevision; imageGuideShown = imageGuideRevision;
+        var guide = new ColorGuide(picture, preview.Size, entries, Motion, fresh, h => _ = Guard(() => ColorActions(h)));
+        AutomationProperties.SetName(guide, L.T("ألوان الصورة"));
         var save = Btn("device-floppy", L.T("حفظ كلوحة"), async () => { var p = Make(); var name = await Prompt(L.T("اسم اللوحة"), p.Name); if (name != null) { p.Name = name; Edit(() => { state.Palettes.Add(p); paletteId = p.Id; paletteCard = 0; }); } }, true);
-        var actions = Line(8, save, Of(Liquid("download", L.T("تصدير"), () => Export(Make())), "still")); actions.Margin = new Thickness(0, 10, 0, 0); list.Children.Add(actions);
-        content.Children.Add(Pair(photo, Section(L.T("ألوان الصورة"), list)));
+        var tools = Line(8, save, Of(Liquid("download", L.T("تصدير"), () => Export(Make())), "still"), Of(Liquid("upload", L.T("تغيير الصورة"), Analyze), "still"));
+        var help = Label(L.T("انقر لافتة لون لإجراءاته."));
+        content.Children.Add(Section(imageName, Col(guide, help, sampling), tools));
     }
     static string Css(Gradient g) => (g.Type == "linear" ? $"linear-gradient({g.Angle}deg, " : "radial-gradient(circle, ") + string.Join(", ", g.Stops.OrderBy(s => s.Pos).Select(s => $"{s.Hex} {s.Pos}%")) + ")";
     internal static (RelativePoint Start, RelativePoint End) CssGradientLine(double degrees, Size size)

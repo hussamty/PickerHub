@@ -297,11 +297,14 @@
   "محايد": "Neutral",
   "أحمر": "Red",
   "برتقالي": "Orange",
+  "بني": "Brown",
   "أصفر": "Yellow",
   "أخضر": "Green",
-  "فيروزي": "Turquoise",
+  "فيروزي": "Teal",
   "أزرق": "Blue",
-  "بنفسجي": "Purple",
+  "بنفسجي": "Violet",
+  "أرجواني": "Purple",
+  "ماجنتا": "Magenta",
   "وردي": "Pink",
   "متوسط السطوع": "Medium lightness",
   "هادئ": "Calm",
@@ -412,5 +415,6 @@
   "لا توجد نتائج مطابقة.": "No matching results.",
   "تظهر أول 30 نتيجة. ضيّق البحث لعرض نتائج أخرى.": "Showing the first 30 results. Refine the search to see other matches.",
   "يتطلب الالتقاط المتعدد العدسة الحية ومشاركة الشاشة.": "Multi-pick requires the live lens and screen sharing.",
-  "يستقبل منتقي النظام لوناً واحداً. تبقى مشاركة الشاشة للعدسة الحية نشطة حتى توقفها.": "The system picker returns one color. Live lens sharing stays active until you stop it."
+  "يستقبل منتقي النظام لوناً واحداً. تبقى مشاركة الشاشة للعدسة الحية نشطة حتى توقفها.": "The system picker returns one color. Live lens sharing stays active until you stop it.",
+  "انقر لافتة لون لإجراءاته.": "Click a color's label for its actions."
 }

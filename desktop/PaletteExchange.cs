@@ -26,6 +26,7 @@ internal static class PaletteExchange
                     throw new InvalidDataException(L.T(invalid));
                 palette.Colors.Add(new Swatch { Name = swatchName, Hex = code.GetString()!.ToUpperInvariant() });
             }
+            Workspace.RefreshAutomaticNames(palette.Colors);
             return palette;
         }
         catch (JsonException ex)

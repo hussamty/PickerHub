@@ -31,6 +31,10 @@ internal class Workspace
 {
     public const int MaxPalettes = 256;
     public int Version { get; set; } = 2;
+    // Which automatic color names the swatches carry: 1 is the perceptual naming of PickerHub 1.1 and later.
+    // Files written before it have no such field; their swatches are renamed once (see RefreshAutomaticNames).
+    // Older versions ignore the field, so this needs no new workspace version.
+    public int NameScheme { get; set; } = 1;
     public string Color { get; set; } = "#87CEEB";
     public int Limit { get; set; } = 32;
     public bool UseWaylandScreenSharing { get; set; }
@@ -72,6 +76,7 @@ internal class Workspace
             if (!obj.RootElement.TryGetProperty(k, out _)) throw new InvalidDataException("اختر نسخة PickerHub احتياطية صالحة.");
         var w = JsonSerializer.Deserialize<Workspace>(text, Json)!;
         if (w.Version == 1) w.Version = 2;
+        bool oldNames = !obj.RootElement.TryGetProperty("nameScheme", out _) || w.NameScheme < 1;
         static bool Name(string? s) => !string.IsNullOrWhiteSpace(s) && s.Length <= 100;
         static bool Ids(IEnumerable<string> ids) { var seen = new HashSet<string>(); return ids.All(id => id != null && Regex.IsMatch(id, @"\A[A-Za-z0-9-]{1,64}\z") && seen.Add(id)); }
         if (w.Version != 2 || !Hex(w.Color) || w.Theme is not ("light" or "dark") || w.CopyFormat is not ("HEX" or "RGB" or "HSL") ||
@@ -83,7 +88,21 @@ internal class Workspace
            !Ids(w.Palettes.Select(p => p.Id)) || w.Gradients == null || w.Gradients.Count > 512 ||
            !w.Gradients.All(g => g != null && Name(g.Name) && g.Type is "linear" or "radial" && g.Angle is >= 0 and <= 360 && g.Stops != null && g.Stops.Count is >= 2 and <= 32 && g.Stops.All(s => s != null && Hex(s.Hex) && s.Pos is >= 0 and <= 100)) ||
            !Ids(w.Gradients.Select(g => g.Id))) throw new InvalidDataException("بيانات المكتبة غير صالحة.");
+        if (oldNames) { RefreshAutomaticNames(w.Palettes.SelectMany(p => p.Colors)); w.NameScheme = 1; }
         return w;
+    }
+    // Before 1.1 a new swatch was named after the nearest of 51 references by RGB distance, which called muted
+    // purples "Gray" and dark browns "Charcoal". A swatch whose name is still exactly what that gave its color was
+    // never renamed by its owner, so it takes its perceptual name, in the same language. Names people typed stay.
+    // Used for libraries saved before 1.1 and for imported palette files, which may have been exported by 1.0.
+    internal static void RefreshAutomaticNames(IEnumerable<Swatch> swatches)
+    {
+        foreach (var swatch in swatches)
+        {
+            var info = Core.Describe(swatch.Hex); var previous = info.GetProperty("previous");
+            if (swatch.Name == previous.GetProperty("name").GetString()) swatch.Name = info.GetProperty("name").GetString()!;
+            else if (swatch.Name == previous.GetProperty("english").GetString()) swatch.Name = info.GetProperty("english").GetString()!;
+        }
     }
     public static Workspace Load()
     {

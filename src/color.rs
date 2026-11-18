@@ -75,6 +75,28 @@ impl Color {
             0.025_904_037_1 * l + 0.782_771_766_2 * m - 0.808_675_766 * s,
         ]
     }
+    /// The sRGB color nearest to OKLab coordinates, clipping anything outside sRGB.
+    pub fn from_oklab([l, a, b]: [f64; 3]) -> Self {
+        let l_ = l + 0.396_337_777_4 * a + 0.215_803_757_3 * b;
+        let m_ = l - 0.105_561_345_8 * a - 0.063_854_172_8 * b;
+        let s_ = l - 0.089_484_177_5 * a - 1.291_485_548 * b;
+        let (l3, m3, s3) = (l_.powi(3), m_.powi(3), s_.powi(3));
+        let linear = [
+            4.076_741_662_1 * l3 - 3.307_711_591_3 * m3 + 0.230_969_929_2 * s3,
+            -1.268_438_004_6 * l3 + 2.609_757_401_1 * m3 - 0.341_319_396_5 * s3,
+            -0.004_196_086_3 * l3 - 0.703_418_614_7 * m3 + 1.707_614_701 * s3,
+        ];
+        let [r, g, b] = linear.map(|v| {
+            let v = v.clamp(0., 1.);
+            let srgb = if v <= 0.003_130_8 { 12.92 * v } else { 1.055 * v.powf(1. / 2.4) - 0.055 };
+            (srgb * 255.).round().clamp(0., 255.) as u8
+        });
+        Self(r, g, b)
+    }
+    pub fn from_oklch(l: f64, c: f64, h: f64) -> Self {
+        let (s, co) = h.to_radians().sin_cos();
+        Self::from_oklab([l, c * co, c * s])
+    }
     pub fn ratio(self, other: Self) -> f64 {
         let a = self.luminance();
         let b = other.luminance();
@@ -108,33 +130,25 @@ impl Color {
         let [r, g, b] = self.channels();
         let cmy = |a: f64| if v == 0. { 0 } else { pct(1. - a / v) };
         let hsv = format!("{h}°, {}%, {}%", pct(sv), pct(v));
-        let name = crate::names::nearest(self);
-        let base = if s < 0.10 || v < 0.07 {
-            "محايد"
-        } else {
-            match h {
-                0..=14 | 346..=359 => "أحمر",
-                15..=44 => "برتقالي",
-                45..=68 => "أصفر",
-                69..=165 => "أخضر",
-                166..=190 => "فيروزي",
-                191..=254 => "أزرق",
-                255..=292 => "بنفسجي",
-                _ => "وردي",
-            }
-        };
-        let shade = if l < 0.28 {
+        // Name, family and shade all come from the one perceptual classifier, in OKLCH.
+        let name = crate::names::name(self);
+        let previous = crate::names::previous(self);
+        let (ok_l, chroma, hue) = crate::names::oklch(self);
+        let shade = if ok_l < 0.42 {
             "داكن"
-        } else if l > 0.65 {
+        } else if ok_l >= 0.70 {
             "فاتح"
         } else {
             "متوسط السطوع"
         };
-        let [ok_l, ok_a, ok_b] = self.oklab();
-        let chroma = ok_a.hypot(ok_b);
-        let hue = if chroma < 1e-7 { 0. } else { ok_b.atan2(ok_a).to_degrees().rem_euclid(360.) };
+        let tone = match name.tone {
+            crate::names::Tone::Neutral => "neutral",
+            crate::names::Tone::Tinted => "tinted",
+            crate::names::Tone::Chromatic => "chromatic",
+        };
         let oklch = format!("oklch({:.2}% {:.5} {:.2})", ok_l * 100., chroma, hue);
-        json!({"hex":self.hex(),"name":name.1,"english":name.2,"reference":Color::unpack(name.0).hex(),"base":base,"shade":shade,"hue":h,
+        json!({"hex":self.hex(),"name":name.arabic,"english":name.english,"reference":Color::unpack(name.reference).hex(),
+        "base":name.family.arabic(),"family":name.family.english(),"tone":tone,"previous":{"name":previous.0,"english":previous.1},"shade":shade,"hue":h,
         "ink":self.ink().hex(),"formats":{"HEX":self.hex(),"RGB":format!("rgb({}, {}, {})",self.0,self.1,self.2),
         "RGBA":format!("rgba({}, {}, {}, 1)",self.0,self.1,self.2),"HSL":format!("hsl({h}, {}%, {}%)",pct(s),pct(l)),
         "HSV":hsv,"HSB":hsv,"OKLCH":oklch,"CMYK":format!("{}%, {}%, {}%, {}%",cmy(r),cmy(g),cmy(b),pct(1.-v))}})

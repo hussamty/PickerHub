@@ -11,6 +11,42 @@ internal static class SelfTests
     {
         bool failed = false; try { action(); } catch { failed = true; } Check(failed, message);
     }
+    // The image guide's leaders: across many random pictures, no two leaders cross, no leader grazes another
+    // color's mark when there is room, no labels overlap, and each column's labels are evenly spaced.
+    static void Callouts()
+    {
+        var random = new Random(41);
+        var frame = new Avalonia.Rect(240, 40, 420, 300);
+        foreach (bool both in new[] { true, false })
+            for (int round = 0; round < 400; round++)
+            {
+                int n = 1 + random.Next(16);
+                var marks = Enumerable.Range(0, n).Select(_ => new Avalonia.Point(frame.X + 12 + random.NextDouble() * (frame.Width - 24), frame.Y + 12 + random.NextDouble() * (frame.Height - 24))).ToList();
+                var placed = PickerHub.Callouts.Layout(marks, frame, new Avalonia.Size(196, 48), both, true, 8, 16);
+                Check(placed.Length == n && placed.All(p => p.Label.Width > 0), "Every color gets a label");
+                for (int i = 0; i < n; i++)
+                    for (int j = i + 1; j < n; j++)
+                    {
+                        Check(!PickerHub.Callouts.Collide(placed[i], placed[j]), $"Leaders never cross ({n} colors, round {round})");
+                        Check(!placed[i].Label.Intersects(placed[j].Label), "Labels never overlap");
+                    }
+                Check(placed.All(p => p.Left ? p.Label.Right <= frame.Left : p.Label.Left >= frame.Right), "Labels sit outside the frame");
+                foreach (var side in placed.GroupBy(p => p.Left))
+                {
+                    var ys = side.Select(p => p.Label.Center.Y).OrderBy(y => y).ToArray();
+                    var gaps = ys.Zip(ys.Skip(1), (a, b) => b - a).ToArray();
+                    Check(gaps.Length == 0 || gaps.Max() - gaps.Min() < .01, "Each column's labels are evenly spaced");
+                }
+            }
+        // Marks in a row on one side: the leaders still fan out without crossing or passing through a mark.
+        var row = Enumerable.Range(0, 6).Select(i => new Avalonia.Point(frame.X + 40 + i * 60, frame.Center.Y)).ToList();
+        var fan = PickerHub.Callouts.Layout(row, frame, new Avalonia.Size(196, 48), false, true, 8, 16);
+        for (int i = 0; i < fan.Length; i++)
+            for (int j = 0; j < row.Count; j++)
+                if (j != i) Check(PickerHub.Callouts.Clearance(fan[i], row[j]) >= 15.5, $"A leader keeps clear of other marks: leader {i} passes {PickerHub.Callouts.Clearance(fan[i], row[j]):0.0} px from mark {j}");
+        for (int i = 0; i < fan.Length; i++)
+            for (int j = i + 1; j < fan.Length; j++) Check(!PickerHub.Callouts.Collide(fan[i], fan[j]), "Bent leaders never cross");
+    }
     public static int Run()
     {
         string root = Path.Combine(Path.GetTempPath(), "pickerhub-test-" + Guid.NewGuid().ToString("N"));
@@ -114,7 +150,41 @@ internal static class SelfTests
         var upgraded = Workspace.Parse(JsonSerializer.Serialize(map));
         Check(upgraded.Version == 2 && upgraded.AutoCopy && upgraded.CopyFormat == "HEX" && !upgraded.GlobalShortcut, "Old settings migrate safely without requesting global permissions");
         Check(Core.Describe("#87CEEB").Text("hex") == "#87CEEB", "Native core ABI works");
+        Naming();
         Console.WriteLine("Phase 1: persistence, recovery, migration and undo passed");
+    }
+    // Every name in the app comes from the engine's perceptual classifier; these are the cases that used to go wrong.
+    static void Naming()
+    {
+        string English(string hex) => Core.Describe(hex).GetProperty("english").GetString()!;
+        string Family(string hex) => Core.Describe(hex).GetProperty("family").GetString()!;
+        Check(English("#7B5EA7") == "Medium purple" && Family("#7B5EA7") == "Purple", "A muted purple is named purple, not gray");
+        foreach (var hex in new[] { "#800080", "#663399", "#8E7CC3", "#866F91", "#301934", "#4B0082", "#6A5ACD", "#8A2BE2" })
+            Check(Family(hex) is "Purple" or "Violet" && !English(hex).Contains("gray", StringComparison.OrdinalIgnoreCase), $"{hex} keeps its purple family");
+        Check(English("#8B8197") == "Purple gray" && Core.Describe("#8B8197").Text("tone") == "tinted", "A gray purple keeps its tint");
+        foreach (var hex in new[] { "#808080", "#7E8081", "#D3D3D3", "#404040" })
+            Check(Family(hex) == "Neutral", $"{hex} is a true gray");
+        Check(Family("#FF00FF") == "Magenta" && Family("#C0007A") == "Magenta", "Magentas keep their family");
+        Check(Family("#8B4513") == "Brown" && Family("#5C4033") == "Brown", "Browns are not charcoal");
+        Check(Family("#4682B4") == "Blue" && Family("#1E3A8A") == "Blue", "Blues keep their family");
+        L.Language = "en"; bool english = Core.Describe("#7B5EA7").Text("base") == "Purple" && Core.Describe("#8B4513").Text("base") == "Brown";
+        L.Language = "ar"; Check(english && Core.Describe("#7B5EA7").Text("base") == "أرجواني", "Families read in both languages");
+
+        // A library saved by 1.0 keeps the names people typed, but drops the old automatic ones.
+        var library = new Workspace();
+        library.Palettes[0].Colors.AddRange([
+            new Swatch { Hex = "#7B5EA7", Name = "رمادي" }, new Swatch { Hex = "#7B5EA7", Name = "Gray" },
+            new Swatch { Hex = "#5C4033", Name = "Charcoal" }, new Swatch { Hex = "#7B5EA7", Name = "Charcoal" },
+            new Swatch { Hex = "#7B5EA7", Name = "Studio wall" }, new Swatch { Hex = "#808080", Name = "Gray" }]);
+        var saved = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(Json(library))!;
+        saved.Remove("nameScheme");
+        var names = Workspace.Parse(JsonSerializer.Serialize(saved)).Palettes[0].Colors.Select(c => c.Name).ToArray();
+        Check(names.SequenceEqual(["أرجواني متوسط", "Medium purple", "Dark brown", "Charcoal", "Studio wall", "Gray"]),
+            "Old automatic swatch names are renamed once and typed names are kept: " + string.Join(", ", names));
+        var current = Workspace.Parse(Json(library)).Palettes[0].Colors.Select(c => c.Name);
+        Check(current.SequenceEqual(library.Palettes[0].Colors.Select(c => c.Name)), "Current libraries are never renamed");
+        var imported = PaletteExchange.Parse(System.Text.Encoding.UTF8.GetBytes("""{"name":"Wall","colors":[{"name":"Gray","hex":"#7B5EA7"},{"name":"Lilac wall","hex":"#7B5EA7"}]}"""));
+        Check(imported.Colors[0].Name == "Medium purple" && imported.Colors[1].Name == "Lilac wall", "Imported palettes from 1.0 lose old automatic names only");
     }
     static void Phase2()
     {
@@ -171,6 +241,7 @@ internal static class SelfTests
         Check(ImageSampler.PixelAt(new Avalonia.Point(210, 110), fitted, new Avalonia.PixelSize(1920, 1920)) == new Avalonia.PixelPoint(960, 960) &&
             ImageSampler.PixelAt(new Avalonia.Point(40, 110), fitted, new Avalonia.PixelSize(1920, 1920)) == null,
             "Image pointer coordinates map to the source and exclude letterboxing");
+        Callouts();
         L.Language = "en"; Check(L.T("القطّارة") == "Eyedropper" && Core.Describe("#87CEEB").Text("name") == Core.Describe("#87CEEB").Text("english"), "English UI and color names");
         L.Language = "ar"; Check(L.T("القطّارة") == "القطّارة", "Arabic UI remains the default");
         Console.WriteLine("Phase 3: large libraries, bulk actions, cache bounds, image analysis and languages passed");

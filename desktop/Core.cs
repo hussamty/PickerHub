@@ -12,6 +12,7 @@ internal static class Core
     [DllImport(Lib)] static extern nuint output_len();
     [DllImport(Lib)] static extern nint pixel_buffer(uint bytes);
     [DllImport(Lib)] static extern nint extract(uint count);
+    [DllImport(Lib)] static extern nint extract_at(uint width, uint height, uint count);
     [DllImport(Lib)] static extern nint daily(byte[] request, nuint len);
     static JsonElement Read(nint ptr)
     {
@@ -41,6 +42,13 @@ internal static class Core
         if (ptr == 0) throw new InvalidDataException(L.T("تجاوزت الصورة حجم العينة المتاح."));
         Marshal.Copy(rgba, 0, ptr, rgba.Length); return Read(extract(16));
     }
+    // The same colors, each with where it lives in the image: x and y as fractions of the width and height.
+    public static JsonElement ExtractAt(byte[] rgba, int width, int height)
+    {
+        nint ptr = pixel_buffer((uint)rgba.Length);
+        if (ptr == 0) throw new InvalidDataException(L.T("تجاوزت الصورة حجم العينة المتاح."));
+        Marshal.Copy(rgba, 0, ptr, rgba.Length); return Read(extract_at((uint)width, (uint)height, 16));
+    }
     // Palette of the day. The core reads the clock and the state file itself; only the folder and the action cross over.
     public static JsonElement Daily(string action, string value = "")
     {
@@ -52,6 +60,8 @@ internal static class Core
     public static string Text(this JsonElement e, string key)
     {
         if (L.Language == "en" && key == "name" && e.TryGetProperty("english", out var english)) return english.GetString()!;
+        // The engine names the hue family in both languages, so English never depends on a second word list.
+        if (L.Language == "en" && key == "base" && e.TryGetProperty("family", out var family)) return family.GetString()!;
         if (L.Language == "en" && key == "story" && e.TryGetProperty("storyEnglish", out var story)) return story.GetString()!;
         return L.T(e.GetProperty(key).GetString()!);
     }

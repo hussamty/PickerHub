@@ -1,3 +1,12 @@
+# 1.1.0 — image color guide and perceptual color names
+
+- Name colors by how they look. One classifier in the engine reads each color in OKLCH and names everything in the app: the editor, palettes, the library, the image guide, sampled pixels and the daily cards. A color is gray only when its chroma is genuinely low, so a muted or dark purple such as #7B5EA7 is now Medium purple, not Gray; faintly tinted grays keep their tint (Purple gray, Slate gray, Taupe), and in the dark, where a little chroma shows plainly, a dark brown or an eggplant is named brown or purple rather than a tinted gray. Purple, violet, magenta, blue, brown and pink each have their own family with fixed hue, lightness and chroma limits, and colors near a limit are compared with the neighbouring family too, so names do not flip between nearly equal colors.
+- Name image colors from a robust representative: each color is its group's weighted OKLab median, snapped to a shade that occurs in the picture, so shadows, highlights, compression fringes and noise do not pull it toward gray. Nearly transparent pixels are no longer counted.
+- Show the sampled pixel's name beside its code. Swatches saved by 1.0, and palette files exported from it, take the new names once when they still carry their old automatic name; names you typed are kept.
+- Show an analyzed image's colors where they are instead of as a list of bars. Each color gets a glass mark inside its own area of the picture and a leader out to a glass label with its name, code and share; the picture sits in a frosted-glass frame. Leaders draw outward one after another and the labels settle as they arrive.
+- Locate every color in the engine: `extract_at` segments the picture by nearest color and marks each color at the deepest point of its largest region, so a mark never lands on an edge between colors.
+- Route the leaders without collisions: labels stand in evenly spaced columns, the marks are split at their median so no leader crosses sides, and a least-total-length matching leaves no two leaders crossing; a leader that would graze another mark bends round it. The self-test checks 800 random layouts; the UI test checks a real picture in both themes and languages.
+
 # 1.0.0 — contrast handoff and image pixel sampling
 
 - Send a swatch directly to the text or background input of Contrast Check. Save both colors as semantic roles in a palette, with confirmation when overwriting existing roles.
