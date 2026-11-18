@@ -20,19 +20,53 @@ internal sealed partial class MainWindow
         var hint = Label(L.T("اسحب صورة هنا أو الصقها باستخدام ") + (OperatingSystem.IsMacOS() ? "⌘V" : "Ctrl+V") + " · PNG / JPG / WEBP · 32 MB");
         content.Children.Add(Surface(Col(hint, inputActions)));
         if (preview == null) { content.Children.Add(Empty(L.T("لوحة جديدة من صورة"), L.T("الصورة تبقى على جهازك. تُستخرج الألوان محلياً."), "photo")); return; }
-        Palette Make() => new() { Name = imageName, Colors = recentImage.Select(Swatch.From).ToList() };
         // The colors are shown where they are: a mark on each one in the picture, and a leader out to its label.
         var (picture, sampling) = ImageSamplingControls();
-        var entries = recentImage.Select((h, i) => new ColorGuide.Entry(h, Core.Describe(h).Text("name"), i < percentages.Length ? percentages[i] : 0,
-            i < imagePoints.Length ? imagePoints[i] : new Point(.5, .5))).ToArray();
+        var all = ImageEntries();
         // Leaders draw out once for each new picture; a page rebuilt for a theme or language change shows them at rest.
         bool fresh = imageGuideShown != imageGuideRevision; imageGuideShown = imageGuideRevision;
-        var guide = new ColorGuide(picture, preview.Size, entries, Motion, fresh, h => _ = Guard(() => ColorActions(h)));
+        var guide = new ColorGuide(picture, preview.Size, ColorGuide.Visible(all, imageShowAll), Motion, fresh, h => _ = Guard(() => ColorActions(h)));
         AutomationProperties.SetName(guide, L.T("ألوان الصورة"));
-        var save = Btn("device-floppy", L.T("حفظ كلوحة"), async () => { var p = Make(); var name = await Prompt(L.T("اسم اللوحة"), p.Name); if (name != null) { p.Name = name; Edit(() => { state.Palettes.Add(p); paletteId = p.Id; paletteCard = 0; }); } }, true);
-        var tools = Line(8, save, Of(Liquid("download", L.T("تصدير"), () => Export(Make())), "still"), Of(Liquid("upload", L.T("تغيير الصورة"), Analyze), "still"));
+        // Saving and export take the colors on show: the five most dominant in compact view, or every color.
+        var save = Btn("device-floppy", L.T("حفظ اللوحة"), async () => { var p = ImagePalette(); var name = await Prompt(L.T("اسم اللوحة"), p.Name); if (name != null) { p.Name = name; Edit(() => { state.Palettes.Add(p); paletteId = p.Id; paletteCard = 0; }); } }, true);
+        ToolTip.SetTip(save, L.T("حفظ الألوان المعروضة كلوحة في مكتبتك")); ToolTip.SetPlacement(save, PlacementMode.Top);
+        AutomationProperties.SetAutomationId(save, "save-image-palette");
+        var tools = Line(8, save, Of(Liquid("download", L.T("تصدير الألوان المعروضة"), () => Export(ImagePalette())), "still"), Of(Liquid("upload", L.T("تغيير الصورة"), Analyze), "still"));
         var help = Label(L.T("انقر لافتة لون لإجراءاته."));
-        content.Children.Add(Section(imageName, Col(guide, help, sampling), tools));
+        var body = Col(guide);
+        if (all.Length > ColorGuide.CompactCount) body.Children.Add(ImageViewToggle(guide, all));
+        body.Children.Add(help); body.Children.Add(sampling);
+        content.Children.Add(Section(imageName, body, tools));
+    }
+    // Every analyzed color, with its name, its share of the picture and where it is.
+    ColorGuide.Entry[] ImageEntries() => recentImage.Select((h, i) => new ColorGuide.Entry(h, Core.Describe(h).Text("name"), i < percentages.Length ? percentages[i] : 0,
+        i < imagePoints.Length ? imagePoints[i] : new Point(.5, .5))).ToArray();
+    // The colors on show, most dominant first: what saving and export take.
+    internal string[] ShownImageColors() => ColorGuide.Visible(ImageEntries(), imageShowAll).Select(e => e.Hex).ToArray();
+    Palette ImagePalette() => new() { Name = imageName, Colors = ShownImageColors().Select(Swatch.From).ToList() };
+    // A picture with more than five colors opens in compact view, with its five most dominant colors. The toggle
+    // beneath it shows every color and back again; the guide redraws in place, so the page keeps its scroll.
+    Control ImageViewToggle(ColorGuide guide, ColorGuide.Entry[] all)
+    {
+        var caption = Label("");
+        Button toggle = null!;
+        toggle = Btn("chevrons-down", L.T("عرض الكل"), () =>
+        {
+            imageShowAll = !imageShowAll;
+            guide.Show(ColorGuide.Visible(all, imageShowAll), Motion);
+            Sync();
+        });
+        AutomationProperties.SetAutomationId(toggle, "guide-show-all");
+        void Sync()
+        {
+            string label = imageShowAll ? string.Format(L.T("عرض أبرز {0}"), ColorGuide.CompactCount) : L.T("عرض الكل");
+            toggle.Content = Line(8, new Icon(imageShowAll ? "chevrons-up" : "chevrons-down", 18), new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
+            AutomationProperties.SetName(toggle, label);
+            caption.Text = imageShowAll ? string.Format(L.T("تُعرض الألوان كلها ({0})."), all.Length)
+                : string.Format(L.T("عرض مختصر: أبرز {0} من {1} ألوان."), ColorGuide.CompactCount, all.Length);
+        }
+        Sync();
+        return Line(12, toggle, caption);
     }
     static string Css(Gradient g) => (g.Type == "linear" ? $"linear-gradient({g.Angle}deg, " : "radial-gradient(circle, ") + string.Join(", ", g.Stops.OrderBy(s => s.Pos).Select(s => $"{s.Hex} {s.Pos}%")) + ")";
     internal static (RelativePoint Start, RelativePoint End) CssGradientLine(double degrees, Size size)

@@ -1,3 +1,9 @@
+# 1.2.0 — compact image palettes and copying from color actions
+
+- Open a picture with more than five colors in compact view: the guide marks and labels only its five most dominant colors, largest first. A Show all toggle beneath the picture brings back every color and then offers Show top 5; the guide redraws in place with its leader motion, so the page keeps its scroll position, and reduced motion switches at rest. Each new picture opens in compact view again.
+- Save palette and export take the colors on show: the five most dominant in compact view, every color after Show all.
+- Copy a color's code from its color actions, in the format chosen in Settings, wherever the actions open: image labels, sampled pixels and palette swatches.
+
 # 1.1.0 — image color guide and perceptual color names
 
 - Name colors by how they look. One classifier in the engine reads each color in OKLCH and names everything in the app: the editor, palettes, the library, the image guide, sampled pixels and the daily cards. A color is gray only when its chroma is genuinely low, so a muted or dark purple such as #7B5EA7 is now Medium purple, not Gray; faintly tinted grays keep their tint (Purple gray, Slate gray, Taupe), and in the dark, where a little chroma shows plainly, a dark brown or an eggplant is named brown or purple rather than a tinted gray. Purple, violet, magenta, blue, brown and pink each have their own family with fixed hue, lightness and chroma limits, and colors near a limit are compared with the neighbouring family too, so names do not flip between nearly equal colors.

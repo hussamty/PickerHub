@@ -171,15 +171,25 @@ internal static class Callouts
 internal sealed class ColorGuide : Panel
 {
     internal sealed record Entry(string Hex, string Name, double Percent, Point At);
+    // Compact view: a picture with more colors than this shows only its most dominant ones at first, so it
+    // is not buried under leaders; "Show all" brings back the rest.
+    internal const int CompactCount = 5;
+    // The colors to show, most dominant (largest share) first, and only the first five in compact view.
+    // Equal shares keep the engine's order, so the choice never shuffles.
+    internal static Entry[] Visible(IReadOnlyList<Entry> all, bool showAll) =>
+        all.Select((entry, index) => (entry, index)).OrderByDescending(x => x.entry.Percent).ThenBy(x => x.index)
+            .Select(x => x.entry).Take(showAll ? all.Count : CompactCount).ToArray();
     const double Pad = 12, Disc = 11, MaxImageHeight = 460;
     readonly Glass frame;
     readonly Leaders leaders;
     readonly List<Glass> labels = [];
     readonly List<TextBlock> names = [];
     readonly Size bitmap;
-    readonly IReadOnlyList<Entry> entries;
+    readonly Action<string> open;
+    IReadOnlyList<Entry> entries = [];
     readonly bool motion;
-    bool animate, running;
+    // animate: draw out at the next layout; pending: drawn out soon, so nothing shows at rest until then.
+    bool animate, pending, running;
     readonly Stopwatch clock = new();
     Size frameSize, labelSize;
     bool twoSided;
@@ -191,17 +201,29 @@ internal sealed class ColorGuide : Panel
 
     public ColorGuide(Control picture, Size bitmap, IReadOnlyList<Entry> entries, bool motion, bool animate, Action<string> open)
     {
-        this.bitmap = bitmap; this.entries = entries; this.motion = motion; this.animate = animate && motion;
+        this.bitmap = bitmap; this.motion = motion; this.open = open;
         FlowDirection = FlowDirection.LeftToRight;
         picture.MaxHeight = double.PositiveInfinity;
         frame = new Glass("CardTint") { Radius = 22, Blur = 18, Padding = new Thickness(Pad), Child = new Border { CornerRadius = new CornerRadius(12), ClipToBounds = true, Child = picture } };
         leaders = new Leaders(this) { IsHitTestVisible = false };
         Children.Add(frame); Children.Add(leaders);
-        for (int i = 0; i < entries.Count; i++) { var label = Label(entries[i], i, open); labels.Add(label); Children.Add(label); }
-        if (this.animate) foreach (var label in labels) label.Opacity = 0;
+        Show(entries, animate);
     }
 
-    Glass Label(Entry e, int index, Action<string> open)
+    // Shows these colors in place of the current ones: the picture stays, the labels are rebuilt and laid
+    // out afresh, and with motion the leaders draw out again, largest color first.
+    internal void Show(IReadOnlyList<Entry> next, bool animate)
+    {
+        foreach (var label in labels) Children.Remove(label);
+        labels.Clear(); names.Clear();
+        entries = next; Hot = -1; running = false; Placements = [];
+        for (int i = 0; i < entries.Count; i++) { var label = Label(entries[i], i); labels.Add(label); Children.Add(label); }
+        this.animate = pending = animate && motion;
+        if (this.animate) foreach (var label in labels) label.Opacity = 0;
+        InvalidateMeasure(); leaders.InvalidateVisual();
+    }
+
+    Glass Label(Entry e, int index)
     {
         string share = e.Percent.ToString(e.Percent < 10 ? "0.0" : "0", CultureInfo.InvariantCulture) + "%";
         var swatch = new Border { Width = 18, Height = 18, CornerRadius = new CornerRadius(5), Background = new SolidColorBrush(Color.Parse(e.Hex)), BorderThickness = new Thickness(1), VerticalAlignment = VerticalAlignment.Center };
@@ -274,7 +296,7 @@ internal sealed class ColorGuide : Panel
     const double PopFor = .26, DrawFor = .58, Stagger = .075;
     static double PopAt(int i) => i * Stagger;
     static double DrawAt(int i) => .14 + i * Stagger;
-    double Elapsed => running ? clock.Elapsed.TotalSeconds : double.PositiveInfinity;
+    double Elapsed => running ? clock.Elapsed.TotalSeconds : pending ? 0 : double.PositiveInfinity;
     internal double MarkScale(int i)
     {
         double t = Math.Clamp((Elapsed - PopAt(i)) / PopFor, 0, 1);
@@ -287,9 +309,10 @@ internal sealed class ColorGuide : Panel
         double t = Math.Clamp((Elapsed - DrawAt(i)) / DrawFor, 0, 1);
         return 1 - Math.Pow(1 - t, 3);                              // eases out as it reaches the label
     }
-    internal bool Settled => !running;
+    internal bool Settled => !running && !pending;
     void Start()
     {
+        pending = false;
         if (VisualRoot == null) { foreach (var label in labels) label.Opacity = 1; return; }
         running = true; clock.Restart();
         TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => Frame());
@@ -318,7 +341,7 @@ internal sealed class ColorGuide : Panel
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        if (running) { running = false; foreach (var label in labels) { label.Opacity = 1; label.RenderTransform = null; } }
+        if (running || pending) { running = pending = false; foreach (var label in labels) { label.Opacity = 1; label.RenderTransform = null; } }
     }
 
     // The marks and leaders, drawn over the picture and the page in one layer.

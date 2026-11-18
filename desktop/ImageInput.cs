@@ -144,6 +144,7 @@ internal sealed partial class MainWindow
             sampledPixel = null;
             sampledColor = null;
             recentImage = result.Colors; percentages = result.Percentages; imagePoints = result.Points; imageGuideRevision++;
+            imageShowAll = false;   // each new picture opens in compact view
             imageName = Path.GetFileNameWithoutExtension(name); if (imageName.Length == 0) imageName = L.T("لوحة الصورة"); if (imageName.Length > 100) imageName = imageName[..100];
             if (page == 3) Render(); previous?.Dispose();
             status.Text = L.T("استُخرجت ألوان الصورة");

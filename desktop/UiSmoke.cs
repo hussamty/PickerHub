@@ -71,30 +71,39 @@ internal sealed partial class MainWindow
         await ImportImage(() => Task.FromResult<Stream>(new MemoryStream(png)), "meadow-guide.png");
         await Task.Delay(120);
         var guide = content.GetVisualDescendants().OfType<ColorGuide>().Single();
-        SelfTests.Check(guide.Labels.Count == recentImage.Length && recentImage.Length >= 6, $"The guide labels every color: {recentImage.Length}");
+        // More than five colors: the guide opens in compact view with the five most dominant.
+        var dominant = Enumerable.Range(0, recentImage.Length).OrderByDescending(i => percentages[i]).ThenBy(i => i).Select(i => recentImage[i]).ToArray();
+        SelfTests.Check(recentImage.Length > ColorGuide.CompactCount && guide.Labels.Count == ColorGuide.CompactCount &&
+            guide.Entries.Select(e => e.Hex).SequenceEqual(dominant.Take(ColorGuide.CompactCount)), $"A picture with {recentImage.Length} colors opens in compact view with its five most dominant");
+        Button ShowAll() => content.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetAutomationId(b) == "guide-show-all");
+        SelfTests.Check(AutomationProperties.GetName(ShowAll()) == L.T("عرض الكل") && ShownImageColors().SequenceEqual(dominant.Take(ColorGuide.CompactCount)),
+            "Compact view offers Show all, and saving or export take the five colors shown");
         SelfTests.Check(!guide.Settled && guide.Labels.Any(l => l.Opacity < 1), "Leaders draw out over time rather than appearing at once");
         await Task.Delay(2600);
-        SelfTests.Check(guide.Settled && guide.Labels.All(l => l.Opacity == 1) && Enumerable.Range(0, guide.Placements.Length).All(i => guide.LeaderProgress(i) == 1), "The guide settles with every leader drawn");
-        var placed = guide.Placements;
-        for (int i = 0; i < placed.Length; i++)
-            for (int j = i + 1; j < placed.Length; j++)
-            {
-                SelfTests.Check(!Callouts.Collide(placed[i], placed[j]), "Guide leaders never cross");
-                SelfTests.Check(!placed[i].Label.Intersects(placed[j].Label), "Guide labels never overlap");
-            }
-        SelfTests.Check(placed.All(p => guide.FrameRect.Deflate(12).Contains(p.Mark) && !guide.FrameRect.Contains(p.Tip)), "Every leader runs from inside the picture to outside its frame");
-        // Each mark sits on a pixel nearer its own color than any other listed color.
-        using (var decoded = SkiaSharp.SKBitmap.Decode(png))
+        // The layout rules hold in either view: no crossing, no overlap, and every mark on its own color.
+        void CheckLayout(string view)
         {
+            SelfTests.Check(guide.Settled && guide.Labels.All(l => l.Opacity == 1) && Enumerable.Range(0, guide.Placements.Length).All(i => guide.LeaderProgress(i) == 1), $"The {view} guide settles with every leader drawn");
+            var placed = guide.Placements;
+            for (int i = 0; i < placed.Length; i++)
+                for (int j = i + 1; j < placed.Length; j++)
+                {
+                    SelfTests.Check(!Callouts.Collide(placed[i], placed[j]), "Guide leaders never cross");
+                    SelfTests.Check(!placed[i].Label.Intersects(placed[j].Label), "Guide labels never overlap");
+                }
+            SelfTests.Check(placed.All(p => guide.FrameRect.Deflate(12).Contains(p.Mark) && !guide.FrameRect.Contains(p.Tip)), "Every leader runs from inside the picture to outside its frame");
+            // Each mark sits on a pixel nearer its own color than any other color of the picture.
+            using var decoded = SkiaSharp.SKBitmap.Decode(png);
             var inner = guide.FrameRect.Deflate(12);
             double Apart(SkiaSharp.SKColor a, string hex) { var b = Avalonia.Media.Color.Parse(hex); return Math.Pow(a.Red - b.R, 2) + Math.Pow(a.Green - b.G, 2) + Math.Pow(a.Blue - b.B, 2); }
             for (int i = 0; i < placed.Length; i++)
             {
                 var px = decoded.GetPixel(Math.Clamp((int)((placed[i].Mark.X - inner.X) / inner.Width * decoded.Width), 0, decoded.Width - 1), Math.Clamp((int)((placed[i].Mark.Y - inner.Y) / inner.Height * decoded.Height), 0, decoded.Height - 1));
-                int nearest = Enumerable.Range(0, recentImage.Length).OrderBy(k => Apart(px, recentImage[k])).First();
-                SelfTests.Check(nearest == i, $"The mark for {recentImage[i]} sits on its own color (found {px})");
+                string nearest = recentImage.OrderBy(hex => Apart(px, hex)).First();
+                SelfTests.Check(nearest == guide.Entries[i].Hex, $"The mark for {guide.Entries[i].Hex} sits on its own color (found {px})");
             }
         }
+        CheckLayout("compact");
         // The lavender row is named for its hue, as every label is: by the engine's perceptual classifier.
         {
             var lavender = guide.Entries.FirstOrDefault(e => Core.Describe(e.Hex).GetProperty("family").GetString() is "Purple" or "Violet");
@@ -106,7 +115,28 @@ internal sealed partial class MainWindow
             state.Theme = theme; Render(); await Task.Delay(250);
             await Capture(L.Language + "-guide-" + theme);
         }
-        state.Theme = "dark"; Render();
+        state.Theme = "dark"; Render(); await Task.Delay(120);
+        // Show all brings back every color, by dominance, and the leaders draw out again.
+        guide = content.GetVisualDescendants().OfType<ColorGuide>().Single();
+        ShowAll().RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        SelfTests.Check(guide.Labels.Count == recentImage.Length && guide.Entries.Select(e => e.Hex).SequenceEqual(dominant) && !guide.Settled,
+            "Show all brings back every color by dominance and redraws the leaders");
+        SelfTests.Check(AutomationProperties.GetName(ShowAll()) == string.Format(L.T("عرض أبرز {0}"), ColorGuide.CompactCount) && ShownImageColors().SequenceEqual(dominant),
+            "The toggle then offers the top five, and saving or export take every color");
+        await Task.Delay(2800);
+        CheckLayout("full");
+        await Capture(L.Language + "-guide-all");
+        // Back to compact; with reduced motion the guide is at rest at once.
+        state.ReduceMotion = true;
+        ShowAll().RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        SelfTests.Check(guide.Labels.Count == ColorGuide.CompactCount && guide.Settled && guide.Labels.All(l => l.Opacity == 1), "Reduced motion switches views at rest");
+        state.ReduceMotion = false;
+        ShowAll().RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        SelfTests.Check(imageShowAll, "The view toggles back to every color");
+        // A new picture opens in compact view again.
+        await ImportImage(() => Task.FromResult<Stream>(new MemoryStream(png)), "meadow-guide.png");
+        await Task.Delay(120);
+        SelfTests.Check(!imageShowAll && content.GetVisualDescendants().OfType<ColorGuide>().Single().Labels.Count == ColorGuide.CompactCount, "Each new picture opens in compact view");
     }
     internal async Task Smoke()
     {
@@ -125,6 +155,8 @@ internal sealed partial class MainWindow
                 Console.WriteLine("PASTE"); await Task.Run(Console.ReadLine);
                 for (int i = 0; (analyzing || preview == null) && i < 100; i++) await Task.Delay(20);
                 SelfTests.Check(recentImage.Contains("#123456") && preview != null, "Clipboard bitmap imports through the shared analyzer");
+                SelfTests.Check(!content.GetVisualDescendants().OfType<Button>().Any(b => AutomationProperties.GetAutomationId(b) == "guide-show-all"),
+                    "A picture with five colors or fewer has no compact view toggle");
                 var sampler = content.GetVisualDescendants().OfType<ImageSampler>().Single();
                 sampler.RaiseEvent(new KeyEventArgs { RoutedEvent = KeyDownEvent, Key = Key.Enter });
                 for (int i = 0; imageSampleRequest != null && i < 100; i++) await Task.Delay(20);
@@ -398,6 +430,12 @@ internal sealed partial class MainWindow
                 .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
             await colorActions;
             SelfTests.Check(page == 2 && foreground == "#123456", "Color actions send a swatch to the contrast text input");
+            var copyAction = ColorActions(exchange.Colors[1].Hex);
+            await Task.Delay(120);
+            overlay.GetVisualDescendants().OfType<Button>().Single(b => AutomationProperties.GetAutomationId(b) == "copy-color-code")
+                .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            await copyAction;
+            SelfTests.Check(await Clipboard!.TryGetTextAsync() == PickValue(state, exchange.Colors[1].Hex), "Color actions copy the color code in the chosen format");
             SetContrastColor(exchange.Colors[1].Hex, asText: false);
             Edit(() => exchange.Roles["primary"] = "#87CEEB", false);
             var saveRoles = SaveContrastRoles();

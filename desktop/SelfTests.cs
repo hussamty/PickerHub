@@ -186,6 +186,17 @@ internal static class SelfTests
         var imported = PaletteExchange.Parse(System.Text.Encoding.UTF8.GetBytes("""{"name":"Wall","colors":[{"name":"Gray","hex":"#7B5EA7"},{"name":"Lilac wall","hex":"#7B5EA7"}]}"""));
         Check(imported.Colors[0].Name == "Medium purple" && imported.Colors[1].Name == "Lilac wall", "Imported palettes from 1.0 lose old automatic names only");
     }
+    // Compact view keeps the five most dominant colors, largest share first; equal shares keep their order.
+    static void CompactView()
+    {
+        static ColorGuide.Entry E(string hex, double share) => new(hex, hex, share, new Avalonia.Point(.5, .5));
+        var all = new[] { E("#000001", 10), E("#000002", 40), E("#000003", 5), E("#000004", 20), E("#000005", 15), E("#000006", 5), E("#000007", 3) };
+        Check(ColorGuide.Visible(all, false).Select(e => e.Hex).SequenceEqual(["#000002", "#000004", "#000005", "#000001", "#000003"]),
+            "Compact view keeps the five most dominant colors, largest first");
+        Check(ColorGuide.Visible(all, true).Select(e => e.Hex).SequenceEqual(["#000002", "#000004", "#000005", "#000001", "#000003", "#000006", "#000007"]),
+            "Show all lists every color by dominance");
+        Check(ColorGuide.Visible(all[..4], false).Length == 4 && ColorGuide.Visible([], false).Length == 0, "Five colors or fewer are all shown");
+    }
     static void Phase2()
     {
         Core.Daily("reveal");
@@ -242,6 +253,7 @@ internal static class SelfTests
             ImageSampler.PixelAt(new Avalonia.Point(40, 110), fitted, new Avalonia.PixelSize(1920, 1920)) == null,
             "Image pointer coordinates map to the source and exclude letterboxing");
         Callouts();
+        CompactView();
         L.Language = "en"; Check(L.T("القطّارة") == "Eyedropper" && Core.Describe("#87CEEB").Text("name") == Core.Describe("#87CEEB").Text("english"), "English UI and color names");
         L.Language = "ar"; Check(L.T("القطّارة") == "القطّارة", "Arabic UI remains the default");
         Console.WriteLine("Phase 3: large libraries, bulk actions, cache bounds, image analysis and languages passed");

@@ -14,6 +14,8 @@ internal sealed partial class MainWindow
     // Where each extracted color lives in the image, and which analysis the guide last animated.
     Point[] imagePoints = [];
     int imageGuideRevision, imageGuideShown = -1;
+    // Every color of the picture is shown, rather than the compact view of its five most dominant.
+    bool imageShowAll;
     Action? refreshImageSample;
     CancellationTokenSource? imageSampleRequest;
     readonly SemaphoreSlim imageSamplerGate = new(1);
