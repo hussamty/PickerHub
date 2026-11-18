@@ -1,0 +1,692 @@
+{
+  "application": "PickerHub",
+  "version": "1.2.0",
+  "build": "1.2.0+4400440558539c92261b7cf34cda29fc4ee8a51e",
+  "inTheApp": "The photo was pasted into Image Analysis of the installed PickerHub 1.2.0 (Arabic interface) and saved as the palette \"Mihmas\"; see screenshots/.",
+  "exactValues": "ImageAnalysis.Analyze, Core.Describe, Core.Harmony(kind 4), Core.Contrast and SemanticPalette.Css/Tokens/Report, called by reflection on /opt/pickerhub/PickerHub.dll with the same file",
+  "analysis": [
+    {
+      "rank": 1,
+      "hex": "#0B0202",
+      "share": 50.589,
+      "x": 0.2303,
+      "y": 0.8249,
+      "ar": "أسود",
+      "en": "Black",
+      "rgb": "rgb(11, 2, 2)",
+      "oklch": "oklch(10.90% 0.02507 22.11)"
+    },
+    {
+      "rank": 2,
+      "hex": "#33140B",
+      "share": 21.965,
+      "x": 0.6562,
+      "y": 0.528,
+      "ar": "بني قاتم",
+      "en": "Bistre",
+      "rgb": "rgb(51, 20, 11)",
+      "oklch": "oklch(23.63% 0.05301 37.01)"
+    },
+    {
+      "rank": 3,
+      "hex": "#5B3323",
+      "share": 11.992,
+      "x": 0.5567,
+      "y": 0.1673,
+      "ar": "بني داكن",
+      "en": "Dark brown",
+      "rgb": "rgb(91, 51, 35)",
+      "oklch": "oklch(36.73% 0.06368 42.29)"
+    },
+    {
+      "rank": 4,
+      "hex": "#7B554B",
+      "share": 8.674,
+      "x": 0.853,
+      "y": 0.4655,
+      "ar": "بني قهوة",
+      "en": "Coffee",
+      "rgb": "rgb(123, 85, 75)",
+      "oklch": "oklch(48.77% 0.05356 35.33)"
+    },
+    {
+      "rank": 5,
+      "hex": "#A47B6C",
+      "share": 3.281,
+      "x": 0.6632,
+      "y": 0.0254,
+      "ar": "وردي ترابي",
+      "en": "Old rose",
+      "rgb": "rgb(164, 123, 108)",
+      "oklch": "oklch(61.92% 0.05616 40.99)"
+    },
+    {
+      "rank": 6,
+      "hex": "#BB958B",
+      "share": 3.173,
+      "x": 0.8669,
+      "y": 0.248,
+      "ar": "وردي ترابي",
+      "en": "Old rose",
+      "rgb": "rgb(187, 149, 139)",
+      "oklch": "oklch(70.23% 0.04825 35.18)"
+    },
+    {
+      "rank": 7,
+      "hex": "#DCC1B5",
+      "share": 0.32,
+      "x": 0.4711,
+      "y": 0.5046,
+      "ar": "رملي",
+      "en": "Tan",
+      "rgb": "rgb(220, 193, 181)",
+      "oklch": "oklch(83.05% 0.03505 45.44)"
+    },
+    {
+      "rank": 8,
+      "hex": "#FFECE5",
+      "share": 0.006,
+      "x": 0.5799,
+      "y": 0.2689,
+      "ar": "أبيض دخاني",
+      "en": "White smoke",
+      "rgb": "rgb(255, 236, 229)",
+      "oklch": "oklch(95.63% 0.02280 41.41)"
+    },
+    {
+      "rank": 9,
+      "hex": "#E2936C",
+      "share": 0.001,
+      "x": 0.5104,
+      "y": 0.1204,
+      "ar": "سلموني داكن",
+      "en": "Dark salmon",
+      "rgb": "rgb(226, 147, 108)",
+      "oklch": "oklch(73.47% 0.10968 46.80)"
+    }
+  ],
+  "monochromatic": {
+    "#0B0202": [
+      "#050101",
+      "#080101",
+      "#0B0202",
+      "#595353",
+      "#AAA6A6"
+    ],
+    "#33140B": [
+      "#170905",
+      "#250E08",
+      "#33140B",
+      "#745F59",
+      "#B8ADAA"
+    ],
+    "#5B3323": [
+      "#291710",
+      "#422519",
+      "#5B3323",
+      "#8F7469",
+      "#C6B8B2"
+    ],
+    "#7B554B": [
+      "#372622",
+      "#593D36",
+      "#7B554B",
+      "#A58B85",
+      "#D1C4C0"
+    ],
+    "#A47B6C": [
+      "#4A3731",
+      "#76594E",
+      "#A47B6C",
+      "#C1A59B",
+      "#DFD1CC"
+    ],
+    "#BB958B": [
+      "#54433F",
+      "#876B64",
+      "#BB958B",
+      "#D1B7B0",
+      "#E7DAD6"
+    ],
+    "#DCC1B5": [
+      "#635751",
+      "#9E8B82",
+      "#DCC1B5",
+      "#E7D5CD",
+      "#F3E9E5"
+    ],
+    "#FFECE5": [
+      "#736A67",
+      "#B8AAA5",
+      "#FFECE5",
+      "#FFF2ED",
+      "#FFF8F6"
+    ],
+    "#E2936C": [
+      "#664231",
+      "#A36A4E",
+      "#E2936C",
+      "#EBB69B",
+      "#F5D9CC"
+    ]
+  },
+  "contrastSuggestion": {
+    "accentAsTextOnLatte": "#986349"
+  },
+  "gradients": [
+    {
+      "id": "espresso",
+      "ar": "إسبريسو",
+      "use": "المظهر الداكن",
+      "css": "linear-gradient(180deg, #33140B 0%, #170905 55%, #0B0202 100%)"
+    },
+    {
+      "id": "latte",
+      "ar": "لاتيه",
+      "use": "المظهر الفاتح",
+      "css": "linear-gradient(180deg, #FFF8F6 0%, #FFF2ED 55%, #F3E9E5 100%)"
+    },
+    {
+      "id": "crema",
+      "ar": "كريما",
+      "use": "الكوب في قسم الزيارة",
+      "css": "radial-gradient(circle, #DCC1B5 0%, #BB958B 30%, #A47B6C 55%, #5B3323 100%)"
+    },
+    {
+      "id": "ember",
+      "ar": "جمرة",
+      "use": "الزر الأساسي",
+      "css": "linear-gradient(135deg, #E2936C 0%, #EBB69B 100%)"
+    },
+    {
+      "id": "roast",
+      "ar": "منحنى التحميص",
+      "use": "مقياس الحبوب",
+      "css": "linear-gradient(270deg, #FFECE5 0%, #DCC1B5 14%, #BB958B 29%, #A47B6C 43%, #7B554B 57%, #5B3323 71%, #33140B 86%, #0B0202 100%)"
+    }
+  ],
+  "semanticCss": "/* PickerHub: sRGB semantic colors. Check contrast for your intended use. */\n:root, [data-theme=\"light\"] {\n  --color-background: #FFF2ED;\n  --color-surface: #FFF8F6;\n  --color-primary: #5B3323;\n  --color-accent: #E2936C;\n  --color-text: #33140B;\n  --color-muted: #7B554B;\n  --color-border: #E7D5CD;\n}\n[data-theme=\"dark\"] {\n  --color-background: #0B0202;\n  --color-surface: #170905;\n  --color-primary: #DCC1B5;\n  --color-accent: #E2936C;\n  --color-text: #FFECE5;\n  --color-muted: #BB958B;\n  --color-border: #33140B;\n}\n@media (prefers-color-scheme: dark) {\n:root:not([data-theme=\"light\"]) {\n  --color-background: #0B0202;\n  --color-surface: #170905;\n  --color-primary: #DCC1B5;\n  --color-accent: #E2936C;\n  --color-text: #FFECE5;\n  --color-muted: #BB958B;\n  --color-border: #33140B;\n}\n}\n",
+  "semanticTokens": {
+    "light": {
+      "background": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            1,
+            0.9490196078431372,
+            0.9294117647058824
+          ],
+          "alpha": 1,
+          "hex": "#fff2ed"
+        }
+      },
+      "surface": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            1,
+            0.9725490196078431,
+            0.9647058823529412
+          ],
+          "alpha": 1,
+          "hex": "#fff8f6"
+        }
+      },
+      "primary": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.3568627450980392,
+            0.2,
+            0.13725490196078433
+          ],
+          "alpha": 1,
+          "hex": "#5b3323"
+        }
+      },
+      "accent": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.8862745098039215,
+            0.5764705882352941,
+            0.4235294117647059
+          ],
+          "alpha": 1,
+          "hex": "#e2936c"
+        }
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.2,
+            0.0784313725490196,
+            0.043137254901960784
+          ],
+          "alpha": 1,
+          "hex": "#33140b"
+        }
+      },
+      "muted": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.4823529411764706,
+            0.3333333333333333,
+            0.29411764705882354
+          ],
+          "alpha": 1,
+          "hex": "#7b554b"
+        }
+      },
+      "border": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.9058823529411765,
+            0.8352941176470589,
+            0.803921568627451
+          ],
+          "alpha": 1,
+          "hex": "#e7d5cd"
+        }
+      }
+    },
+    "dark": {
+      "background": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.043137254901960784,
+            0.00784313725490196,
+            0.00784313725490196
+          ],
+          "alpha": 1,
+          "hex": "#0b0202"
+        }
+      },
+      "surface": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.09019607843137255,
+            0.03529411764705882,
+            0.0196078431372549
+          ],
+          "alpha": 1,
+          "hex": "#170905"
+        }
+      },
+      "primary": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.8627450980392157,
+            0.7568627450980392,
+            0.7098039215686275
+          ],
+          "alpha": 1,
+          "hex": "#dcc1b5"
+        }
+      },
+      "accent": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.8862745098039215,
+            0.5764705882352941,
+            0.4235294117647059
+          ],
+          "alpha": 1,
+          "hex": "#e2936c"
+        }
+      },
+      "text": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            1,
+            0.9254901960784314,
+            0.8980392156862745
+          ],
+          "alpha": 1,
+          "hex": "#ffece5"
+        }
+      },
+      "muted": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.7333333333333333,
+            0.5843137254901961,
+            0.5450980392156862
+          ],
+          "alpha": 1,
+          "hex": "#bb958b"
+        }
+      },
+      "border": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.2,
+            0.0784313725490196,
+            0.043137254901960784
+          ],
+          "alpha": 1,
+          "hex": "#33140b"
+        }
+      }
+    }
+  },
+  "semanticReport": {
+    "standard": "WCAG 2 contrast (opaque sRGB)",
+    "themes": {
+      "light": [
+        {
+          "foreground": "text",
+          "background": "background",
+          "ratio": 15.39408468666727,
+          "aa": true,
+          "large": true,
+          "aaa": true
+        },
+        {
+          "foreground": "text",
+          "background": "surface",
+          "ratio": 16.06360138599893,
+          "aa": true,
+          "large": true,
+          "aaa": true
+        },
+        {
+          "foreground": "muted",
+          "background": "background",
+          "ratio": 5.912615018927806,
+          "aa": true,
+          "large": true,
+          "aaa": false
+        },
+        {
+          "foreground": "muted",
+          "background": "surface",
+          "ratio": 6.169765383659776,
+          "aa": true,
+          "large": true,
+          "aaa": false
+        },
+        {
+          "foreground": "primary",
+          "background": "background",
+          "ratio": 9.871020198853671,
+          "aa": true,
+          "large": true,
+          "aaa": true
+        },
+        {
+          "foreground": "primary",
+          "background": "surface",
+          "ratio": 10.300328793491746,
+          "aa": true,
+          "large": true,
+          "aaa": true
+        },
+        {
+          "foreground": "accent",
+          "background": "background",
+          "ratio": 2.2235885336092576,
+          "aa": false,
+          "large": false,
+          "aaa": false
+        },
+        {
+          "foreground": "accent",
+          "background": "surface",
+          "ratio": 2.3202964370666925,
+          "aa": false,
+          "large": false,
+          "aaa": false
+        }
+      ],
+      "dark": [
+        {
+          "foreground": "text",
+          "background": "background",
+          "ratio": 17.95448402370923,
+          "aa": true,
+          "large": true,
+          "aaa": true
+        },
+        {
+          "foreground": "text",
+          "background": "surface",
+          "ratio": 17.056364487832223,
+          "aa": true,
+          "large": true,
+          "aaa": true
+        },
+        {
+          "foreground": "muted",
+          "background": "background",
+          "ratio": 7.603862576573076,
+          "aa": true,
+          "large": true,
+          "aaa": true
+        },
+        {
+          "foreground": "muted",
+          "background": "surface",
+          "ratio": 7.223502020450923,
+          "aa": true,
+          "large": true,
+          "aaa": true
+        },
+        {
+          "foreground": "primary",
+          "background": "background",
+          "ratio": 12.051652581666753,
+          "aa": true,
+          "large": true,
+          "aaa": true
+        },
+        {
+          "foreground": "primary",
+          "background": "surface",
+          "ratio": 11.448804590663256,
+          "aa": true,
+          "large": true,
+          "aaa": true
+        },
+        {
+          "foreground": "accent",
+          "background": "background",
+          "ratio": 8.423392424725348,
+          "aa": true,
+          "large": true,
+          "aaa": true
+        },
+        {
+          "foreground": "accent",
+          "background": "surface",
+          "ratio": 8.002037331200286,
+          "aa": true,
+          "large": true,
+          "aaa": true
+        }
+      ]
+    }
+  },
+  "pagePairs": [
+    {
+      "text": "#0B0202",
+      "background": "#E2936C",
+      "ratio": 8.42,
+      "aa": true
+    },
+    {
+      "text": "#0B0202",
+      "background": "#EBB69B",
+      "ratio": 11.43,
+      "aa": true
+    },
+    {
+      "text": "#33140B",
+      "background": "#E2936C",
+      "ratio": 6.92,
+      "aa": true
+    },
+    {
+      "text": "#FFECE5",
+      "background": "#33140B",
+      "ratio": 14.76,
+      "aa": true
+    },
+    {
+      "text": "#FFECE5",
+      "background": "#170905",
+      "ratio": 17.06,
+      "aa": true
+    },
+    {
+      "text": "#FFECE5",
+      "background": "#250E08",
+      "ratio": 16.05,
+      "aa": true
+    },
+    {
+      "text": "#BB958B",
+      "background": "#250E08",
+      "ratio": 6.8,
+      "aa": true
+    },
+    {
+      "text": "#DCC1B5",
+      "background": "#250E08",
+      "ratio": 10.78,
+      "aa": true
+    },
+    {
+      "text": "#33140B",
+      "background": "#E7D5CD",
+      "ratio": 11.88,
+      "aa": true
+    },
+    {
+      "text": "#33140B",
+      "background": "#F3E9E5",
+      "ratio": 14.13,
+      "aa": true
+    },
+    {
+      "text": "#7B554B",
+      "background": "#F3E9E5",
+      "ratio": 5.43,
+      "aa": true
+    },
+    {
+      "text": "#5B3323",
+      "background": "#F3E9E5",
+      "ratio": 9.06,
+      "aa": true
+    },
+    {
+      "text": "#33140B",
+      "background": "#DCC1B5",
+      "ratio": 9.91,
+      "aa": true
+    },
+    {
+      "text": "#0B0202",
+      "background": "#DCC1B5",
+      "ratio": 12.05,
+      "aa": true
+    },
+    {
+      "text": "#0B0202",
+      "background": "#BB958B",
+      "ratio": 7.6,
+      "aa": true
+    },
+    {
+      "text": "#FFECE5",
+      "background": "#5B3323",
+      "ratio": 9.46,
+      "aa": true
+    },
+    {
+      "text": "#FFECE5",
+      "background": "#7B554B",
+      "ratio": 5.67,
+      "aa": true
+    },
+    {
+      "text": "#E2936C",
+      "background": "#FFF2ED",
+      "ratio": 2.22,
+      "aa": false
+    },
+    {
+      "text": "#E2936C",
+      "background": "#0B0202",
+      "ratio": 8.42,
+      "aa": true
+    },
+    {
+      "text": "#E2936C",
+      "background": "#170905",
+      "ratio": 8.0,
+      "aa": true
+    },
+    {
+      "text": "#FFECE5",
+      "background": "#0B0202",
+      "ratio": 17.95,
+      "aa": true
+    },
+    {
+      "text": "#DCC1B5",
+      "background": "#0B0202",
+      "ratio": 12.05,
+      "aa": true
+    },
+    {
+      "text": "#BB958B",
+      "background": "#0B0202",
+      "ratio": 7.6,
+      "aa": true
+    },
+    {
+      "text": "#A47B6C",
+      "background": "#0B0202",
+      "ratio": 5.5,
+      "aa": true
+    },
+    {
+      "text": "#FFF2ED",
+      "background": "#33140B",
+      "ratio": 15.39,
+      "aa": true
+    },
+    {
+      "text": "#33140B",
+      "background": "#FFF2ED",
+      "ratio": 15.39,
+      "aa": true
+    }
+  ]
+}
