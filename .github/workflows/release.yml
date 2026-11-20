@@ -80,13 +80,18 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          extra=()
-          if [ "$RUNNER_OS" = "Windows" ] && [ -f "$RUNNER_TEMP/signing.json" ]; then extra=(--config "$RUNNER_TEMP/signing.json"); fi
+          # The updater plugin checks signatures with the public key in its config, which is empty in
+          # tauri.conf.json: the repository variable fills it here (base64, so it is safe inside JSON).
+          pubkey=$(printf '%s' "$PICKERHUB_UPDATER_PUBKEY" | tr -d '[:space:]')
+          case "$pubkey" in *[!A-Za-z0-9+/=]*) echo "PICKERHUB_UPDATER_PUBKEY is not base64." >&2; exit 1;; esac
+          printf '{"plugins":{"updater":{"pubkey":"%s"}}}' "$pubkey" > "$RUNNER_TEMP/updater.json"
+          extra=(--config "$RUNNER_TEMP/updater.json")
+          if [ "$RUNNER_OS" = "Windows" ] && [ -f "$RUNNER_TEMP/signing.json" ]; then extra+=(--config "$RUNNER_TEMP/signing.json"); fi
           if [ "$RUNNER_OS" = "macOS" ] && [ -z "$APPLE_SIGNING_IDENTITY" ]; then
             # No Developer ID: sign ad hoc, so the app runs on Apple silicon. Gatekeeper asks once on first open.
             echo "::warning::No APPLE_SIGNING_IDENTITY: the macOS app is ad-hoc signed and not notarized."
             unset APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
-            extra=(--config '{"bundle":{"macOS":{"signingIdentity":"-"}}}')
+            extra+=(--config '{"bundle":{"macOS":{"signingIdentity":"-"}}}')
           fi
           ui/node_modules/.bin/tauri build --ci --config src-tauri/tauri.release.conf.json "${extra[@]}" --features updater ${{ matrix.args }}
       - if: runner.os == 'Linux'

@@ -13,8 +13,8 @@ run() { # <script> <color> [shortcut]
   data=$(mktemp -d)
   PICKERHUB_DATA_DIR="$data" PICKERHUB_EVAL="$1" "$root/target/debug/pickerhub" &
   app=$!
-  "$root/target/debug/examples/x11_click" "$2" 4500 $3
-  sleep 2
+  # Clicks until the pick is saved (30 s at most), so a slow start is waited for, not raced.
+  "$root/target/debug/examples/x11_click" "$2" 30000 "$data/PickerHub/workspace.json" $3
   kill $app 2>/dev/null || true
   wait $app 2>/dev/null || true
   first=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['history'][0])" "$data/PickerHub/workspace.json")
@@ -22,8 +22,12 @@ run() { # <script> <color> [shortcut]
   echo "$first"
 }
 
-a=$(run 'window.dispatchEvent(new KeyboardEvent("keydown", {key: "F8"}))' 0x6A2CB0)
+# The app runs PICKERHUB_EVAL once, 2.5 s after start; each script waits there until the interface
+# is mounted and the library loaded, which on a cold CI runner can take longer.
+when_ready() { echo "(function go() { if (window.__pickerhub?.app?.ws) { $1; } else setTimeout(go, 100); })()"; }
+
+a=$(run "$(when_ready 'window.dispatchEvent(new KeyboardEvent("keydown", {key: "F8"}))')" 0x6A2CB0)
 echo "F8 picked: $a"
-b=$(run '__pickerhub.setting("globalShortcut", true)' 0x1E8F6B shortcut)
+b=$(run "$(when_ready '__pickerhub.setting("globalShortcut", true)')" 0x1E8F6B shortcut)
 echo "shortcut picked: $b"
 test "$a" = "#6A2CB0" && test "$b" = "#1E8F6B"
