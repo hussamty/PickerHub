@@ -11,6 +11,12 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 serde_json = "1"
 
+# The repository is one Cargo workspace. The root package stays the color core (and its C ABI for the
+# Avalonia app during the parallel run); the Tauri app and its crates are members beside it.
+[workspace]
+members = ["crates/store", "crates/capture", "src-tauri"]
+exclude = ["prototypes"]
+
 [profile.release]
 opt-level = "s"
 lto = true

@@ -2,6 +2,7 @@
 pub mod color;
 pub mod daily;
 pub mod names;
+pub mod vision;
 use color::Color;
 use serde_json::{Value, json};
 use std::cell::RefCell;

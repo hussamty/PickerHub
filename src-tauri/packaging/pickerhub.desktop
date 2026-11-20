@@ -1,0 +1,18 @@
+[Desktop Entry]
+Categories={{categories}}
+{{#if comment}}
+Comment={{comment}}
+{{/if}}
+Exec={{exec}}
+TryExec={{exec}}
+StartupWMClass={{exec}}
+Icon={{icon}}
+Name={{name}}
+Terminal=false
+Type=Application
+Actions=preview-envelope;
+
+[Desktop Action preview-envelope]
+Name=Preview the daily envelope
+Name[ar]=معاينة ظرف باقة اليوم
+Exec={{exec}} --preview-envelope

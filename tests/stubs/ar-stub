@@ -1,0 +1,2 @@
+#!/bin/sh
+for a in "$@"; do case "$a" in *.a) : > "$a"; exit 0;; esac; done; exit 0

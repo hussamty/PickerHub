@@ -1,3 +1,17 @@
+# 2.0.0-beta.1 — PickerHub on Tauri
+
+- Rebuild the app on Tauri 2: Rust for everything below the interface, and an interface in Svelte 5, TypeScript and Tailwind CSS 4 in the system WebView. Same seven tools, same look, same Arabic-first layout. The 1.x Avalonia app still builds unchanged beside it.
+- Keep libraries interchangeable: 2.0 reads and writes `workspace.json` schema 2, the palette-of-the-day state and full backups exactly as 1.x does, keeps fields it does not know, takes the same `desktop.lock`, and saves a copy of the 1.x library before its first write. Tested by opening 2.0-written libraries in 1.x.
+- Pick colors with the native samplers in `crates/capture`: X11, the Wayland portal (or the GNOME Color Picker extension), Windows and macOS. The tray offers pick and copy, pick and edit, quick pick and multi-pick; the optional global shortcut works on X11, Windows and macOS, and through the GlobalShortcuts portal on Wayland.
+- Ship far smaller: the release binary needs no .NET runtime.
+- Use Noto Kufi Arabic 2.102. Later builds lose the dots of a final yeh in WebKit («بني» drawn as «بنى»); a WebView check guards it.
+- Bring back the live magnifier lens on X11 and Windows, and the screen-sharing lens on Wayland, now on every monitor; a capture-mode button beside the eyedropper on Wayland chooses the system picker or the live lens and starts or ends screen sharing.
+- Open the palette of the day as 1.x did: the foil envelope drawn in two layers, its flap swinging back on its hinge to show the lining, the cards dealt into a fan and settled into a row, confetti at two depths, and a floor light and shadow.
+- Keep the local timing log (off by default): operation names and error codes only, bounded and written off the main thread, and included in the support report.
+- Tighten the content security policy: no inline styles, no plugins, no base or form targets. A WebView check walks every page, sheet and animation and fails on any refusal.
+- Pass an axe-core audit on every page and state; headings, field labels, focus kept inside sheets and returned on close, and arrow keys in segmented choices.
+- Prepare releases: the final name PickerHub with the `pickerhub` package, which upgrades 1.x in place and replaces the 2.0 alphas; signed updates checked only on request; and a release workflow that writes the update manifest and signs the Windows and macOS installers when their certificates are set (docs/release.md). A manual beta checklist is in docs/beta-checklist.md.
+
 # 1.2.0 — compact image palettes and copying from color actions
 
 - Open a picture with more than five colors in compact view: the guide marks and labels only its five most dominant colors, largest first. A Show all toggle beneath the picture brings back every color and then offers Show top 5; the guide redraws in place with its leader motion, so the page keeps its scroll position, and reduced motion switches at rest. Each new picture opens in compact view again.

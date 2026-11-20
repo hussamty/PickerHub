@@ -1,0 +1,48 @@
+[package]
+name = "pickerhub-app"
+version = "2.0.0-beta.1"
+edition = "2024"
+license = "MIT"
+description = "PickerHub desktop app on Tauri 2"
+publish = false
+
+[[bin]]
+name = "pickerhub"
+path = "src/main.rs"
+
+[features]
+# Test hooks (scripted page actions and WebView snapshots). Never enabled in release packages.
+qa = []
+# Serve the built interface from the binary instead of the Vite dev server. The Tauri CLI turns it
+# on for `tauri build`; plain `cargo build --features custom-protocol` does the same.
+custom-protocol = ["tauri/custom-protocol"]
+# The signed update channel, for release builds (see docs/release.md). Off in development builds.
+updater = ["dep:tauri-plugin-updater"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-window-state = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-updater = { version = "2", optional = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+pickerhub = { path = ".." }
+pickerhub-store = { path = "../crates/store" }
+pickerhub-capture = { path = "../crates/capture" }
+tokio = { version = "1", features = ["time", "sync"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+ashpd = { version = "0.14", default-features = false, features = ["tokio", "global_shortcuts"] }
+futures-util = "0.3"
+webkit2gtk = "2.0"
+gtk = "0.18"
+cairo-rs = { version = "0.18", features = ["png"] }
+gio = "0.18"

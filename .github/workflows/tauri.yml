@@ -1,0 +1,57 @@
+name: PickerHub 2 (Tauri)
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  app:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm, cache-dependency-path: ui/package-lock.json}
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dbus libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev librsvg2-dev libayatana-appindicator3-dev xvfb fonts-noto-core python3-pil
+      - run: rustup update stable && rustup default stable
+      - run: npm ci --prefix ui
+      - run: npm --prefix ui run check
+      - run: npm --prefix ui test
+      - run: npm --prefix ui run build
+      # The core, the store (with its 1.x compatibility fixtures), capture and the app's own tests.
+      - run: cargo test --locked --workspace
+      - if: runner.os == 'Linux'
+        name: Real X11 picking, the app end to end, and the WebView checks
+        run: |
+          xvfb-run -a -s '-screen 0 1280x800x24' cargo test --locked -p pickerhub-capture -- --include-ignored
+          cargo build --locked -p pickerhub-app --features custom-protocol,qa
+          cargo build --locked -p pickerhub-capture --example x11_click
+          dbus-run-session -- xvfb-run -a -s '-screen 0 1400x900x24' sh tests/e2e_pick.sh
+          xvfb-run -a -s '-screen 0 1400x900x24' python3 tests/ui_tauri.py --pages
+          # The accessibility audit runs on its own build: axe-core in the interface, prototypes unfrozen.
+          VITE_QA=1 npm --prefix ui run build
+          TAURI_CONFIG='{"app":{"security":{"freezePrototype":false}}}' cargo build --locked -p pickerhub-app --features custom-protocol,qa
+          xvfb-run -a -s '-screen 0 1400x900x24' python3 tests/ui_tauri.py --a11y
+      - name: Packages
+        run: ui/node_modules/.bin/tauri build --ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pickerhub2-${{ matrix.os }}
+          path: |
+            target/release/bundle/deb/*.deb
+            target/release/bundle/rpm/*.rpm
+            target/release/bundle/appimage/*.AppImage
+            target/release/bundle/nsis/*.exe
+            target/release/bundle/dmg/*.dmg
+            dist/qa-tauri/*.png
+  supply-chain:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with: {command: check advisories licenses sources}
+      - run: npm ci --prefix ui && npm audit --prefix ui --audit-level=high

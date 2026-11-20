@@ -1,0 +1,77 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "PickerHub 2",
+  "version": "2.0.0-beta.1",
+  "identifier": "org.pickerhub.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../ui/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "PickerHub",
+        "width": 1120,
+        "height": 820,
+        "minWidth": 900,
+        "minHeight": 640,
+        "decorations": false,
+        "dragDropEnabled": false,
+        "transparent": false,
+        "visible": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' blob: data:; style-src 'self'; font-src 'self'; script-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      "devCsp": "default-src 'self'; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'; connect-src ipc: http://ipc.localhost ws://localhost:5173 http://localhost:5173",
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "deb",
+      "rpm",
+      "appimage",
+      "nsis",
+      "dmg",
+      "app"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "GraphicsAndDesign",
+    "shortDescription": "Offline Arabic color workbench",
+    "longDescription": "PickerHub is an offline Arabic-first color workbench: pick colors from the screen, name them, check contrast, extract image palettes and keep project palettes.",
+    "copyright": "MIT",
+    "linux": {
+      "deb": {
+        "section": "graphics"
+      },
+      "rpm": {
+        "release": "1"
+      }
+    }
+  },
+  "mainBinaryName": "pickerhub2",
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://github.com/hussamty/PickerHub/releases/latest/download/latest.json"
+      ],
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

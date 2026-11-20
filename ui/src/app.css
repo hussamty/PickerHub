@@ -1,0 +1,340 @@
+@import "tailwindcss";
+
+/* ---------- Fonts ----------
+   Noto Kufi Arabic 2.102 (Regular, Bold), as packaged by Debian/Ubuntu (fonts-noto-core). Versions
+   2.108 and later draw ي from a dotless base plus a two-dot mark (a ccmp decomposition), and WebKit
+   loses that mark on final and isolated yeh: «بني» shows as «بنى». 2.102 composes the letter
+   itself. Weights between the two files resolve to the nearer one. Verified in WebKitGTK 2.52 by the
+   final-yeh check in tests/ui_tauri.py. Plus Jakarta Sans is the upstream variable font. */
+@font-face {
+  font-family: "Noto Kufi Arabic";
+  src: url(/fonts/NotoKufiArabic-Regular.ttf) format("truetype");
+  font-weight: 100 549;
+  font-display: block;
+}
+@font-face {
+  font-family: "Noto Kufi Arabic";
+  src: url(/fonts/NotoKufiArabic-Bold.ttf) format("truetype");
+  font-weight: 550 900;
+  font-display: block;
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url(/fonts/PlusJakartaSans.ttf) format("truetype");
+  font-weight: 200 800;
+  font-display: block;
+}
+
+@custom-variant light (&:where([data-theme=light], [data-theme=light] *));
+
+/* ---------- Brand and type scale (desktop/Theme.axaml, desktop/Ui.cs) ---------- */
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Noto Kufi Arabic", system-ui, sans-serif;
+  --font-arabic: "Noto Kufi Arabic", "Plus Jakarta Sans", sans-serif;
+  --font-mono: "Cascadia Mono", "JetBrains Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+
+  --color-brand: #fff000;
+  --color-brand-ink: #111111;
+
+  --text-caption: 11px;
+  --text-label: 12.5px;
+  --text-control: 13px;
+  --text-body: 14px;
+  --text-lead: 15px;
+  --text-title: 17px;
+  --text-heading: 20px;
+  --text-feature: 24px;
+  --text-display: 28px;
+
+  --radius-pane: 22px;
+  --radius-card: 16px;
+  --radius-control: 12px;
+
+  --ease-liquid: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Dark is the default room; light overrides every role. */
+:root {
+  --canvas: #111111;
+  --raised: #1c1c1a;
+  --ink: #ffffff;
+  --muted: #adada5;
+  --line: rgb(255 255 255 / 0.14);
+  --tint: rgb(255 255 255 / 0.08);
+  --tint-strong: rgb(255 255 255 / 0.15);
+  --accent-hover: #fff566;
+  --accent-text: #fff000;
+  --danger: #ff9e94;
+  --keycap: rgb(17 17 17 / 0.14);
+  --glass-tint: rgb(255 255 255 / 0.07);
+  --glass-rim: rgb(255 255 255 / 0.34);
+  --glass-shade: rgb(0 0 0 / 0.45);
+  --card-tint: rgb(255 255 255 / 0.11);
+  --dense-tint: rgb(26 26 24 / 0.82);
+  --sheet-tint: rgb(25 25 23 / 0.78);
+  --scrim: rgb(0 0 0 / 0.55);
+  --pool-yellow: rgb(255 240 0 / 0.24);
+  --pool-neutral: rgb(255 255 255 / 0.12);
+  --pool-core: rgb(255 240 0 / 0.09);
+  --sheen: 0.07;
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  --canvas: #f4f3ee;
+  --raised: #ffffff;
+  --ink: #111111;
+  --muted: #5a5a54;
+  --line: rgb(17 17 17 / 0.13);
+  --tint: rgb(17 17 17 / 0.06);
+  --tint-strong: rgb(17 17 17 / 0.12);
+  --accent-hover: #f5e600;
+  --accent-text: #111111;
+  --danger: #a42635;
+  --glass-tint: rgb(255 255 255 / 0.58);
+  --glass-rim: rgb(255 255 255 / 1);
+  --glass-shade: rgb(17 17 17 / 0.14);
+  --card-tint: rgb(255 255 255 / 0.55);
+  --dense-tint: rgb(255 255 255 / 0.9);
+  --sheet-tint: rgb(255 255 255 / 0.88);
+  --scrim: rgb(17 17 17 / 0.28);
+  --pool-yellow: rgb(255 240 0 / 0.42);
+  --pool-neutral: rgb(17 17 17 / 0.1);
+  --pool-core: rgb(255 240 0 / 0.22);
+  --sheen: 0.5;
+  color-scheme: light;
+}
+
+/* ---------- Base ----------
+   In the base layer, so the utilities below (pill-accent and the rest) always win over it. */
+@layer base {
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+:lang(ar) body,
+[lang="ar"] {
+  font-family: var(--font-arabic);
+  line-height: 1.7;
+}
+button {
+  font: inherit;
+  color: inherit;
+}
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  user-select: text;
+}
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+[data-theme="light"] :focus-visible {
+  outline-color: #111111;
+}
+::selection {
+  background: color-mix(in srgb, var(--color-brand) 55%, transparent);
+}
+
+}
+
+/* The room behind the glass (desktop/Glass.cs, Backdrop): yellow light from the corner where
+   the eyedropper lives, a neutral pool opposite it, and a fine grain against banding. */
+.room {
+  background:
+    radial-gradient(72vmax 72vmax at 12% -5%, var(--pool-yellow), transparent 70%),
+    radial-gradient(80vmax 80vmax at 95% 105%, var(--pool-neutral), transparent 70%),
+    radial-gradient(42vmax 42vmax at 62% 60%, var(--pool-core), transparent 70%),
+    var(--canvas);
+}
+.room::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='128' height='128' filter='url(%23n)'/></svg>");
+}
+
+/* ---------- Glass ----------
+   Panes are frosted: tint, sheen and a lit rim. A live blur is kept for surfaces that open over
+   moving content (the spine and sheets); on large panes it costs a GPU pass per frame for a change
+   the soft room behind them barely shows (measured, docs/tauri-migration-plan.md 6.2). */
+@utility glass {
+  position: relative;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / var(--sheen)) 0%, transparent 42%),
+    var(--glass-tint);
+  border: 1px solid var(--glass-rim);
+  border-radius: var(--radius-pane);
+  box-shadow:
+    0 10px 30px var(--glass-shade),
+    inset 0 1px 0 rgb(255 255 255 / 0.12);
+}
+@utility glass-live {
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+}
+@utility glass-dense {
+  background: var(--dense-tint);
+}
+/* Full glass: a live blur behind the large panes only. Small glass (labels, toasts, the title bar's
+   dense strip) gains nothing visible from it and would add a filter pass each. */
+.full-glass .glass:not(.glass-dense):not(.label):not(.sheet) {
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+.reduce-transparency .glass,
+.reduce-transparency .glass-live {
+  background: var(--raised);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ---------- Controls ---------- */
+@utility pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding-inline: 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--tint);
+  font-size: var(--text-control);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.18s var(--ease-liquid),
+    transform 0.18s var(--ease-liquid),
+    border-color 0.18s;
+  &:hover {
+    background: var(--tint-strong);
+  }
+  &:active {
+    transform: scale(0.97);
+  }
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+    transform: none;
+  }
+}
+@utility pill-accent {
+  background: var(--color-brand);
+  color: var(--color-brand-ink);
+  border-color: transparent;
+  box-shadow: 0 6px 22px rgb(255 240 0 / 0.28);
+  &:hover {
+    background: var(--accent-hover);
+  }
+}
+@utility round {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--tint);
+  cursor: pointer;
+  transition:
+    background 0.18s,
+    transform 0.18s var(--ease-liquid);
+  &:hover {
+    background: var(--tint-strong);
+  }
+  &:active {
+    transform: scale(0.94);
+  }
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+@utility field {
+  width: 100%;
+  min-height: 44px;
+  padding-inline: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--tint);
+  outline: none;
+  transition:
+    border-color 0.18s,
+    background 0.18s;
+  &:hover {
+    border-color: var(--glass-rim);
+  }
+  &:focus {
+    border-color: var(--color-brand);
+    background: transparent;
+  }
+  &::placeholder {
+    color: var(--muted);
+  }
+}
+@utility code {
+  font-family: var(--font-mono);
+  direction: ltr;
+  unicode-bidi: isolate;
+  letter-spacing: 0;
+}
+@utility muted {
+  color: var(--muted);
+}
+
+/* An empty dir="auto" field resolves to left-to-right; keep a right-to-left placeholder in place. */
+input[dir="auto"]:placeholder-shown {
+  direction: inherit;
+}
+
+/* Reduced motion: transitions become instant, and components check the setting before animating. */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  transition-duration: 0s !important;
+  animation-duration: 0s !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .follow-motion *,
+  .follow-motion *::before,
+  .follow-motion *::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+}
+
+/* Scrollbars that belong to the glass. */
+.scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--tint-strong) transparent;
+}
+
+/* The lens window and the Wayland overlay draw on a transparent window. */
+html.surface,
+html.surface body {
+  background: transparent !important;
+}
+html.surface .room,
+html.surface body::after {
+  display: none;
+}

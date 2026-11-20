@@ -1,0 +1,98 @@
+{
+  "version": 2,
+  "nameScheme": 1,
+  "color": "#2E8BC0",
+  "limit": 32,
+  "useWaylandScreenSharing": false,
+  "reduceMotion": true,
+  "diagnosticsEnabled": false,
+  "language": "ar",
+  "reduceTransparency": false,
+  "libraryView": "deck",
+  "followSystemTheme": false,
+  "autoCopy": true,
+  "copyFormat": "HSL",
+  "hexUppercase": false,
+  "hexPrefix": true,
+  "globalShortcut": true,
+  "quickPick": false,
+  "shortcut": "Ctrl+Alt+P",
+  "theme": "light",
+  "discoveries": [
+    {
+      "id": "desert-dawn:3",
+      "name": "\u0641\u062c\u0631 \u0627\u0644\u0635\u062d\u0631\u0627\u0621",
+      "createdAt": "2026-11-15T08:00:00+00:00",
+      "light": {
+        "background": "#FAF6EF",
+        "text": "#1B1A17"
+      },
+      "dark": {
+        "background": "#141310",
+        "text": "#F4EFE6"
+      }
+    }
+  ],
+  "brandLocks": {
+    "primary": "#FFF000"
+  },
+  "history": [
+    "#2E8BC0",
+    "#FFF000",
+    "#111111"
+  ],
+  "palettes": [
+    {
+      "id": "3f1c0d6e9b2a4c7f8e5d1a2b3c4d5e6f",
+      "name": "\u0647\u0648\u064a\u0629 TrineHub",
+      "colors": [
+        {
+          "id": "a1",
+          "name": "\u0623\u0635\u0641\u0631",
+          "hex": "#FFF000",
+          "favorite": true
+        },
+        {
+          "id": "a2",
+          "name": "Ink",
+          "hex": "#111111",
+          "favorite": false
+        }
+      ],
+      "collection": "\u0639\u0645\u0644\u0627\u0621",
+      "roles": {
+        "primary": "#FFF000",
+        "text": "#111111"
+      }
+    },
+    {
+      "id": "p2",
+      "name": "Empty",
+      "colors": [],
+      "collection": "",
+      "roles": {}
+    }
+  ],
+  "gradients": [
+    {
+      "id": "g1",
+      "name": "\u062a\u062f\u0631\u062c\u064a",
+      "type": "radial",
+      "angle": 45,
+      "stops": [
+        {
+          "hex": "#2856B4",
+          "pos": 0
+        },
+        {
+          "hex": "#87CEEB",
+          "pos": 60
+        },
+        {
+          "hex": "#FFFFFF",
+          "pos": 100
+        }
+      ]
+    }
+  ]
+}

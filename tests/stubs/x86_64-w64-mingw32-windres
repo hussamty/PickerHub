@@ -1,0 +1,11 @@
+#!/bin/sh
+# Type-check stub: nothing is linked by `cargo check`, so the resource only has to exist.
+case "$1" in -V|--version) echo "GNU windres (stub)"; exit 0;; esac
+prev=""; for a in "$@"; do
+  case "$prev" in -o|--output|-fo) : > "$a";; esac
+  case "$a" in --output=*) : > "${a#--output=}";; -o*) [ "${#a}" -gt 2 ] && : > "${a#-o}";; esac
+  prev="$a"
+done
+# ar: archive name is the second argument
+[ "$(basename "$0")" = x86_64-w64-mingw32-ar ] && [ -n "$2" ] && : > "$2"
+exit 0

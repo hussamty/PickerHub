@@ -1,0 +1,35 @@
+{
+  "$schema": "../ui/node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "PickerHub",
+  "mainBinaryName": "pickerhub",
+  "bundle": {
+    "createUpdaterArtifacts": true,
+    "publisher": "PickerHub contributors",
+    "homepage": "https://github.com/hussamty/PickerHub",
+    "linux": {
+      "deb": {
+        "section": "graphics",
+        "recommends": ["xdg-desktop-portal", "gstreamer1.0-pipewire", "gstreamer1.0-plugins-base"],
+        "conflicts": ["picker-hub-2"],
+        "replaces": ["picker-hub-2"],
+        "desktopTemplate": "packaging/pickerhub.desktop"
+      },
+      "rpm": {
+        "release": "1",
+        "recommends": ["xdg-desktop-portal", "gstreamer1-plugin-pipewire"],
+        "provides": ["pickerhub"],
+        "obsoletes": ["picker-hub-2"],
+        "desktopTemplate": "packaging/pickerhub.desktop"
+      }
+    },
+    "windows": {
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com"
+    },
+    "macOS": {
+      "hardenedRuntime": true,
+      "entitlements": "packaging/macos.entitlements",
+      "minimumSystemVersion": "11.0"
+    }
+  }
+}

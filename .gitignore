@@ -7,3 +7,7 @@ __pycache__/
 /desktop/bin/
 /desktop/obj/
 /desktop/.avalonia-build-tasks/
+/ui/node_modules/
+/ui/dist/
+/src-tauri/gen/
+/prototypes/*/target/

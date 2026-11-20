@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "color": "#87CEEB",
+  "limit": 8,
+  "theme": "dark",
+  "history": [
+    "#87CEEB"
+  ],
+  "palettes": [
+    {
+      "id": "old",
+      "name": "لوحتي الأولى",
+      "colors": [],
+      "collection": "",
+      "roles": {}
+    }
+  ],
+  "gradients": []
+}

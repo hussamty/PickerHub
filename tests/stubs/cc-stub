@@ -1,0 +1,3 @@
+#!/bin/sh
+# Type-check stub for Apple targets: writes the requested object; nothing is linked by `cargo check`.
+prev=""; for a in "$@"; do [ "$prev" = "-o" ] && : > "$a"; prev="$a"; done; exit 0

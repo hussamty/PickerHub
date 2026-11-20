@@ -10,7 +10,7 @@
 
 [ما نُفذ وكيف اختُبر وما يلزم قبل النشر](docs/production-readiness.md). الحزم المحلية مرشحة للاختبار؛ توقيع Windows وتوثيق macOS يحتاجان بيانات الناشر.
 
-[تنزيل الإصدار](https://github.com/hussamty/PickerHub/releases) · [تجربة Windows 11](docs/windows-test.md)
+[تنزيل الإصدار](https://github.com/hussamty/PickerHub/releases) · [دليل الاستخدام اليومي](docs/real-use.md) · [تجربة Windows 11](docs/windows-test.md)
 
 الواجهة بخطي Noto Kufi Arabic للعربية وPlus Jakarta Sans للاتينية. لمعاينة ظرف «باقة اليوم» دون لمس مكتبتك شغّل `pickerhub --preview-envelope`.
 

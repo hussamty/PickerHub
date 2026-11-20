@@ -1,0 +1,99 @@
+{
+  "version": 2,
+  "nameScheme": 1,
+  "color": "#2E8BC0",
+  "limit": 32,
+  "useWaylandScreenSharing": false,
+  "reduceMotion": true,
+  "diagnosticsEnabled": false,
+  "language": "ar",
+  "reduceTransparency": false,
+  "libraryView": "deck",
+  "followSystemTheme": false,
+  "autoCopy": true,
+  "copyFormat": "HSL",
+  "hexUppercase": false,
+  "hexPrefix": true,
+  "globalShortcut": true,
+  "quickPick": false,
+  "shortcut": "Ctrl+Alt+P",
+  "theme": "light",
+  "discoveries": [
+    {
+      "id": "desert-dawn:3",
+      "name": "فجر الصحراء",
+      "createdAt": "2026-11-15T08:00:00+00:00",
+      "light": {
+        "background": "#FAF6EF",
+        "text": "#1B1A17"
+      },
+      "dark": {
+        "background": "#141310",
+        "text": "#F4EFE6"
+      }
+    }
+  ],
+  "brandLocks": {
+    "primary": "#FFF000"
+  },
+  "history": [
+    "#2E8BC0",
+    "#FFF000",
+    "#111111"
+  ],
+  "palettes": [
+    {
+      "id": "3f1c0d6e9b2a4c7f8e5d1a2b3c4d5e6f",
+      "name": "هوية TrineHub",
+      "colors": [
+        {
+          "id": "a1",
+          "name": "أصفر",
+          "hex": "#FFF000",
+          "favorite": true
+        },
+        {
+          "id": "a2",
+          "name": "Ink",
+          "hex": "#111111",
+          "favorite": false
+        }
+      ],
+      "collection": "عملاء",
+      "roles": {
+        "primary": "#FFF000",
+        "text": "#111111"
+      },
+      "pinned": true
+    }
+  ],
+  "gradients": [
+    {
+      "id": "g1",
+      "name": "تدرجي",
+      "type": "radial",
+      "angle": 45,
+      "stops": [
+        {
+          "hex": "#2856B4",
+          "pos": 0
+        },
+        {
+          "hex": "#87CEEB",
+          "pos": 60
+        },
+        {
+          "hex": "#FFFFFF",
+          "pos": 100
+        }
+      ]
+    }
+  ],
+  "futureSetting": {
+    "keep": [
+      1,
+      2,
+      3
+    ]
+  }
+}
