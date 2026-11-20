@@ -1,3 +1,8 @@
+# Archived: the CI and preview releases of PickerHub 1.x, the Avalonia app in desktop/.
+# PickerHub 2 (Tauri) replaced it with 2.0.0-beta.1; its CI is .github/workflows/tauri.yml and its
+# releases .github/workflows/release.yml. GitHub runs only files in .github/workflows, so this one no
+# longer runs. To build or release 1.x again, move it back:
+#   git mv .github/workflows-archive/check.yml .github/workflows/check.yml
 name: Native desktop builds
 on: [push, pull_request, workflow_dispatch]
 permissions:
