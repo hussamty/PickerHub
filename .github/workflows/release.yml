@@ -136,7 +136,16 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           python3 scripts/latest_json.py "$version" release > release/latest.json
-          (cd release && find . -type f ! -name '*.sig' ! -name SHA256SUMS -printf '%P\n' | sort | xargs sha256sum > SHA256SUMS)
+          # The artifacts keep their build folders (release/bundle/deb/…), but a release holds bare file
+          # names: list each file by the name it is downloaded as, so `sha256sum -c SHA256SUMS` works
+          # in the folder the downloads land in. Two files of one name would also clash on upload.
+          (cd release
+            dupes=$(find . -type f ! -name SHA256SUMS -printf '%f\n' | sort | uniq -d)
+            if [ -n "$dupes" ]; then echo "Two release files share a name: $dupes" >&2; exit 1; fi
+            find . -type f ! -name '*.sig' ! -name SHA256SUMS -printf '%P\n' | while read -r f; do
+              (cd "$(dirname "$f")" && sha256sum "$(basename "$f")")
+            done | sort -k2 > SHA256SUMS
+            cat SHA256SUMS)
           cat release/latest.json
       - name: Draft release
         env:
