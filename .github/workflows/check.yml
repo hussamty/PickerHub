@@ -69,5 +69,11 @@ jobs:
         shell: bash
         run: |
           version=$(python3 -c "import xml.etree.ElementTree as E; print(E.parse('desktop/PickerHub.csproj').findtext('PropertyGroup/Version'))")
+          # A preview is published once per version: pushes that do not bump desktop/PickerHub.csproj
+          # find it already released and stop here instead of failing.
+          if gh release view "v$version" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::notice::PickerHub $version is already released; nothing to publish."
+            exit 0
+          fi
           gh release create "v$version" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "PickerHub $version — unsigned preview" --notes-file docs/release-notes.md --prerelease
         env: {GH_TOKEN: '${{ github.token }}'}
