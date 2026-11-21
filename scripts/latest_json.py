@@ -4,15 +4,31 @@
     python3 scripts/latest_json.py <version> <folder with the release files> [notes file] > latest.json
 
 Each installer is paired with the minisign signature `tauri build` (or scripts/release_deb.py) wrote
-beside it. The URLs point at the GitHub release for tag v<version>, which is where the updater's
-endpoint (src-tauri/src/update.rs) finds this file.
+beside it, and every signature must name this version, as the updater requires. The URLs point at
+the GitHub release for tag v<version>, which is where the updater's endpoint (src-tauri/src/update.rs)
+finds this file.
 """
+import base64
 import datetime
 import json
 import pathlib
+import re
 import sys
 
 REPO = "hussamty/PickerHub"
+
+
+def signed_for(name: str, signature: str, version: str) -> None:
+    """Stops the release when a signature does not name this version in its signed comment.
+
+    The app is built with requireSignedVersion, so the updater refuses such an installer: the
+    release would publish an update that fails on every machine that tries it.
+    """
+    comment = base64.b64decode(signature).decode("utf-8", "replace").splitlines()[2]
+    found = re.search(r"\bversion:(\S+)", comment)
+    if not found or found.group(1).lstrip("v") != version:
+        sys.exit(f"{name}: signed for {found.group(1) if found else 'no version'}, not {version}; "
+                 "sign updater files with --app-version")
 
 
 def main() -> None:
@@ -26,7 +42,9 @@ def main() -> None:
         if not names:
             return None
         name = names[0]
-        return {"signature": files[name + ".sig"].read_text().strip(), "url": base + name}
+        signature = files[name + ".sig"].read_text().strip()
+        signed_for(name, signature, version)
+        return {"signature": signature, "url": base + name}
 
     kinds = {
         "linux-x86_64-appimage": entry(".AppImage"),

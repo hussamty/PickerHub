@@ -125,9 +125,10 @@
   {/if}
 </div>
 <Toasts />
-<Dialogs />
 <CaptureOptions />
 {#if app.settingsOpen && app.ws}<Settings />{/if}
+<!-- Last: a confirmation or prompt opens over the sheet that asked for it (Settings, Capture options). -->
+<Dialogs />
 <HandCursor />
 
 <style>

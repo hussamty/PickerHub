@@ -56,7 +56,10 @@ def main() -> None:
         deb.unlink()
         deb.with_name(deb.name + ".sig").unlink(missing_ok=True)
         if signing:
-            run(TAURI, "signer", "sign", out)
+            # --app-version puts the version in the signed comment: the updater requires it
+            # (requireSignedVersion) and refuses an installer signed without it.
+            version = subprocess.run(["dpkg-deb", "-f", out, "Version"], capture_output=True, text=True, check=True).stdout.strip()
+            run(TAURI, "signer", "sign", "--app-version", version, out)
         info = subprocess.run(["dpkg-deb", "-f", out, "Package", "Version", "Replaces", "Conflicts"], capture_output=True, text=True, check=True).stdout
         print(out.name + ("  (signed)" if signing else "  (unsigned: no TAURI_SIGNING_PRIVATE_KEY)"))
         print("  " + info.strip().replace("\n", "\n  "))

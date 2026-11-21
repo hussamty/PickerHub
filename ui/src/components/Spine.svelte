@@ -1,9 +1,9 @@
 <script lang="ts">
   // Edge navigation (desktop/Controls.cs, Spine). One pane of glass grown out of the window's right
   // edge through two concave shoulders. At rest it is a slim rail of icons; under the pointer or
-  // keyboard focus it opens over the page and shows labels, and the grip (the dots) pins it open
-  // until a click elsewhere or Esc. One pill follows the pointer from row to row and squashes on
-  // press; a second, filled pill marks the current tool and slides when it changes.
+  // keyboard focus it opens over the page and shows labels under a "Menu" header. One pill follows
+  // the pointer from row to row and squashes on press; a second, filled pill marks the current tool
+  // and slides when it changes.
   import { onMount } from "svelte";
   import { app } from "../lib/app.svelte";
   import { t } from "../lib/i18n";
@@ -15,7 +15,6 @@
   let list: HTMLElement;
   let size = $state({ w: CLOSED, h: 400 });
   let expanded = $state(false);
-  let pinned = $state(false);
   let keyboard = false;
   let over = false;
   let closing = 0;
@@ -27,6 +26,13 @@
   const shape = $derived.by(() => {
     const { w, h } = size, s = LIP, r = Math.max(0, Math.min(RADIUS, Math.min(w, h - 2 * s) / 2));
     return `M ${w} 0 A ${s} ${s} 0 0 1 ${w - s} ${s} L ${r} ${s} A ${r} ${r} 0 0 0 0 ${s + r} L 0 ${h - s - r} A ${r} ${r} 0 0 0 ${r} ${h - s} L ${w - s} ${h - s} A ${s} ${s} 0 0 1 ${w} ${h} Z`;
+  });
+
+  // Full glass gives the spine the panes' own sheen: CSS linear-gradient(160deg, sheen 0%, transparent 42%).
+  const paneSheen = $derived.by(() => {
+    const { w, h } = size, dx = Math.sin((160 * Math.PI) / 180), dy = -Math.cos((160 * Math.PI) / 180);
+    const half = (Math.abs(w * dx) + Math.abs(h * dy)) / 2;
+    return { x1: w / 2 - dx * half, y1: h / 2 - dy * half, x2: w / 2 + dx * half, y2: h / 2 + dy * half };
   });
 
   function expand(open: boolean) {
@@ -42,7 +48,7 @@
     over = false;
     hoverShown = false;
     clearTimeout(closing);
-    if (!keyboard && !pinned) closing = window.setTimeout(() => { if (!over && !keyboard && !pinned) expand(false); }, app.motion ? 160 : 0);
+    if (!keyboard) closing = window.setTimeout(() => { if (!over && !keyboard) expand(false); }, app.motion ? 160 : 0);
   }
   // A pill that is not showing appears in place; one that is showing travels.
   function follow(row: HTMLElement) {
@@ -71,10 +77,7 @@
     ro.observe(el);
     fit();
     addEventListener("resize", fit);
-    // A click anywhere else lets a pinned spine close.
-    const outside = (e: PointerEvent) => { if (pinned && !el.contains(e.target as Node)) { pinned = false; if (!over && !keyboard) expand(false); } };
-    addEventListener("pointerdown", outside, true);
-    return () => { ro.disconnect(); removeEventListener("resize", fit); removeEventListener("pointerdown", outside, true); };
+    return () => { ro.disconnect(); removeEventListener("resize", fit); };
   });
 </script>
 
@@ -90,8 +93,7 @@
   onpointerdown={() => (squash = true)}
   onpointerup={() => (squash = false)}
   onfocusin={(e) => { if ((e.target as HTMLElement).matches(":focus-visible")) { keyboard = true; expand(true); follow(e.target as HTMLElement); } }}
-  onfocusout={(e) => { if (!el.contains(e.relatedTarget as Node)) { keyboard = false; if (!over && !pinned) { hoverShown = false; expand(false); } } }}
-  onkeydown={(e) => { if (e.key === "Escape" && pinned) { e.stopPropagation(); pinned = false; if (!over && !keyboard) expand(false); } }}
+  onfocusout={(e) => { if (!el.contains(e.relatedTarget as Node)) { keyboard = false; if (!over) { hoverShown = false; expand(false); } } }}
 >
   <!-- The blur and the shadow follow the body of the pane as a rounded rectangle: a path clip or a
        filtered shape would be redrawn in software on every frame of the opening. The shoulders are
@@ -104,6 +106,10 @@
         <stop offset="0" stop-color="var(--rim-top)" stop-opacity="0.22" />
         <stop offset="1" stop-color="var(--rim-top)" stop-opacity="0" />
       </linearGradient>
+      <linearGradient id="spine-sheen-pane" x1={paneSheen.x1} y1={paneSheen.y1} x2={paneSheen.x2} y2={paneSheen.y2} gradientUnits="userSpaceOnUse">
+        <stop offset="0" class="pane-sheen" />
+        <stop offset="0.42" stop-color="#fff" stop-opacity="0" />
+      </linearGradient>
       <linearGradient id="spine-rim" x1="0" y1="0" x2="0" y2={size.h} gradientUnits="userSpaceOnUse">
         <stop offset="0" stop-color="var(--rim-top)" stop-opacity="var(--rim-a)" />
         <stop offset="1" stop-color="var(--rim-top)" stop-opacity="calc(var(--rim-a) * 0.22)" />
@@ -111,16 +117,17 @@
       <clipPath id="spine-clip"><path d={shape} /></clipPath>
     </defs>
     <path d={shape} class="fill" />
-    <path d={shape} fill="url(#spine-sheen)" />
-    <path d={shape} fill="none" stroke="url(#spine-rim)" stroke-width="2" clip-path="url(#spine-clip)" />
+    <path d={shape} class="sheen" />
+    <path d={shape} class="rim" stroke-width="2" clip-path="url(#spine-clip)" />
   </svg>
 
   <div class="layers" bind:this={list} dir={app.language === "ar" ? "rtl" : "ltr"} style:--row="{rowH}px">
     <span class="pill active" class:shown={currentShown} class:instant={currentInstant} style:top="{currentY}px"></span>
     <span class="pill hover" class:shown={hoverShown} class:instant={hoverInstant} class:squash style:top="{hoverY}px"></span>
-    <button class="row" onpointerenter={(e) => follow(e.currentTarget)} onclick={() => { pinned = !pinned; expand(pinned || over); }} aria-pressed={pinned} aria-label={t("القائمة")}>
+    <!-- A header, not a control: the nav's own label names it for assistive technology. -->
+    <div class="row title" aria-hidden="true" onpointerenter={() => (hoverShown = false)}>
       <span class="ico"><Icon name="dots" size={20} /></span><span class="label">{t("القائمة")}</span>
-    </button>
+    </div>
     <span class="rule"></span>
     {#each TOOLS as tool, i}
       <button class="row" class:active={app.page === i} data-tool={i} onpointerenter={(e) => follow(e.currentTarget)} onclick={() => (app.page = i)} aria-current={app.page === i ? "page" : undefined} aria-label={t(tool.title)}>
@@ -180,6 +187,32 @@
   .fill {
     fill: var(--glass-tint);
   }
+  .sheen {
+    fill: url(#spine-sheen);
+  }
+  .rim {
+    fill: none;
+    stroke: url(#spine-rim);
+  }
+  .pane-sheen {
+    stop-color: #fff;
+    stop-opacity: var(--sheen);
+  }
+  /* Full glass: the same material as the panes (app.css, glass): their sheen, an even rim, their blur
+     and shadow. */
+  :global(.full-glass) .sheen {
+    fill: url(#spine-sheen-pane);
+  }
+  :global(.full-glass) .rim {
+    stroke: var(--glass-rim);
+  }
+  :global(.full-glass) .frost {
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+  }
+  :global(.full-glass) .shade {
+    box-shadow: 0 10px 30px var(--glass-shade);
+  }
   :global(.reduce-transparency) .fill {
     fill: var(--raised);
   }
@@ -205,6 +238,20 @@
   }
   .row:hover {
     color: var(--ink);
+  }
+  .row.title {
+    cursor: default;
+    --hand: idle;
+  }
+  .row.title,
+  .row.title:hover {
+    color: var(--muted);
+  }
+  .row.title:active {
+    transform: none;
+  }
+  .row.title .label {
+    font-weight: 600;
   }
   .row:active {
     transform: scale(0.97, 0.94);
