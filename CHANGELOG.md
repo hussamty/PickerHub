@@ -1,3 +1,8 @@
+# 2.0.0-beta.5 — a smooth side menu
+
+- Open and close the side menu smoothly again on high-resolution screens: its glass is built from shapes the graphics card draws without repainting them on every frame, and it still reads as one body with its curved top and bottom.
+- Draw the side menu's highlights flat: a plain yellow fill for the current tool and a soft tint under the pointer, with no white or yellow halo around the text and buttons.
+
 # 2.0.0-beta.4 — one glass
 
 - Draw every floating surface in one glass: the same tint per layer, sheen, rim, blur and shadow, defined once. The side menu is now one body of that glass, its curved top and bottom included, with one rim all the way round and the same look with full glass on or off.
