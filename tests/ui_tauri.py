@@ -27,7 +27,11 @@ def run(script: str, shot: pathlib.Path | None = None, wait: int = 1500, timeout
         (pathlib.Path(data) / "PickerHub").mkdir()
         shutil.copy(FIXTURE, pathlib.Path(data) / "PickerHub/workspace.json")
         # X11 only: under a Wayland session GTK would open the app on the real desktop, not on Xvfb.
-        env = dict(os.environ, PICKERHUB_DATA_DIR=data, PICKERHUB_EVAL=script, PICKERHUB_WAIT=str(wait), GDK_BACKEND="x11", XDG_SESSION_TYPE="x11")
+        # Its own config, cache and data folders: the window state and WebKit's files of the PickerHub
+        # installed on this machine (same identifier) are never read or overwritten by a test.
+        home = pathlib.Path(data) / "xdg"
+        env = dict(os.environ, PICKERHUB_DATA_DIR=data, PICKERHUB_EVAL=script, PICKERHUB_WAIT=str(wait), GDK_BACKEND="x11", XDG_SESSION_TYPE="x11",
+                   XDG_CONFIG_HOME=str(home / "config"), XDG_CACHE_HOME=str(home / "cache"), XDG_DATA_HOME=str(home / "data"))
         env.pop("WAYLAND_DISPLAY", None)
         if shot:
             env["PICKERHUB_SHOT"] = str(shot)

@@ -7,9 +7,11 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 
 /// Settings the interface may change, by their names in `workspace.json`.
-/// `fullGlass` is new in 2.0; it is kept with the other unknown fields and ignored by 1.x.
-const SETTINGS: [&str; 17] = [
+/// `fullGlass` and `minimizeToTray` are new in 2.0; they are kept with the other unknown fields and
+/// ignored by 1.x.
+const SETTINGS: [&str; 18] = [
     "fullGlass",
+    "minimizeToTray",
     "theme",
     "language",
     "reduceMotion",

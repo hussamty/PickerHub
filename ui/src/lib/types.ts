@@ -31,6 +31,8 @@ export interface Workspace {
   gradients: Gradient[];
   /** New in 2.0: a live blur behind every pane. */
   fullGlass?: boolean;
+  /** New in 2.0: closing the window hides it in the tray instead of quitting. */
+  minimizeToTray?: boolean;
 }
 export interface Snapshot { workspace: Workspace; canUndo: boolean; canRedo: boolean }
 export interface Boot extends Snapshot { recoveryNotice: string | null; platform: string; session: string; version: string; preview: boolean }

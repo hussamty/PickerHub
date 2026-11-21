@@ -50,5 +50,12 @@
   "يُنزَّل الإصدار الجديد ويُتحقق من توقيعه، ثم يُثبَّت ويُعاد تشغيل PickerHub. مكتبتك تبقى كما هي.": "The new version is downloaded and its signature checked, then it is installed and PickerHub restarts. Your library stays as it is.",
   "تعذّر التحقق من التحديثات. تحقق من الاتصال وحاول لاحقاً.": "Could not check for updates. Check your connection and try again later.",
   "تعذّر تثبيت التحديث. لم يتغير شيء في نسختك الحالية.": "Could not install the update. Nothing changed in your current version.",
-  "لا يوجد تحديث جاهز. تحقق من التحديثات أولاً.": "No update is ready. Check for updates first."
+  "لا يوجد تحديث جاهز. تحقق من التحديثات أولاً.": "No update is ready. Check for updates first.",
+  "التقاط لون": "Pick a color",
+  "إظهار PickerHub": "Show PickerHub",
+  "إخفاء PickerHub": "Hide PickerHub",
+  "إنهاء PickerHub": "Quit PickerHub",
+  "النافذة": "Window",
+  "عند الإغلاق، تصغير إلى شريط النظام": "Minimize to tray on close",
+  "يبقى PickerHub يعمل في الخلفية. أعد فتحه من أيقونة شريط النظام أو بتشغيله مرة أخرى، وأنهِه من «إنهاء PickerHub» في قائمتها.": "PickerHub keeps running in the background. Reopen it from its tray icon or by launching it again, and quit it with Quit PickerHub in the tray menu."
 }

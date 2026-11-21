@@ -12,7 +12,11 @@ mod support;
 mod update;
 
 use state::AppState;
-use tauri::{Manager, RunEvent};
+use tauri::{Manager, RunEvent, WindowEvent};
+
+/// What the workbench remembers between sessions: its place, size and maximized state, but not
+/// whether it was showing, so a session that ended in the tray still opens to a window.
+pub const WINDOW_STATE: tauri_plugin_window_state::StateFlags = tauri_plugin_window_state::StateFlags::all().difference(tauri_plugin_window_state::StateFlags::VISIBLE);
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
 fn main() {
@@ -39,19 +43,24 @@ fn main() {
     };
     builder
         // A second launch only brings the first window forward; it never opens a second library.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(w) = app.get_webview_window("main") {
-                let _ = w.unminimize();
-                let _ = w.show();
-                let _ = w.set_focus();
-            }
-        }))
+        // It also brings back a window that was put away in the tray.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| system::show(app)))
         // Only the workbench remembers its place; the lens windows follow the pointer.
-        .plugin(tauri_plugin_window_state::Builder::default().with_denylist(&["lens", "overlay-0", "overlay-1", "overlay-2", "overlay-3", "overlay-4", "overlay-5"]).build())
+        .plugin(tauri_plugin_window_state::Builder::default().with_state_flags(WINDOW_STATE).with_denylist(&["lens", "overlay-0", "overlay-1", "overlay-2", "overlay-3", "overlay-4", "overlay-5"]).build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(system::System::default())
+        // With "Minimize to tray on close", closing the workbench puts it in the tray instead of quitting.
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event
+                && window.label() == "main"
+                && system::closes_to_tray(window.app_handle())
+            {
+                api.prevent_close();
+                system::hide(window.app_handle());
+            }
+        })
         .manage(lens::Lens::default())
         .invoke_handler(tauri::generate_handler![
             commands::boot,
@@ -93,6 +102,7 @@ fn main() {
             lens::capture_portal,
             lens::sharing,
             system::tray_labels,
+            system::tray_available,
             system::apply_shortcut,
         ])
         .setup(move |app| {

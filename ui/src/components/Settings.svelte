@@ -13,6 +13,9 @@
   type Offer = { version: string; current: string; notes: string | null; date: string | null };
   let updates = $state<{ supported: boolean; busy: boolean; checked: boolean; offer: Offer | null }>({ supported: false, busy: false, checked: false, offer: null });
   ipc.updateSupported().then((v) => (updates.supported = v)).catch(() => {});
+  // Closing to the tray is offered only where a tray icon exists to bring the window back.
+  let tray = $state(false);
+  ipc.trayAvailable().then((v) => (tray = v)).catch(() => {});
   async function check() {
     updates.busy = true;
     try { updates.offer = await ipc.updateCheck(); updates.checked = true; } catch (e) { app.fail(e); }
@@ -51,6 +54,13 @@
     <Toggle label="تقليل الشفافية" checked={ws.reduceTransparency} onchange={(v) => app.setting("reduceTransparency", v)} />
     <Toggle label="زجاج كامل" hint="تمويه حي خلف كل اللوحات. أجمل على الأجهزة القوية وأبطأ على غيرها." checked={!!ws.fullGlass} onchange={(v) => app.setting("fullGlass", v)} />
   </section>
+
+  {#if tray}
+    <section>
+      <h3>{t("النافذة")}</h3>
+      <Toggle label="عند الإغلاق، تصغير إلى شريط النظام" hint="يبقى PickerHub يعمل في الخلفية. أعد فتحه من أيقونة شريط النظام أو بتشغيله مرة أخرى، وأنهِه من «إنهاء PickerHub» في قائمتها." checked={!!ws.minimizeToTray} onchange={(v) => app.setting("minimizeToTray", v)} />
+    </section>
+  {/if}
 
   <section>
     <h3>{t("القطّارة")}</h3>

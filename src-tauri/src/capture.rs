@@ -78,6 +78,7 @@ pub async fn pick_once(app: &AppHandle, stay_hidden: bool, copy: bool) -> Result
         && !portal
     {
         let _ = w.hide();
+        crate::system::sync(app);
         tokio::time::sleep(std::time::Duration::from_millis(180)).await;
     }
     let started = crate::support::start();
@@ -87,11 +88,8 @@ pub async fn pick_once(app: &AppHandle, stay_hidden: bool, copy: bool) -> Result
         Ok(Some(_)) if portal => crate::support::measured("system-picker-selection", started),
         _ => {}
     }
-    if let Some(w) = &window
-        && !stay_hidden
-    {
-        let _ = w.show();
-        let _ = w.set_focus();
+    if window.is_some() && !stay_hidden {
+        crate::system::show(app);
     }
     let Some(rgb) = result? else { return Ok(None) };
     let hex = rgb.hex();
@@ -124,15 +122,15 @@ pub async fn pick_many(app: AppHandle, state: State<'_, AppState>, palette: Stri
     let window = app.get_webview_window("main");
     if let Some(w) = &window {
         let _ = w.hide();
+        crate::system::sync(&app);
         tokio::time::sleep(std::time::Duration::from_millis(180)).await;
     }
     let outcome = sample(&app, true).await;
     if let Err(e) = &outcome {
         crate::support::failed("capture-many", &e.code);
     }
-    if let Some(w) = &window {
-        let _ = w.show();
-        let _ = w.set_focus();
+    if window.is_some() {
+        crate::system::show(&app);
     }
     let picked: Vec<String> = outcome?.into_iter().map(|c| c.hex()).collect();
     if picked.is_empty() {

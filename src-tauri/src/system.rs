@@ -1,23 +1,42 @@
-//! The tray menu and the global shortcut: picking from anywhere, without opening the window first.
+//! The tray menu and the global shortcut: picking from anywhere, without opening the window first,
+//! and the tray as the window's home when "Minimize to tray on close" is on.
 use crate::capture::pick_once;
-use crate::state::AppError;
+use crate::state::{AppError, AppState};
+use serde::Deserialize;
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
-use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Emitter, Manager, Wry};
+use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindow, Wry};
 
-const ITEMS: [(&str, &str); 6] = [
-    ("pick-copy", "التقاط ونسخ"),
-    ("pick-edit", "التقاط وتحرير"),
-    ("pick-quick", "التقاط سريع"),
-    ("pick-many", "التقاط متعدد إلى اللوحة الحالية"),
-    ("open", "فتح PickerHub"),
-    ("quit", "خروج"),
-];
+/// The tray's words; the interface sends them in its language (`tray_labels`).
+#[derive(Deserialize, Clone)]
+pub struct TrayLabels {
+    pick: String,
+    show: String,
+    hide: String,
+    settings: String,
+    quit: String,
+}
+impl Default for TrayLabels {
+    fn default() -> Self {
+        Self { pick: "التقاط لون".into(), show: "إظهار PickerHub".into(), hide: "إخفاء PickerHub".into(), settings: "الإعدادات".into(), quit: "إنهاء PickerHub".into() }
+    }
+}
+
+struct TrayItems {
+    pick: MenuItem<Wry>,
+    toggle: MenuItem<Wry>,
+    settings: MenuItem<Wry>,
+    quit: MenuItem<Wry>,
+}
 
 #[derive(Default)]
 pub struct System {
-    items: Mutex<Vec<MenuItem<Wry>>>,
+    items: Mutex<Option<TrayItems>>,
+    labels: Mutex<TrayLabels>,
+    /// Set once the tray icon exists: only then may closing hide the window instead of quitting.
+    tray: AtomicBool,
     shortcut: Mutex<Option<Registered>>,
 }
 
@@ -45,46 +64,117 @@ pub fn run_pick(app: &AppHandle, quick: bool, copy: bool, event: &'static str) {
     });
 }
 
+/// The tray: one pick, the window (show or hide, settings) and quit. On Windows a double click
+/// opens the window and the menu is on the right button; macOS keeps its click-to-open menu, and
+/// Linux trays (AppIndicator) send no clicks, so there the menu's Show item reopens the window.
 pub fn tray(app: &AppHandle) -> tauri::Result<()> {
-    let items: Vec<MenuItem<Wry>> = ITEMS.iter().map(|(id, label)| MenuItem::with_id(app, *id, *label, true, None::<&str>)).collect::<Result<_, _>>()?;
-    let sep = PredefinedMenuItem::separator(app)?;
-    let menu = Menu::with_items(app, &[&items[0], &items[1], &items[2], &items[3], &sep, &items[4], &items[5]])?;
+    let labels = app.state::<System>().labels.lock().unwrap().clone();
+    let items = TrayItems {
+        pick: MenuItem::with_id(app, "pick", &labels.pick, true, None::<&str>)?,
+        toggle: MenuItem::with_id(app, "toggle", &labels.hide, true, None::<&str>)?,
+        settings: MenuItem::with_id(app, "settings", &labels.settings, true, None::<&str>)?,
+        quit: MenuItem::with_id(app, "quit", &labels.quit, true, None::<&str>)?,
+    };
+    let (a, b) = (PredefinedMenuItem::separator(app)?, PredefinedMenuItem::separator(app)?);
+    let menu = Menu::with_items(app, &[&items.pick, &a, &items.toggle, &items.settings, &b, &items.quit])?;
     TrayIconBuilder::with_id("main")
         .icon(app.default_window_icon().cloned().expect("bundled icon"))
         .tooltip("PickerHub")
         .menu(&menu)
-        .show_menu_on_left_click(true)
+        .show_menu_on_left_click(cfg!(target_os = "macos"))
         .on_menu_event(|app, event| match event.id().as_ref() {
-            "pick-copy" => run_pick(app, false, true, "picked"),
-            "pick-edit" => run_pick(app, false, false, "picked-edit"),
-            "pick-quick" => run_pick(app, true, true, "picked"),
-            "pick-many" => {
-                show(app);
-                let _ = app.emit("pick-many", ());
+            "pick" => run_pick(app, false, true, "picked"),
+            "toggle" => {
+                if main_window(app).is_some_and(|w| w.is_visible().unwrap_or(false)) { hide(app) } else { show(app) }
             }
-            "open" => show(app),
-            "quit" => app.exit(0),
+            "settings" => {
+                show(app);
+                let _ = app.emit("open-settings", ());
+            }
+            "quit" => quit(app),
             _ => {}
         })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::DoubleClick { button: MouseButton::Left, .. } = event {
+                show(tray.app_handle());
+            }
+        })
         .build(app)?;
-    *app.state::<System>().items.lock().unwrap() = items;
+    let system = app.state::<System>();
+    *system.items.lock().unwrap() = Some(items);
+    system.tray.store(true, Ordering::Relaxed);
+    sync(app);
     Ok(())
 }
 
+fn main_window(app: &AppHandle) -> Option<WebviewWindow> {
+    app.get_webview_window("main")
+}
+
+/// Brings the window back: from the tray, a second launch or the end of a pick.
 pub fn show(app: &AppHandle) {
-    if let Some(w) = app.get_webview_window("main") {
+    if let Some(w) = main_window(app) {
         let _ = w.unminimize();
         let _ = w.show();
         let _ = w.set_focus();
     }
+    sync(app);
 }
 
-/// The interface sends the menu labels in its language whenever the language changes.
-#[tauri::command]
-pub fn tray_labels(app: AppHandle, labels: Vec<String>) {
-    for (item, label) in app.state::<System>().items.lock().unwrap().iter().zip(labels) {
-        let _ = item.set_text(label);
+/// Puts the window away in the tray; the app keeps running. Its place and size are saved first.
+pub fn hide(app: &AppHandle) {
+    save_window(app);
+    if let Some(w) = main_window(app) {
+        let _ = w.hide();
     }
+    sync(app);
+}
+
+/// Saves and quits for good: the tray's Quit, or closing with the tray option off.
+pub fn quit(app: &AppHandle) {
+    save_window(app);
+    app.exit(0);
+}
+
+fn save_window(app: &AppHandle) {
+    use tauri_plugin_window_state::AppHandleExt;
+    let _ = app.save_window_state(crate::WINDOW_STATE);
+}
+
+/// Whether closing the window should hide it in the tray: the setting is on and a tray exists to
+/// bring it back from. Without a tray, closing still quits, so the app can never become unreachable.
+pub fn closes_to_tray(app: &AppHandle) -> bool {
+    app.state::<System>().tray.load(Ordering::Relaxed)
+        && app.try_state::<AppState>().is_some_and(|s| s.workspace().extra.get("minimizeToTray").and_then(|v| v.as_bool()).unwrap_or(false))
+}
+
+/// The Show/Hide item names the action that applies now.
+pub fn sync(app: &AppHandle) {
+    let system = app.state::<System>();
+    let visible = main_window(app).is_some_and(|w| w.is_visible().unwrap_or(false));
+    if let Some(items) = system.items.lock().unwrap().as_ref() {
+        let labels = system.labels.lock().unwrap();
+        let _ = items.toggle.set_text(if visible { &labels.hide } else { &labels.show });
+    }
+}
+
+/// The interface sends the tray's words in its language whenever the language changes.
+#[tauri::command]
+pub fn tray_labels(app: AppHandle, labels: TrayLabels) {
+    let system = app.state::<System>();
+    if let Some(items) = system.items.lock().unwrap().as_ref() {
+        let _ = items.pick.set_text(&labels.pick);
+        let _ = items.settings.set_text(&labels.settings);
+        let _ = items.quit.set_text(&labels.quit);
+    }
+    *system.labels.lock().unwrap() = labels;
+    sync(&app);
+}
+
+/// Whether this desktop has a tray icon, so the interface offers the close-to-tray setting.
+#[tauri::command]
+pub fn tray_available(app: AppHandle) -> bool {
+    app.state::<System>().tray.load(Ordering::Relaxed)
 }
 
 fn plugin_accelerator(shortcut: &str) -> String {

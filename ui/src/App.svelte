@@ -5,7 +5,7 @@
   import { ipc } from "./lib/ipc";
   import { t } from "./lib/i18n";
   import { TOOLS } from "./lib/tools";
-  import { pick, pickMany } from "./lib/pick";
+  import { pick } from "./lib/pick";
   import { listen } from "@tauri-apps/api/event";
   import type { Snapshot } from "./lib/types";
   import TitleBar from "./components/TitleBar.svelte";
@@ -53,17 +53,16 @@
       app.set(e.payload.snapshot);
       app.toast(e.payload.copied ? "نُسخ {0}" : "{0}", e.payload.hex, [e.payload.copied ?? e.payload.hex]);
     });
-    listen<Picked>("picked-edit", (e) => {
-      app.set(e.payload.snapshot);
-      app.page = 0;
-      requestAnimationFrame(() => (document.getElementById("hex-field") as HTMLInputElement | null)?.select());
-    });
     listen("pick-cancelled", () => app.toast("أُلغي الالتقاط"));
     listen<boolean>("sharing", (e) => { app.sharing = e.payload; app.toast(e.payload ? "مشاركة الشاشة نشطة" : "توقفت مشاركة الشاشة."); });
     listen("pick-failed", (e) => app.fail(e.payload));
-    listen("pick-many", () => app.palette && pickMany(app.palette.id));
-    // Show the window only once the first frame is laid out: no white flash.
-    requestAnimationFrame(() => getCurrentWindow().show());
+    listen("open-settings", () => (app.settingsOpen = true));
+    // Show the window once the first frame is laid out, so there is no white flash. WebKitGTK runs no
+    // animation frames for a window that is not shown yet, so a short timeout shows it regardless.
+    let shown = false;
+    const show = () => { if (!shown) { shown = true; getCurrentWindow().show(); } };
+    requestAnimationFrame(show);
+    setTimeout(show, 120);
   });
 
   // The document follows the library's language and appearance.
@@ -82,7 +81,7 @@
   $effect(() => {
     const language = app.language;
     if (!ready || !language) return;
-    ipc.trayLabels(["التقاط ونسخ", "التقاط وتحرير", "التقاط سريع", "التقاط متعدد إلى اللوحة الحالية", "فتح PickerHub", "خروج"].map((l) => t(l))).catch(() => {});
+    ipc.trayLabels({ pick: t("التقاط لون"), show: t("إظهار PickerHub"), hide: t("إخفاء PickerHub"), settings: t("الإعدادات"), quit: t("إنهاء PickerHub") }).catch(() => {});
   });
   // The global shortcut follows its settings; a refused binding is reported, not fatal.
   // Keyed on the three settings alone: every edit replaces the library snapshot, and re-binding
