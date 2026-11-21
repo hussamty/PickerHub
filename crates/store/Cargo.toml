@@ -1,6 +1,6 @@
 [package]
 name = "pickerhub-store"
-version = "2.0.0-beta.1"
+version = "2.0.0-beta.2"
 edition = "2024"
 license = "MIT"
 description = "PickerHub library storage: the workspace file, recovery, backups and edit history"

@@ -1,3 +1,9 @@
+# 2.0.0-beta.2 — the hand cursor
+
+- Replace the system cursor with a hand drawn by the interface while a mouse is in use: brand black with a white rim, so it reads on either theme and any color. It rests leaning back, points upright over anything clickable, presses with a yellow ring from the click, opens and grips over sliders and dragged handles, and steps aside for a hollow ring on the spectrum and the image guide, so the pixel under it stays in view. The index fingertip is the exact click point in every pose. Text fields keep the system I-beam, and touch, pens and forced colors keep the system cursor.
+- List each release file in `SHA256SUMS` by the name it is downloaded as, so `sha256sum -c SHA256SUMS` works in a folder of downloads.
+- Make the end-to-end pick test wait for the app instead of clicking at a fixed moment, build the X11 test examples only on Linux, and archive the 1.x workflow (docs/ci-cd.md explains the pipeline).
+
 # 2.0.0-beta.1 — PickerHub on Tauri
 
 - Rebuild the app on Tauri 2: Rust for everything below the interface, and an interface in Svelte 5, TypeScript and Tailwind CSS 4 in the system WebView. Same seven tools, same look, same Arabic-first layout. The 1.x Avalonia app still builds unchanged beside it.
