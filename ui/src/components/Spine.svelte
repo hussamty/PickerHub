@@ -1,9 +1,9 @@
 <script lang="ts">
   // Edge navigation (desktop/Controls.cs, Spine). One pane of glass grown out of the window's right
   // edge through two concave shoulders. At rest it is a slim rail of icons; under the pointer or
-  // keyboard focus it opens over the page and shows labels under a "Menu" header. One pill follows
-  // the pointer from row to row and squashes on press; a second, filled pill marks the current tool
-  // and slides when it changes.
+  // keyboard focus it opens over the page and shows labels under a "Menu" header. One marker follows
+  // the pointer from row to row and squashes on press; a second, filled marker shows the current tool
+  // and slides when it changes. (Not .pill: that is the app's button utility, which adds a border.)
   import { onMount } from "svelte";
   import { app } from "../lib/app.svelte";
   import { t } from "../lib/i18n";
@@ -88,31 +88,18 @@
   onfocusin={(e) => { if ((e.target as HTMLElement).matches(":focus-visible")) { keyboard = true; expand(true); follow(e.target as HTMLElement); } }}
   onfocusout={(e) => { if (!el.contains(e.relatedTarget as Node)) { keyboard = false; if (!over) { hoverShown = false; expand(false); } } }}
 >
-  <!-- One body, shoulders included: the glass (tint, sheen, blur) is one layer clipped to the outline,
-       the shadow is cast by the same outline and kept outside it, and one rim runs all the way round.
-       It is the panes' material (app.css, Glass system), so the spine reads as one of them. -->
-  <svg class="cast" width={size.w} height={size.h} aria-hidden="true">
-    <defs>
-      <filter id="spine-shadow" x="-40%" y="-20%" width="180%" height="150%" color-interpolation-filters="sRGB">
-        <feGaussianBlur in="SourceAlpha" stdDeviation="14" />
-        <feOffset dy="10" result="blur" />
-        <feFlood class="shade" />
-        <feComposite in2="blur" operator="in" result="shadow" />
-        <feComposite in="shadow" in2="SourceAlpha" operator="out" />
-      </filter>
-    </defs>
-    <path d={shape} filter="url(#spine-shadow)" />
-  </svg>
-  <div class="body" style:clip-path="path('{shape}')" aria-hidden="true"></div>
-  <svg class="rim" width={size.w} height={size.h} aria-hidden="true">
-    <defs><clipPath id="spine-clip"><path d={shape} /></clipPath></defs>
-    <!-- Twice the width, clipped to the outline: an even 1px rim on the inside, like a border. -->
-    <path d={shape} clip-path="url(#spine-clip)" />
-  </svg>
+  <!-- One body of the panes' glass, built from shapes the GPU composites without repainting them on
+       every frame of the opening: a rounded rectangle for the body (tint, sheen, blur, shadow) and
+       two fixed shoulder pieces at the window edge with the same glass, cut to their curve by a mask.
+       One rim runs round the whole outline. A path clip or a filtered shadow here dropped frames at 2x. -->
+  <div class="body" aria-hidden="true"></div>
+  <span class="shoulder top" aria-hidden="true"></span>
+  <span class="shoulder bottom" aria-hidden="true"></span>
+  <svg class="rim" width={size.w} height={size.h} aria-hidden="true"><path d={shape} /></svg>
 
   <div class="layers" bind:this={list} dir={app.language === "ar" ? "rtl" : "ltr"} style:--row="{rowH}px">
-    <span class="pill active" class:shown={currentShown} class:instant={currentInstant} style:top="{currentY}px"></span>
-    <span class="pill hover" class:shown={hoverShown} class:instant={hoverInstant} class:squash style:top="{hoverY}px"></span>
+    <span class="marker active" class:shown={currentShown} class:instant={currentInstant} style:top="{currentY}px"></span>
+    <span class="marker hover" class:shown={hoverShown} class:instant={hoverInstant} class:squash style:top="{hoverY}px"></span>
     <!-- A header, not a control: the nav's own label names it for assistive technology. -->
     <div class="row title" aria-hidden="true" onpointerenter={() => (hoverShown = false)}>
       <span class="ico"><Icon name="dots" size={20} /></span><span class="label">{t("القائمة")}</span>
@@ -142,31 +129,51 @@
     contain: layout style;
     transition: width 460ms cubic-bezier(0.65, 0, 0.35, 1);
   }
-  .cast,
-  .rim,
-  .body {
+  .body,
+  .shoulder,
+  .rim {
     position: absolute;
-    inset: 0;
     pointer-events: none;
   }
-  .cast,
-  .rim {
-    overflow: visible;
-  }
-  .shade {
-    flood-color: var(--glass-shade);
-  }
   .body {
+    inset: 18px 0;
+    border-radius: 22px 0 0 22px;
     background: var(--glass-sheen), var(--glass-tint);
+    box-shadow: var(--glass-shadow);
+  }
+  .shoulder {
+    right: 0;
+    width: 18px;
+    height: 18px;
+    background: var(--glass-tint);
+  }
+  /* The concave curve: everything outside a circle of the shoulder's radius around its inner corner. */
+  .shoulder.top {
+    top: 0;
+    mask-image: radial-gradient(circle 18px at 0 0, transparent 17.5px, #000 18px);
+    -webkit-mask-image: radial-gradient(circle 18px at 0 0, transparent 17.5px, #000 18px);
+  }
+  .shoulder.bottom {
+    bottom: 0;
+    mask-image: radial-gradient(circle 18px at 0 100%, transparent 17.5px, #000 18px);
+    -webkit-mask-image: radial-gradient(circle 18px at 0 100%, transparent 17.5px, #000 18px);
+  }
+  .body,
+  .shoulder {
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
+  }
+  .rim {
+    inset: 0;
+    overflow: visible;
   }
   .rim path {
     fill: none;
     stroke: var(--glass-rim);
-    stroke-width: 2;
+    stroke-width: 1;
   }
-  :global(.reduce-transparency) .body {
+  :global(.reduce-transparency) .body,
+  :global(.reduce-transparency) .shoulder {
     background: var(--raised);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -240,7 +247,7 @@
     background: var(--line);
     flex: none;
   }
-  .pill {
+  .marker {
     position: absolute;
     left: 0;
     right: 0;
@@ -254,26 +261,24 @@
       opacity 110ms,
       transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-  .pill.instant {
+  .marker.instant {
     transition: opacity 110ms;
   }
-  .pill.shown {
+  .marker.shown {
     opacity: 1;
   }
-  .pill.hover {
+  /* Flat: a tint under the pointer and a plain yellow fill for the current tool, no rims or shadows. */
+  .marker.hover {
     background: var(--tint);
-    border: 1px solid var(--glass-rim);
   }
-  .pill.squash {
+  .marker.squash {
     transform: scale(0.97, 0.86);
   }
-  .pill.active {
+  .marker.active {
     background: var(--color-brand);
-    border: 1px solid rgb(255 255 255 / 0.6);
-    box-shadow: var(--glass-shadow-small);
   }
   :global(.reduce-motion) .spine,
-  :global(.reduce-motion) .pill,
+  :global(.reduce-motion) .marker,
   :global(.reduce-motion) .label {
     transition: none;
   }
