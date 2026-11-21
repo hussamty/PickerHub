@@ -362,6 +362,7 @@
     width: 20px;
     height: 20px;
     cursor: default;
+    --hand: idle;
   }
   .entry {
     display: flex;

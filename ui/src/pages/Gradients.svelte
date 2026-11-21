@@ -183,6 +183,7 @@
     border: 3px solid #fff;
     box-shadow: 0 0 0 1px rgb(0 0 0 / 0.5), 0 3px 8px rgb(0 0 0 / 0.35);
     cursor: ew-resize;
+    --hand: grab;
     touch-action: none;
   }
   .knob.on {

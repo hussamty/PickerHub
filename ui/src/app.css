@@ -306,6 +306,43 @@ input[dir="auto"]:placeholder-shown {
   direction: inherit;
 }
 
+/* ---------- Hand cursor (components/HandCursor.svelte) ----------
+   What the element under the pointer asks the hand for, inherited like `cursor`. Zero specificity, so
+   a component sets its own (precision on picking surfaces, grab on dragged handles). Disabled controls
+   come last and win. */
+:where(button, a[href], summary, select, label, [role="button"], [role="link"], [role="tab"], [role="option"],
+  [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="switch"], [role="checkbox"],
+  [role="radio"], input:is([type="checkbox"], [type="radio"], [type="color"], [type="file"], [type="button"], [type="submit"])) {
+  --hand: pointer;
+}
+:where([role="slider"], input[type="range"]) {
+  --hand: grab;
+}
+:where(textarea, [contenteditable]:not([contenteditable="false"]),
+  input:not([type="range"], [type="checkbox"], [type="radio"], [type="color"], [type="file"], [type="button"], [type="submit"])) {
+  --hand: text;
+}
+:where(:disabled, [aria-disabled="true"]) {
+  --hand: idle;
+}
+/* Only while a mouse is in use: the hand replaces the system cursor everywhere but in text fields. */
+html.hand-cursor,
+html.hand-cursor *,
+html.hand-cursor *::before,
+html.hand-cursor *::after {
+  cursor: none !important;
+}
+html.hand-cursor :where(textarea, [contenteditable]:not([contenteditable="false"]),
+  input:not([type="range"], [type="checkbox"], [type="radio"], [type="color"], [type="file"], [type="button"], [type="submit"])) {
+  cursor: text !important;
+}
+@media (forced-colors: active) {
+  html.hand-cursor,
+  html.hand-cursor * {
+    cursor: auto !important;
+  }
+}
+
 /* Reduced motion: transitions become instant, and components check the setting before animating. */
 .reduce-motion *,
 .reduce-motion *::before,

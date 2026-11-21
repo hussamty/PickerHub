@@ -257,6 +257,7 @@
       linear-gradient(to top, #000, transparent),
       linear-gradient(to right, #fff, var(--hue));
     cursor: crosshair;
+    --hand: precision;
     touch-action: none;
   }
   .handle {

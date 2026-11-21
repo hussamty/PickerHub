@@ -14,6 +14,7 @@
   import Dialogs from "./components/Dialogs.svelte";
   import CaptureOptions from "./components/CaptureOptions.svelte";
   import Settings from "./components/Settings.svelte";
+  import HandCursor from "./components/HandCursor.svelte";
   import Picker from "./pages/Picker.svelte";
   import Library from "./pages/Library.svelte";
   import Contrast from "./pages/Contrast.svelte";
@@ -127,6 +128,7 @@
 <Dialogs />
 <CaptureOptions />
 {#if app.settingsOpen && app.ws}<Settings />{/if}
+<HandCursor />
 
 <style>
   .shell {

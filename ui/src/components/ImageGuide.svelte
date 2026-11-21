@@ -220,6 +220,7 @@
       linear-gradient(160deg, rgb(255 255 255 / var(--sheen)) 0%, transparent 42%),
       var(--card-tint);
     cursor: crosshair;
+    --hand: precision;
   }
   .pic {
     position: relative;
