@@ -308,7 +308,7 @@
   }
   .swatch:hover {
     transform: translateY(-3px);
-    box-shadow: 0 12px 28px var(--glass-shade);
+    box-shadow: var(--glass-shadow);
   }
   .swatch.picked {
     outline: 3px solid var(--color-brand);

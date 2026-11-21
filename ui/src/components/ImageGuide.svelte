@@ -45,25 +45,28 @@
   });
 
   // ---- Motion: marks pop in, leaders draw outward, labels settle as their leaders arrive. ----
-  const POP = 0.26, DRAW = 0.58, STAGGER = 0.075;
-  const popAt = (i: number) => i * STAGGER, drawAt = (i: number) => 0.14 + i * STAGGER;
+  // Unhurried: each leader takes 1.1 s on an ease-in-out curve, so it leaves the mark gently, travels
+  // and settles at the label, and the next one starts 140 ms later.
+  const POP = 0.36, DRAW = 1.1, STAGGER = 0.14, SETTLE = 0.4;
+  const popAt = (i: number) => i * STAGGER, drawAt = (i: number) => 0.2 + i * STAGGER;
+  const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
   let elapsed = Infinity;
   function markScale(i: number) {
     const t = Math.min(1, Math.max(0, (elapsed - popAt(i)) / POP));
     if (t >= 1) return 1;
-    const back = 1.7, u = t - 1; // a small overshoot, then rest
+    const back = 1.15, u = t - 1; // a slight overshoot, then rest
     return 1 + u * u * ((back + 1) * u + back);
   }
-  const leaderProgress = (i: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, (elapsed - drawAt(i)) / DRAW)), 3);
+  const leaderProgress = (i: number) => easeInOut(Math.min(1, Math.max(0, (elapsed - drawAt(i)) / DRAW)));
 
   function frameTick(now: number) {
     elapsed = (now - started) / 1000;
     labelState = geo.placements.map((p, i) => {
-      const r = Math.min(1, Math.max(0, (elapsed - drawAt(i) - DRAW * 0.7) / 0.24)), e = 1 - Math.pow(1 - r, 3);
+      const r = Math.min(1, Math.max(0, (elapsed - drawAt(i) - DRAW * 0.72) / SETTLE)), e = 1 - Math.pow(1 - r, 3);
       return { o: e, dx: (p.left ? 10 : -10) * (1 - e) }; // each label slides in from the frame's side
     });
     draw();
-    if (elapsed > drawAt(Math.max(0, colors.length - 1)) + DRAW + 0.3) { elapsed = Infinity; labelState = []; draw(); raf = 0; return; }
+    if (elapsed > drawAt(Math.max(0, colors.length - 1)) + DRAW + SETTLE) { elapsed = Infinity; labelState = []; draw(); raf = 0; return; }
     raf = requestAnimationFrame(frameTick);
   }
   // A new picture, or Show all / Show top five, draws out afresh.
@@ -114,9 +117,10 @@
     ctx.lineCap = "round"; ctx.lineJoin = "round";
     ctx.strokeStyle = halo; ctx.lineWidth = w + 3; ctx.stroke();
     ctx.strokeStyle = ink; ctx.lineWidth = w; ctx.stroke();
-    if (progress < 0.999) return;
-    // The arrowhead points into the label.
-    const sign = p.left ? -1 : 1, size = 6 + w;
+    // The arrowhead points into the label and grows in over the last stretch of the leader.
+    const head = Math.min(1, Math.max(0, (progress - 0.86) / 0.14));
+    if (head <= 0) return;
+    const sign = p.left ? -1 : 1, size = (6 + w) * head;
     ctx.beginPath();
     ctx.moveTo(p.tip.x, p.tip.y);
     ctx.lineTo(p.tip.x - sign * size, p.tip.y - size * 0.62);
@@ -217,7 +221,7 @@
     box-sizing: border-box;
     border-radius: 22px;
     background:
-      linear-gradient(160deg, rgb(255 255 255 / var(--sheen)) 0%, transparent 42%),
+      var(--glass-sheen),
       var(--card-tint);
     cursor: crosshair;
     --hand: precision;
@@ -260,17 +264,17 @@
     padding: 6px 10px;
     border-radius: 14px;
     background:
-      linear-gradient(160deg, rgb(255 255 255 / var(--sheen)) 0%, transparent 42%),
+      var(--glass-sheen),
       var(--sheet-tint);
     border: 1px solid var(--glass-rim);
-    box-shadow: 0 6px 18px var(--glass-shade);
+    box-shadow: var(--glass-shadow-small);
     cursor: pointer;
     will-change: transform, opacity;
     transition: box-shadow 0.2s, border-color 0.2s;
   }
   .label.hot {
     border-color: var(--color-brand);
-    box-shadow: 0 6px 22px rgb(255 240 0 / 0.25);
+    box-shadow: var(--glass-shadow-small);
   }
   .label:focus-visible {
     outline: 2px solid var(--color-brand);

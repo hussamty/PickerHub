@@ -52,26 +52,24 @@
   .scrim {
     position: fixed;
     inset: 0;
-    z-index: 40;
+    z-index: var(--z-scrim);
     background: var(--scrim);
     will-change: opacity;
   }
   .sheet {
     position: fixed;
-    z-index: 41;
+    z-index: var(--z-sheet);
     top: 50%;
     left: 50%;
     translate: -50% -50%;
     max-height: calc(100vh - 80px);
     display: flex;
     flex-direction: column;
-    background:
-      linear-gradient(160deg, rgb(255 255 255 / var(--sheen)) 0%, transparent 42%),
-      var(--sheet-tint);
+    background: var(--glass-sheen), var(--sheet-tint);
     outline: none;
     will-change: transform, opacity;
-    backdrop-filter: blur(16px) saturate(140%);
-    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
   }
   .head {
     display: flex;

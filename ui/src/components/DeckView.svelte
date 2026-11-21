@@ -287,7 +287,7 @@
     /* Dense enough that the card beneath never reads through: WebKit does not blur the backdrop of
        an element inside a transformed card, which 1.x's frosted reverse relied on. */
     background:
-      linear-gradient(160deg, rgb(255 255 255 / var(--sheen)) 0%, transparent 42%),
+      var(--glass-sheen),
       color-mix(in srgb, var(--raised) 96%, transparent);
     border: 1px solid var(--glass-rim);
     box-shadow: 0 18px 40px rgb(0 0 0 / 0.28);

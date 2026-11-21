@@ -54,6 +54,26 @@
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* ---------- Glass system ----------
+   One material for everything that floats: a translucent tint per layer (glass-tint for panes,
+   sheet-tint for what opens over the page, dense-tint for small dense strips), the same sheen from the
+   top-left corner, a lit 1px rim, one blur and two shadow sizes. The tints and the sheen strength
+   change with the theme below; these compositions do not.
+   Layers, bottom to top: page, spine 20, menus 30, scrim 40, sheets 41, toasts 60, cursor 99999. */
+:root {
+  --glass-sheen: linear-gradient(160deg, rgb(255 255 255 / var(--sheen)) 0%, transparent 42%);
+  --glass-blur: blur(18px) saturate(150%);
+  --glass-shadow: 0 10px 30px var(--glass-shade);
+  --glass-shadow-small: 0 6px 18px var(--glass-shade);
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.12);
+  --z-spine: 20;
+  --z-menu: 30;
+  --z-scrim: 40;
+  --z-sheet: 41;
+  --z-toast: 60;
+  --z-cursor: 99999;
+}
+
 /* Dark is the default room; light overrides every role. */
 :root {
   --canvas: #111111;
@@ -153,22 +173,31 @@ select {
 
 }
 
-/* The room behind the glass (desktop/Glass.cs, Backdrop): yellow light from the corner where
-   the eyedropper lives, a neutral pool opposite it, and a fine grain against banding. */
+/* The room behind the glass: yellow light from the corner where the eyedropper lives, a neutral
+   pool opposite it and a faint warm core. No texture: each pool falls off along an eased curve
+   (many stops instead of one linear ramp), which keeps the long faint gradients free of visible
+   steps without a noise layer drawn over the glass. */
 .room {
   background:
-    radial-gradient(72vmax 72vmax at 12% -5%, var(--pool-yellow), transparent 70%),
-    radial-gradient(80vmax 80vmax at 95% 105%, var(--pool-neutral), transparent 70%),
-    radial-gradient(42vmax 42vmax at 62% 60%, var(--pool-core), transparent 70%),
+    radial-gradient(72vmax 72vmax at 12% -5%,
+      var(--pool-yellow) 0%,
+      color-mix(in oklab, var(--pool-yellow) 72%, transparent) 18%,
+      color-mix(in oklab, var(--pool-yellow) 42%, transparent) 36%,
+      color-mix(in oklab, var(--pool-yellow) 18%, transparent) 54%,
+      color-mix(in oklab, var(--pool-yellow) 5%, transparent) 70%,
+      transparent 84%),
+    radial-gradient(80vmax 80vmax at 95% 105%,
+      var(--pool-neutral) 0%,
+      color-mix(in oklab, var(--pool-neutral) 60%, transparent) 24%,
+      color-mix(in oklab, var(--pool-neutral) 24%, transparent) 48%,
+      color-mix(in oklab, var(--pool-neutral) 6%, transparent) 68%,
+      transparent 84%),
+    radial-gradient(42vmax 42vmax at 62% 60%,
+      var(--pool-core) 0%,
+      color-mix(in oklab, var(--pool-core) 50%, transparent) 32%,
+      color-mix(in oklab, var(--pool-core) 14%, transparent) 58%,
+      transparent 80%),
     var(--canvas);
-}
-.room::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.05;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='128' height='128' filter='url(%23n)'/></svg>");
 }
 
 /* ---------- Glass ----------
@@ -177,18 +206,14 @@ select {
    the soft room behind them barely shows (measured, docs/tauri-migration-plan.md 6.2). */
 @utility glass {
   position: relative;
-  background:
-    linear-gradient(160deg, rgb(255 255 255 / var(--sheen)) 0%, transparent 42%),
-    var(--glass-tint);
+  background: var(--glass-sheen), var(--glass-tint);
   border: 1px solid var(--glass-rim);
   border-radius: var(--radius-pane);
-  box-shadow:
-    0 10px 30px var(--glass-shade),
-    inset 0 1px 0 rgb(255 255 255 / 0.12);
+  box-shadow: var(--glass-shadow), var(--glass-highlight);
 }
 @utility glass-live {
-  backdrop-filter: blur(22px) saturate(160%);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 @utility glass-dense {
   background: var(--dense-tint);
@@ -196,8 +221,8 @@ select {
 /* Full glass: a live blur behind the large panes only. Small glass (labels, toasts, the title bar's
    dense strip) gains nothing visible from it and would add a filter pass each. */
 .full-glass .glass:not(.glass-dense):not(.label):not(.sheet) {
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 .reduce-transparency .glass,
 .reduce-transparency .glass-live {
@@ -241,7 +266,7 @@ select {
   background: var(--color-brand);
   color: var(--color-brand-ink);
   border-color: transparent;
-  box-shadow: 0 6px 22px rgb(255 240 0 / 0.28);
+  box-shadow: var(--glass-shadow-small); /* the yellow fill is the emphasis; no colored glow */
   &:hover {
     background: var(--accent-hover);
   }

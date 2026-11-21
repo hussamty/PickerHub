@@ -10,7 +10,7 @@
   import { TOOLS } from "../lib/tools";
   import Icon from "./Icon.svelte";
 
-  const CLOSED = 58, OPEN = 236, LIP = 18, RADIUS = 26;
+  const CLOSED = 58, OPEN = 236, LIP = 18, RADIUS = 22; // RADIUS matches the panes (--radius-pane)
   let el: HTMLElement;
   let list: HTMLElement;
   let size = $state({ w: CLOSED, h: 400 });
@@ -26,13 +26,6 @@
   const shape = $derived.by(() => {
     const { w, h } = size, s = LIP, r = Math.max(0, Math.min(RADIUS, Math.min(w, h - 2 * s) / 2));
     return `M ${w} 0 A ${s} ${s} 0 0 1 ${w - s} ${s} L ${r} ${s} A ${r} ${r} 0 0 0 0 ${s + r} L 0 ${h - s - r} A ${r} ${r} 0 0 0 ${r} ${h - s} L ${w - s} ${h - s} A ${s} ${s} 0 0 1 ${w} ${h} Z`;
-  });
-
-  // Full glass gives the spine the panes' own sheen: CSS linear-gradient(160deg, sheen 0%, transparent 42%).
-  const paneSheen = $derived.by(() => {
-    const { w, h } = size, dx = Math.sin((160 * Math.PI) / 180), dy = -Math.cos((160 * Math.PI) / 180);
-    const half = (Math.abs(w * dx) + Math.abs(h * dy)) / 2;
-    return { x1: w / 2 - dx * half, y1: h / 2 - dy * half, x2: w / 2 + dx * half, y2: h / 2 + dy * half };
   });
 
   function expand(open: boolean) {
@@ -95,30 +88,26 @@
   onfocusin={(e) => { if ((e.target as HTMLElement).matches(":focus-visible")) { keyboard = true; expand(true); follow(e.target as HTMLElement); } }}
   onfocusout={(e) => { if (!el.contains(e.relatedTarget as Node)) { keyboard = false; if (!over) { hoverShown = false; expand(false); } } }}
 >
-  <!-- The blur and the shadow follow the body of the pane as a rounded rectangle: a path clip or a
-       filtered shape would be redrawn in software on every frame of the opening. The shoulders are
-       small enough to carry only the tint. -->
-  <div class="shade" aria-hidden="true"></div>
-  <div class="frost" aria-hidden="true"></div>
-  <svg class="pane" width={size.w} height={size.h} aria-hidden="true">
+  <!-- One body, shoulders included: the glass (tint, sheen, blur) is one layer clipped to the outline,
+       the shadow is cast by the same outline and kept outside it, and one rim runs all the way round.
+       It is the panes' material (app.css, Glass system), so the spine reads as one of them. -->
+  <svg class="cast" width={size.w} height={size.h} aria-hidden="true">
     <defs>
-      <linearGradient id="spine-sheen" x1="0" y1="0" x2={size.w * 0.7} y2={size.h * 0.7} gradientUnits="userSpaceOnUse">
-        <stop offset="0" stop-color="var(--rim-top)" stop-opacity="0.22" />
-        <stop offset="1" stop-color="var(--rim-top)" stop-opacity="0" />
-      </linearGradient>
-      <linearGradient id="spine-sheen-pane" x1={paneSheen.x1} y1={paneSheen.y1} x2={paneSheen.x2} y2={paneSheen.y2} gradientUnits="userSpaceOnUse">
-        <stop offset="0" class="pane-sheen" />
-        <stop offset="0.42" stop-color="#fff" stop-opacity="0" />
-      </linearGradient>
-      <linearGradient id="spine-rim" x1="0" y1="0" x2="0" y2={size.h} gradientUnits="userSpaceOnUse">
-        <stop offset="0" stop-color="var(--rim-top)" stop-opacity="var(--rim-a)" />
-        <stop offset="1" stop-color="var(--rim-top)" stop-opacity="calc(var(--rim-a) * 0.22)" />
-      </linearGradient>
-      <clipPath id="spine-clip"><path d={shape} /></clipPath>
+      <filter id="spine-shadow" x="-40%" y="-20%" width="180%" height="150%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="14" />
+        <feOffset dy="10" result="blur" />
+        <feFlood class="shade" />
+        <feComposite in2="blur" operator="in" result="shadow" />
+        <feComposite in="shadow" in2="SourceAlpha" operator="out" />
+      </filter>
     </defs>
-    <path d={shape} class="fill" />
-    <path d={shape} class="sheen" />
-    <path d={shape} class="rim" stroke-width="2" clip-path="url(#spine-clip)" />
+    <path d={shape} filter="url(#spine-shadow)" />
+  </svg>
+  <div class="body" style:clip-path="path('{shape}')" aria-hidden="true"></div>
+  <svg class="rim" width={size.w} height={size.h} aria-hidden="true">
+    <defs><clipPath id="spine-clip"><path d={shape} /></clipPath></defs>
+    <!-- Twice the width, clipped to the outline: an even 1px rim on the inside, like a border. -->
+    <path d={shape} clip-path="url(#spine-clip)" />
   </svg>
 
   <div class="layers" bind:this={list} dir={app.language === "ar" ? "rtl" : "ltr"} style:--row="{rowH}px">
@@ -143,78 +132,44 @@
 
 <style>
   .spine {
-    --rim-top: #ffffff;
-    --rim-a: 0.34;
     position: absolute;
     right: 0;
     top: 50%;
     translate: 0 calc(-50% - 8px);
-    z-index: 20;
+    z-index: var(--z-spine);
     box-sizing: border-box;
     padding: calc(18px + 7px) 7px;
     contain: layout style;
     transition: width 460ms cubic-bezier(0.65, 0, 0.35, 1);
   }
-  :global([data-theme="light"]) .spine {
-    --rim-a: 1;
-  }
-  .frost,
-  .shade {
-    position: absolute;
-    inset: 18px 0 18px 0;
-    border-radius: 26px 0 0 26px;
-  }
-  .frost {
-    backdrop-filter: blur(20px) saturate(150%);
-    -webkit-backdrop-filter: blur(20px) saturate(150%);
-  }
-  .shade {
-    box-shadow: 0 10px 28px var(--glass-shade);
-  }
-  :global(.reduce-transparency) .frost {
-    display: none;
-  }
-  :global([dir="ltr"]) .frost,
-  :global([dir="ltr"]) .shade {
-    border-radius: 26px 0 0 26px;
-  }
-  .pane {
+  .cast,
+  .rim,
+  .body {
     position: absolute;
     inset: 0;
-    overflow: visible;
     pointer-events: none;
   }
-  .fill {
-    fill: var(--glass-tint);
-  }
-  .sheen {
-    fill: url(#spine-sheen);
-  }
+  .cast,
   .rim {
+    overflow: visible;
+  }
+  .shade {
+    flood-color: var(--glass-shade);
+  }
+  .body {
+    background: var(--glass-sheen), var(--glass-tint);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+  }
+  .rim path {
     fill: none;
-    stroke: url(#spine-rim);
-  }
-  .pane-sheen {
-    stop-color: #fff;
-    stop-opacity: var(--sheen);
-  }
-  /* Full glass: the same material as the panes (app.css, glass): their sheen, an even rim, their blur
-     and shadow. */
-  :global(.full-glass) .sheen {
-    fill: url(#spine-sheen-pane);
-  }
-  :global(.full-glass) .rim {
     stroke: var(--glass-rim);
+    stroke-width: 2;
   }
-  :global(.full-glass) .frost {
-    backdrop-filter: blur(18px) saturate(150%);
-    -webkit-backdrop-filter: blur(18px) saturate(150%);
-  }
-  :global(.full-glass) .shade {
-    box-shadow: 0 10px 30px var(--glass-shade);
-  }
-  :global(.reduce-transparency) .fill {
-    fill: var(--raised);
+  :global(.reduce-transparency) .body {
+    background: var(--raised);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
   .layers {
     position: relative;
@@ -315,7 +270,7 @@
   .pill.active {
     background: var(--color-brand);
     border: 1px solid rgb(255 255 255 / 0.6);
-    box-shadow: 0 8px 26px rgb(255 240 0 / 0.28);
+    box-shadow: var(--glass-shadow-small);
   }
   :global(.reduce-motion) .spine,
   :global(.reduce-motion) .pill,

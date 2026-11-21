@@ -70,7 +70,7 @@
   }
   .menu {
     position: absolute;
-    z-index: 30;
+    z-index: var(--z-menu);
     top: calc(100% + 6px);
     inset-inline-start: 0;
     min-width: 100%;

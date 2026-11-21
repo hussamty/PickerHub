@@ -21,7 +21,7 @@
     inset-inline-start: 76px;
     margin-inline-start: 0;
     bottom: 20px;
-    z-index: 60;
+    z-index: var(--z-toast);
     display: flex;
     flex-direction: column;
     gap: 8px;

@@ -26,7 +26,9 @@ def run(script: str, shot: pathlib.Path | None = None, wait: int = 1500, timeout
     with tempfile.TemporaryDirectory() as data:
         (pathlib.Path(data) / "PickerHub").mkdir()
         shutil.copy(FIXTURE, pathlib.Path(data) / "PickerHub/workspace.json")
-        env = dict(os.environ, PICKERHUB_DATA_DIR=data, PICKERHUB_EVAL=script, PICKERHUB_WAIT=str(wait))
+        # X11 only: under a Wayland session GTK would open the app on the real desktop, not on Xvfb.
+        env = dict(os.environ, PICKERHUB_DATA_DIR=data, PICKERHUB_EVAL=script, PICKERHUB_WAIT=str(wait), GDK_BACKEND="x11", XDG_SESSION_TYPE="x11")
+        env.pop("WAYLAND_DISPLAY", None)
         if shot:
             env["PICKERHUB_SHOT"] = str(shot)
         # A private session bus: the single-instance guard never sees (or raises) a PickerHub the user has open.

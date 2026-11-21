@@ -169,6 +169,8 @@
     position: relative;
     height: 36px;
     margin-top: 8px;
+    /* Half a knob of room each side: a stop at 0% or 100% stays inside the panel. */
+    margin-inline: 9px;
     border-radius: 12px;
     border: 1px solid var(--line);
   }
