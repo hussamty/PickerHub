@@ -3055,7 +3055,7 @@ dependencies = [
 
 [[package]]
 name = "pickerhub-app"
-version = "2.0.0-beta.3"
+version = "2.0.0-beta.4"
 dependencies = [
  "ashpd",
  "base64 0.22.1",
@@ -3083,7 +3083,7 @@ dependencies = [
 
 [[package]]
 name = "pickerhub-capture"
-version = "2.0.0-beta.3"
+version = "2.0.0-beta.4"
 dependencies = [
  "ashpd",
  "block2",
@@ -3100,7 +3100,7 @@ dependencies = [
 
 [[package]]
 name = "pickerhub-store"
-version = "2.0.0-beta.3"
+version = "2.0.0-beta.4"
 dependencies = [
  "dirs 6.0.0",
  "pickerhub",

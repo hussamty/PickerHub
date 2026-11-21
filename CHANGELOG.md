@@ -1,3 +1,12 @@
+# 2.0.0-beta.4 — one glass
+
+- Draw every floating surface in one glass: the same tint per layer, sheen, rim, blur and shadow, defined once. The side menu is now one body of that glass, its curved top and bottom included, with one rim all the way round and the same look with full glass on or off.
+- Replace the fine dot pattern over the background and the glass with smooth pools of light.
+- Let yellow buttons and the current menu item carry their emphasis with their fill alone, without a yellow glow.
+- Draw the image guide's leaders more slowly and smoothly: each eases out of its mark and into its label, one after another, with the arrowhead growing in.
+- Keep the gradient editor's stop handles inside their panel.
+- Add the steps for upgrading from 1.x to the README.
+
 # 2.0.0-beta.3 — updates that install
 
 - Install updates from the Debian package: its signature now names the version it was signed for, which the updater requires, so Check for updates no longer fails with "Could not install the update" before asking for a password. Releases now stop if any update signature lacks its version. Copies installed from the 2.0.0-beta.1 or beta.2 .deb update to this version from Settings.
