@@ -1,3 +1,8 @@
+# 2.0.0-beta.6 — a dithered room and a sharp envelope
+
+- Paint the background at your screen's full resolution with a true dither, so its wide soft gradients show neither bands nor any pattern.
+- Keep the daily palette's envelope sharp while it leans toward the pointer: its paper edges, seal and title no longer soften.
+
 # 2.0.0-beta.5 — a smooth side menu
 
 - Open and close the side menu smoothly again on high-resolution screens: its glass is built from shapes the graphics card draws without repainting them on every frame, and it still reads as one body with its curved top and bottom.
