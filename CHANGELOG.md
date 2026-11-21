@@ -1,3 +1,10 @@
+# 2.0.0-beta.7 — the tray
+
+- Add "Minimize to tray on close" in Settings: closing the window then hides it in the system tray and PickerHub keeps running. It is off by default, and closing still quits on a desktop without a tray icon.
+- Tidy the tray menu into Pick a color, Show or Hide PickerHub, Settings and Quit PickerHub. Pick and edit, quick pick and multi-pick are no longer in the tray; quick pick stays on the global shortcut.
+- Double-click the tray icon on Windows to open the window. Launching PickerHub again also brings a hidden window back, and only one copy runs at a time.
+- Remember the window's place, size and maximized state across sessions, and always open to a window, even after a session that ended in the tray.
+
 # 2.0.0-beta.6 — a dithered room and a sharp envelope
 
 - Paint the background at your screen's full resolution with a true dither, so its wide soft gradients show neither bands nor any pattern.
