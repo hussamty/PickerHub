@@ -1,3 +1,10 @@
+# 2.0.0-beta.3 — updates that install
+
+- Install updates from the Debian package: its signature now names the version it was signed for, which the updater requires, so Check for updates no longer fails with "Could not install the update" before asking for a password. Releases now stop if any update signature lacks its version. Copies installed from the 2.0.0-beta.1 or beta.2 .deb update to this version from Settings.
+- Open the install confirmation, and every other confirmation or prompt, above the sheet that asked for it instead of behind Settings.
+- In full glass, draw the side menu in the same glass as the panes: their sheen, rim, blur and shadow.
+- Show Menu at the top of the side menu as a header rather than a button; the menu opens under the pointer or keyboard focus and closes when you leave it.
+
 # 2.0.0-beta.2 — the hand cursor
 
 - Replace the system cursor with a hand drawn by the interface while a mouse is in use: brand black with a white rim, so it reads on either theme and any color. It rests leaning back, points upright over anything clickable, presses with a yellow ring from the click, opens and grips over sliders and dragged handles, and steps aside for a hollow ring on the spectrum and the image guide, so the pixel under it stays in view. The index fingertip is the exact click point in every pose. Text fields keep the system I-beam, and touch, pens and forced colors keep the system cursor.
