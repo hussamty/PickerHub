@@ -15,6 +15,7 @@
   import CaptureOptions from "./components/CaptureOptions.svelte";
   import Settings from "./components/Settings.svelte";
   import HandCursor from "./components/HandCursor.svelte";
+  import Backdrop from "./components/Backdrop.svelte";
   import Picker from "./pages/Picker.svelte";
   import Library from "./pages/Library.svelte";
   import Contrast from "./pages/Contrast.svelte";
@@ -107,6 +108,7 @@
 <svelte:window onkeydown={keys} />
 
 <div class="room shell">
+  <Backdrop />
   <TitleBar onpick={pick} />
   {#if ready && app.ws}
     {@const Page = pages[app.page]}

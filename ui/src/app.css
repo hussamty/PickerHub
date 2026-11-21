@@ -174,10 +174,12 @@ select {
 }
 
 /* The room behind the glass: yellow light from the corner where the eyedropper lives, a neutral
-   pool opposite it and a faint warm core. No texture: each pool falls off along an eased curve
-   (many stops instead of one linear ramp), which keeps the long faint gradients free of visible
-   steps without a noise layer drawn over the glass. */
+   pool opposite it and a faint warm core, each falling off along an eased curve. This CSS version
+   shows first and while a theme change repaints; components/Backdrop.svelte paints the same pools
+   at device resolution with a true dither (no bands, no visible texture) and fades in over it. Keep
+   the two in step. */
 .room {
+  isolation: isolate;
   background:
     radial-gradient(72vmax 72vmax at 12% -5%,
       var(--pool-yellow) 0%,

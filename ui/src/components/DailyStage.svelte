@@ -130,9 +130,13 @@
   })();
 
   // ---- Painting ----
-  function prepare(canvas: HTMLCanvasElement | undefined, w: number, h: number) {
+  /** Sizes a canvas for painting. The envelope's canvases lean and turn in 3D on the GPU, which
+   *  stretches their texture at the near side and softens edges and type; painting them oversampled
+   *  (2x the CSS size on a 1x screen, 3x on a 2x screen) means the GPU only ever shrinks them. */
+  function prepare(canvas: HTMLCanvasElement | undefined, w: number, h: number, oversample = false) {
     if (!canvas) return null;
-    const dpr = devicePixelRatio || 1;
+    const screen = devicePixelRatio || 1;
+    const dpr = oversample ? Math.min(4, Math.max(2, screen * 1.5)) : screen;
     if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
     const ctx = canvas.getContext("2d")!;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -211,7 +215,7 @@
   }
 
   function paintBack(deg: number) {
-    const s = prepare(backCanvas, RW, RH);
+    const s = prepare(backCanvas, RW, RH, true);
     if (!s) return;
     const { ctx, dpr } = s;
     ctx.translate(RX, RY + HEAD);
@@ -224,7 +228,7 @@
   // Opened past upright, the flap stands behind the cards and shows its lining. Its element is turned
   // about the hinge, so its back face shows: the lining is painted in the flap's own frame.
   function paintLining(deg: number) {
-    const s = prepare(liningCanvas, FW, FH);
+    const s = prepare(liningCanvas, FW, FH, true);
     if (!s || deg <= 90) return;
     const { ctx } = s;
     ctx.translate(FM, FM);
@@ -235,7 +239,7 @@
     edge(ctx, face, flapEdge(c), 0xf2fff000, 1.8);
   }
   function paintFront(deg: number, light: number) {
-    const s = prepare(frontCanvas, RW, RH);
+    const s = prepare(frontCanvas, RW, RH, true);
     if (!s) return;
     const { ctx, dpr } = s;
     ctx.translate(RX, RY);
@@ -278,7 +282,7 @@
   }
   // Closed, the flap lies over the pocket; it catches more light as it lifts toward the viewer.
   function paintFlap(deg: number, light: number) {
-    const s = prepare(flapCanvas, FW, FH);
+    const s = prepare(flapCanvas, FW, FH, true);
     if (!s || deg >= 90) return;
     const { ctx, dpr } = s;
     ctx.translate(FM, FM);
